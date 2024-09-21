@@ -14,16 +14,29 @@ You can start editing the page by modifying `pages/index.tsx`. The page auto-upd
 
 ## Learn More
 
-To learn more about this stack, take a look at the following resources:
 
-- [RainbowKit Documentation](https://rainbowkit.com) - Learn how to customize your wallet connection flow.
-- [wagmi Documentation](https://wagmi.sh) - Learn how to interact with Ethereum.
-- [Next.js Documentation](https://nextjs.org/docs) - Learn how to build a Next.js application.
+> # DegenChess
 
-You can check out [the RainbowKit GitHub repository](https://github.com/rainbow-me/rainbowkit) - your feedback and contributions are welcome!
+> ## Introduction
 
-## Deploy on Vercel
+DegenChess is a copy of the regular chess game but with a web3 twist. Users can compete for ETH and rather than winner takes all which is for normal chess, players can save some of their stake by capturing opponents pieces even if they lose.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+> ## Tech Stack
+
+The Technology stack of this project includes but is not limited to
+
+Frontend: NextJs
+Smart Contracts: solidity
+Remix
+Deployed on arbitrum sepolia network
+Libraries: RainbowKit, Wagmi, Viem, react-chessboard, chess.js 
+
+### video link
+
+
+### deployment contract address
+0x3085800a571E6f85250a22b711471F38fBdB7C7a
+
+
+
