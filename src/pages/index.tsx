@@ -1,3 +1,4 @@
+// imports
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import type { NextPage } from "next";
 import { useState, useEffect } from "react";
@@ -15,7 +16,9 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ABI, CONTRACT_ADDRESS } from "../keys";
 
+// main code
 const Home: NextPage = () => {
+  // state management
   const [game, setGame] = useState(new Chess());
   const [gameId, setGameId] = useState<number | null>(null);
   const [stake, setStake] = useState("");
@@ -30,8 +33,10 @@ const Home: NextPage = () => {
   const [isWithdrawingConfirming, setIsWithdrawingConfirming] = useState(false);
   const [player1Joined, setPlayer1Joined] = useState(false);
   const [player2Joined, setPlayer2Joined] = useState(false);
-  const { address, isConnected } = useAccount();
   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
+
+  // implementation
+  const { address, isConnected } = useAccount();
   const {
     writeContract,
     data: transactionHash,
@@ -39,13 +44,12 @@ const Home: NextPage = () => {
   } = useWriteContract();
   const { isLoading: isTransactionConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash: transactionHash });
-
+  // read contract
   const { data: latestGameId } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: "getLatestGameId",
   }) as { data: bigint | undefined };
-
   const { data: gameDetails, refetch: refetchGameDetails } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -55,30 +59,7 @@ const Home: NextPage = () => {
     data: [string, string, bigint, bigint, boolean] | undefined;
     refetch: () => void;
   };
-
-  useEffect(() => {
-    if (latestGameId !== undefined) {
-      setGameId(Number(latestGameId));
-    }
-  }, [latestGameId]);
-
-  useEffect(() => {
-    if (gameDetails) {
-      setPlayer1Stake(Number(formatEther(gameDetails[2])));
-      setPlayer2Stake(Number(formatEther(gameDetails[3])));
-      setGameOver(!gameDetails[4]);
-      setPlayer1Joined(!!gameDetails[0]);
-      setPlayer2Joined(!!gameDetails[1]);
-      setCurrentPlayer(
-        address === gameDetails[0]
-          ? "player1"
-          : address === gameDetails[1]
-          ? "player2"
-          : null
-      );
-    }
-  }, [gameDetails]);
-
+  // watch contract event
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -101,15 +82,6 @@ const Home: NextPage = () => {
       }
     },
   });
-
-  useWatchContractEvent({
-    address: CONTRACT_ADDRESS,
-    abi: ABI,
-    onLogs(logs) {
-      console.log("Contract event:", logs);
-    },
-  });
-
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -120,7 +92,6 @@ const Home: NextPage = () => {
       setPlayer2Joined(true);
     },
   });
-
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -130,7 +101,6 @@ const Home: NextPage = () => {
       toast.info("A piece has been captured! Stakes updated.");
     },
   });
-
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: ABI,
@@ -141,7 +111,14 @@ const Home: NextPage = () => {
       toast.success("Game has ended! You can now withdraw your stake.");
     },
   });
-
+  useWatchContractEvent({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    onLogs(logs) {
+      console.log("Contract event:", logs);
+    },
+  });
+  // game logic
   const handleCreateGame = async () => {
     if (!isConnected || !stake) return;
     setIsCreatingGame(true);
@@ -165,7 +142,6 @@ const Home: NextPage = () => {
       setIsCreatingGame(false);
     }
   };
-
   const handleJoinGame = async () => {
     if (!isConnected || gameId === null) return;
     setIsJoiningGame(true);
@@ -188,7 +164,6 @@ const Home: NextPage = () => {
       setIsJoiningGame(false);
     }
   };
-
   const handleMove = (
     sourceSquare: Square,
     targetSquare: Square,
@@ -231,7 +206,6 @@ const Home: NextPage = () => {
     }
     return false;
   };
-
   const handlePieceTaken = async (pieceType: string) => {
     if (!isConnected || gameId === null) return;
     try {
@@ -245,7 +219,6 @@ const Home: NextPage = () => {
       console.error("Error handling piece taken:", error);
     }
   };
-
   const handleGameEnd = async () => {
     if (!isConnected || gameId === null) return;
     try {
@@ -254,14 +227,13 @@ const Home: NextPage = () => {
         address: CONTRACT_ADDRESS,
         abi: ABI,
         functionName: "endGame",
-        args: [BigInt(gameId), winner],
+        args: [BigInt(gameId), address],
       });
       setGameOver(true);
     } catch (error) {
       console.error("Error ending game:", error);
     }
   };
-
   const handleWithdraw = async () => {
     if (!isConnected || gameId === null) return;
     setIsWithdrawing(true);
@@ -284,7 +256,6 @@ const Home: NextPage = () => {
       setIsWithdrawing(false);
     }
   };
-
   const getPieceTypeId = (pieceType: string): number => {
     const pieceMap: { [key: string]: number } = {
       p: 1,
@@ -297,6 +268,28 @@ const Home: NextPage = () => {
     return pieceMap[pieceType.toLowerCase()] || 0;
   };
 
+  // state management - use effect
+  useEffect(() => {
+    if (latestGameId !== undefined) {
+      setGameId(Number(latestGameId));
+    }
+  }, [latestGameId]);
+  useEffect(() => {
+    if (gameDetails) {
+      setPlayer1Stake(Number(formatEther(gameDetails[2])));
+      setPlayer2Stake(Number(formatEther(gameDetails[3])));
+      setGameOver(!gameDetails[4]);
+      setPlayer1Joined(!!gameDetails[0]);
+      setPlayer2Joined(!!gameDetails[1]);
+      setCurrentPlayer(
+        address === gameDetails[0]
+          ? "player1"
+          : address === gameDetails[1]
+          ? "player2"
+          : null
+      );
+    }
+  }, [gameDetails]);
   useEffect(() => {
     if (isConfirmed) {
       refetchGameDetails();
@@ -306,7 +299,6 @@ const Home: NextPage = () => {
       setIsWithdrawingConfirming(false);
     }
   }, [isConfirmed, refetchGameDetails]);
-
   useEffect(() => {
     if (writeError) {
       setIsCreatingConfirming(false);
@@ -315,6 +307,7 @@ const Home: NextPage = () => {
     }
   }, [writeError]);
 
+  // ui
   return (
     <div className="container mx-auto px-4 text-retroGreen">
       <ConnectButton />

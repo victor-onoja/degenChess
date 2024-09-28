@@ -2,73 +2,6 @@ export const ABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "_stake",
-        type: "uint256",
-      },
-    ],
-    name: "createGame",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_gameId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_winner",
-        type: "address",
-      },
-    ],
-    name: "endGame",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_gameId",
-        type: "uint256",
-      },
-    ],
-    name: "joinGame",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_gameId",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "_player",
-        type: "address",
-      },
-      {
-        internalType: "uint8",
-        name: "_pieceType",
-        type: "uint8",
-      },
-    ],
-    name: "pieceTaken",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
         internalType: "address",
         name: "_paymentToken",
         type: "address",
@@ -189,19 +122,6 @@ export const ABI = [
     type: "event",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "_gameId",
-        type: "uint256",
-      },
-    ],
-    name: "withdraw",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "FEE_DENOMINATOR",
     outputs: [
@@ -225,6 +145,37 @@ export const ABI = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_stake",
+        type: "uint256",
+      },
+    ],
+    name: "createGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "_winner",
+        type: "address",
+      },
+    ],
+    name: "endGame",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -356,6 +307,19 @@ export const ABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "joinGame",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "owner",
     outputs: [
@@ -379,6 +343,42 @@ export const ABI = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "_player",
+        type: "address",
+      },
+      {
+        internalType: "uint8",
+        name: "_pieceType",
+        type: "uint8",
+      },
+    ],
+    name: "pieceTaken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_gameId",
+        type: "uint256",
+      },
+    ],
+    name: "withdraw",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ];
@@ -608,6 +608,6 @@ export const ERC_20_ABI = [
 
 export const TOKEN_ADDRESS = "0xb1D4538B4571d411F07960EF2838Ce337FE1E80E";
 
-export const CONTRACT_ADDRESS = "0x3085800a571E6f85250a22b711471F38fBdB7C7a";
+export const CONTRACT_ADDRESS = "0xE4dF735CDa746344ff044836C6208F75A52D2700";
 
 export const PROJECT_ID = "637dc6b08ddd56005484d930c03d17d7";
