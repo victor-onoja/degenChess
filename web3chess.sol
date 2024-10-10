@@ -17,6 +17,7 @@ contract Web3Chess {
         uint256 player2Stake;
         bool isActive;
         mapping(uint8 => uint256) piecesValue;
+        mapping(address => uint256[16]) remainingPieces;
     }
 
     mapping(uint256 => Game) public games;
@@ -24,14 +25,16 @@ contract Web3Chess {
 
     IERC20 public paymentToken;
 
-    event GameCreated(uint256 gameId, address player1);
-    event PlayerJoined(uint256 gameId, address player2);
-    event PieceTaken(uint256 gameId, address player, uint8 pieceType, uint256 value);
-    event GameEnded(uint256 gameId, address winner, uint256 winnerPayout, uint256 loserPayout);
-
      constructor(address _paymentToken) {
         owner = msg.sender;
         paymentToken = IERC20(_paymentToken);
+    }
+
+    function getInitialPieces() internal pure returns (uint256[16] memory) {
+        return [
+            uint256(4), 2, 3, 5, 6, 3, 2, 4, // Main pieces
+            1, 1, 1, 1, 1, 1, 1, 1  // Pawns
+        ];
     }
 
     function createGame(uint256 _stake) external {
@@ -52,7 +55,11 @@ contract Web3Chess {
         newGame.piecesValue[5] = _stake / 2;  // Queen
         newGame.piecesValue[6] = _stake / 4;  // King
 
-        emit GameCreated(gameId, msg.sender);
+    uint256[16] memory initialPieces = getInitialPieces();
+        for (uint8 i = 0; i < 16; i++) {
+            newGame.remainingPieces[msg.sender][i] = initialPieces[i];
+        }
+
     }
 
     function joinGame(uint256 _gameId) external {
@@ -64,7 +71,10 @@ contract Web3Chess {
         game.player2 = msg.sender;
         game.player2Stake = game.player1Stake;
 
-        emit PlayerJoined(_gameId, msg.sender);
+    uint256[16] memory initialPieces = getInitialPieces();
+        for (uint8 i = 0; i < 16; i++) {
+            game.remainingPieces[msg.sender][i] = initialPieces[i];
+        }
     }
 
     function pieceTaken(uint256 _gameId, address _player, uint8 _pieceType) external {
@@ -73,6 +83,18 @@ contract Web3Chess {
         require(_player == game.player1 || _player == game.player2, "Invalid player");
         
         uint256 pieceValue = game.piecesValue[_pieceType];
+        address opponent = _player == game.player1 ? game.player2 : game.player1;
+
+        // Remove the piece from the opponent's remaining pieces
+        bool pieceRemoved = false;
+        for (uint8 i = 0; i < 16; i++) {
+            if (game.remainingPieces[opponent][i] == _pieceType) {
+                game.remainingPieces[opponent][i] = 0;
+                pieceRemoved = true;
+                break;
+            }
+        }
+        require(pieceRemoved, "Piece not found in opponent's remaining pieces");
         if (_player == game.player1) {
             game.player1Stake += pieceValue;
             game.player2Stake -= pieceValue;
@@ -80,8 +102,6 @@ contract Web3Chess {
             game.player2Stake += pieceValue;
             game.player1Stake -= pieceValue;
         }
-
-        emit PieceTaken(_gameId, _player, _pieceType, pieceValue);
     }
 
     function endGame(uint256 _gameId, address _winner) external {
@@ -91,14 +111,39 @@ contract Web3Chess {
 
         game.isActive = false;
 
+        address loser = _winner == game.player1 ? game.player2 : game.player1;
+
+        // Calculate the value of all remaining pieces of the loser
+        uint256 remainingValue = 0;
+        for (uint8 i = 0; i < 16; i++) {
+            uint8 pieceType = uint8(game.remainingPieces[loser][i]);
+            if (pieceType > 0) {
+                remainingValue += game.piecesValue[pieceType];
+            }
+        }
+
+        // Transfer the remaining value from loser to winner
+        if (_winner == game.player1) {
+            game.player1Stake += remainingValue;
+            game.player2Stake -= remainingValue;
+        } else {
+            game.player2Stake += remainingValue;
+            game.player1Stake -= remainingValue;
+        }
+
+        // Calculate fee
         uint256 totalStake = game.player1Stake + game.player2Stake;
         uint256 fee = (totalStake * FEE_PERCENTAGE) / FEE_DENOMINATOR;
-        uint256 winnerPayout = totalStake - fee;
-
+    
+        // Deduct fee from total stake
+        uint256 remainingStake = totalStake - fee;
+    
+        // Transfer fee to contract owner
         paymentToken.safeTransfer(owner, fee);
-        paymentToken.safeTransfer(_winner, winnerPayout);
 
-        emit GameEnded(_gameId, _winner, winnerPayout, 0);
+        // Update final stakes
+        game.player1Stake = (game.player1Stake * remainingStake) / totalStake;
+        game.player2Stake = (game.player2Stake * remainingStake) / totalStake;
     }
 
     function withdraw(uint256 _gameId) external {
@@ -115,14 +160,10 @@ contract Web3Chess {
             game.player2Stake = 0;
         }
 
-        uint256 fee = (payout * FEE_PERCENTAGE) / FEE_DENOMINATOR;
-        uint256 playerPayout = payout - fee;
+        require(payout > 0, "No balance to withdraw");
 
-        paymentToken.safeTransfer(owner, fee);
-        paymentToken.safeTransfer(msg.sender, playerPayout);
-
-        emit GameEnded(_gameId, msg.sender, playerPayout, 0);
-    }
+        paymentToken.safeTransfer(msg.sender, payout);
+}
 
     function getGameDetails(uint256 _gameId) external view returns (
         address player1,
@@ -143,6 +184,10 @@ contract Web3Chess {
 
     function getPieceValue(uint256 _gameId, uint8 _pieceType) external view returns (uint256) {
         return games[_gameId].piecesValue[_pieceType];
+    }
+
+    function getRemainingPieces(uint256 _gameId, address _player) external view returns (uint256[16] memory) {
+        return games[_gameId].remainingPieces[_player];
     }
 
     function getLatestGameId() external view returns (uint256) {
