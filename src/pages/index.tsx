@@ -1,366 +1,3 @@
-// // imports
-// import { ConnectButton } from "@rainbow-me/rainbowkit";
-// import type { NextPage } from "next";
-// import { useState, useEffect } from "react";
-// import {
-//   useAccount,
-//   useWriteContract,
-//   useReadContract,
-//   useWaitForTransactionReceipt,
-// } from "wagmi";
-// import { parseEther, formatEther } from "viem";
-// import { Chessboard } from "react-chessboard";
-// import { Chess, Square } from "chess.js";
-// import { ToastContainer, toast } from "react-toastify";
-// import "react-toastify/dist/ReactToastify.css";
-// import { ABI, CONTRACT_ADDRESS, LINK_TOKEN_ADDRESS } from "../keys";
-
-// // main code
-// const Home: NextPage = () => {
-//   // state management
-//   const [game, setGame] = useState(new Chess());
-//   const [gameId, setGameId] = useState<number | null>(null);
-//   const [stake, setStake] = useState("");
-//   const [player1Stake, setPlayer1Stake] = useState(0);
-//   const [player2Stake, setPlayer2Stake] = useState(0);
-//   const [gameOver, setGameOver] = useState(false);
-//   const [isCreatingGame, setIsCreatingGame] = useState(false);
-//   const [isJoiningGame, setIsJoiningGame] = useState(false);
-//   const [isWithdrawing, setIsWithdrawing] = useState(false);
-//   const [player1Joined, setPlayer1Joined] = useState(false);
-//   const [player2Joined, setPlayer2Joined] = useState(false);
-//   const [currentPlayer, setCurrentPlayer] = useState<string | null>(null);
-
-//   // implementation
-//   const { address, isConnected } = useAccount();
-//   const {
-//     writeContract,
-//     data: transactionHash,
-//     error: writeError,
-//   } = useWriteContract();
-//   const { isLoading: isTransactionConfirming, isSuccess: isConfirmed } =
-//     useWaitForTransactionReceipt({ hash: transactionHash });
-//   // read contract
-//   const { data: latestGameId } = useReadContract({
-//     address: CONTRACT_ADDRESS,
-//     abi: ABI,
-//     functionName: "getLatestGameId",
-//   }) as { data: bigint | undefined };
-//   const { data: gameDetails, refetch: refetchGameDetails } = useReadContract({
-//     address: CONTRACT_ADDRESS,
-//     abi: ABI,
-//     functionName: "getGameDetails",
-//     args: gameId !== null ? [BigInt(gameId)] : undefined,
-//   }) as {
-//     data: [string, string, bigint, bigint, boolean] | undefined;
-//     refetch: () => void;
-//   };
-//   // game logic
-//   const handleApprove = async () => {
-//     if (!isConnected || !stake) return;
-//     try {
-//       writeContract({
-//         address: LINK_TOKEN_ADDRESS,
-//         abi: [
-//           {
-//             constant: false,
-//             inputs: [
-//               { name: "_spender", type: "address" },
-//               { name: "_value", type: "uint256" },
-//             ],
-//             name: "approve",
-//             outputs: [{ name: "", type: "bool" }],
-//             type: "function",
-//           },
-//         ],
-//         functionName: "approve",
-//         args: [CONTRACT_ADDRESS, parseEther(stake)],
-//       });
-//       toast.info(
-//         "Approval transaction submitted. Please wait for confirmation."
-//       );
-//     } catch (error) {
-//       console.error("Error approving LINK tokens:", error);
-//       toast.error("Failed to approve LINK tokens: " + error);
-//     }
-//   };
-
-//   const handleCreateGame = async () => {
-//     if (!isConnected || !stake) return;
-//     setIsCreatingGame(true);
-//     try {
-//       writeContract({
-//         address: CONTRACT_ADDRESS,
-//         abi: ABI,
-//         functionName: "createGame",
-//         args: [parseEther(stake)],
-//       });
-//       toast.success(
-//         "Game creation transaction submitted. Waiting for confirmation..."
-//       );
-//     } catch (error) {
-//       console.error("Error creating game:", error);
-//       toast.error("Failed to create game: " + error);
-//     } finally {
-//       setIsCreatingGame(false);
-//     }
-//   };
-
-//   const handleJoinGame = async () => {
-//     if (!isConnected || gameId === null) return;
-//     setIsJoiningGame(true);
-//     try {
-//       writeContract({
-//         address: CONTRACT_ADDRESS,
-//         abi: ABI,
-//         functionName: "joinGame",
-//         args: [gameId],
-//       });
-//       toast.success(
-//         "Join game transaction submitted. Waiting for confirmation..."
-//       );
-//     } catch (error) {
-//       console.error("Error joining game:", error);
-//       toast.error("Failed to join game: " + error);
-//     } finally {
-//       setIsJoiningGame(false);
-//     }
-//   };
-
-//   const handleMove = (
-//     sourceSquare: Square,
-//     targetSquare: Square,
-//     piece: string
-//   ) => {
-//     if (!player1Joined || !player2Joined || !currentPlayer) {
-//       toast.info(
-//         "Both Player 1 and Player 2 need to join before you can play."
-//       );
-//       return false;
-//     }
-//     const newGame = new Chess(game.fen());
-//     try {
-//       const move = newGame.move({
-//         from: sourceSquare,
-//         to: targetSquare,
-//         promotion: "q",
-//       });
-
-//       if (move) {
-//         setGame(newGame);
-//         if (move.captured) {
-//           handlePieceTaken(move.captured);
-//         }
-//         if (newGame.isGameOver()) {
-//           handleGameEnd();
-//         }
-//         return true;
-//       }
-//     } catch (error) {
-//       console.error("Invalid move:", error);
-//       toast.error("Invalid move. Please try again.");
-//     }
-//     return false;
-//   };
-
-//   const handlePieceTaken = async (pieceType: string) => {
-//     if (!isConnected || gameId === null) return;
-//     try {
-//       writeContract({
-//         address: CONTRACT_ADDRESS,
-//         abi: ABI,
-//         functionName: "pieceTaken",
-//         args: [BigInt(gameId), address, getPieceTypeId(pieceType)],
-//       });
-//       toast.info("Piece captured! Updating stakes...");
-//     } catch (error) {
-//       console.error("Error handling piece taken:", error);
-//       toast.error("Failed to update stakes: " + error);
-//     }
-//   };
-
-//   const handleGameEnd = async () => {
-//     if (!isConnected || gameId === null) return;
-//     try {
-//       const winner = game.turn() === "w" ? "black" : "white";
-//       writeContract({
-//         address: CONTRACT_ADDRESS,
-//         abi: ABI,
-//         functionName: "endGame",
-//         args: [BigInt(gameId), address],
-//       });
-//       setGameOver(true);
-//       toast.success("Game ended! The winner can now withdraw their winnings.");
-//     } catch (error) {
-//       console.error("Error ending game:", error);
-//       toast.error("Failed to end game: " + error);
-//     }
-//   };
-
-//   const handleWithdraw = async () => {
-//     if (!isConnected || gameId === null) return;
-//     setIsWithdrawing(true);
-//     try {
-//       writeContract({
-//         address: CONTRACT_ADDRESS,
-//         abi: ABI,
-//         functionName: "withdraw",
-//         args: [BigInt(gameId)],
-//       });
-//       toast.success(
-//         "Withdrawal transaction submitted. Waiting for confirmation..."
-//       );
-//     } catch (error) {
-//       console.error("Error withdrawing:", error);
-//       toast.error("Failed to withdraw: " + error);
-//     } finally {
-//       setIsWithdrawing(false);
-//     }
-//   };
-
-//   const getPieceTypeId = (pieceType: string): number => {
-//     const pieceMap: { [key: string]: number } = {
-//       p: 1,
-//       n: 2,
-//       b: 3,
-//       r: 4,
-//       q: 5,
-//       k: 6,
-//     };
-//     return pieceMap[pieceType.toLowerCase()] || 0;
-//   };
-
-//   // state management - use effect
-//   useEffect(() => {
-//     if (latestGameId !== undefined) {
-//       setGameId(Number(latestGameId));
-//     }
-//   }, [latestGameId]);
-
-//   useEffect(() => {
-//     if (gameDetails) {
-//       setPlayer1Stake(Number(formatEther(gameDetails[2])));
-//       setPlayer2Stake(Number(formatEther(gameDetails[3])));
-//       setGameOver(!gameDetails[4]);
-//       setPlayer1Joined(!!gameDetails[0]);
-//       setPlayer2Joined(!!gameDetails[1]);
-//       setCurrentPlayer(
-//         address === gameDetails[0]
-//           ? "player1"
-//           : address === gameDetails[1]
-//           ? "player2"
-//           : null
-//       );
-//     }
-//   }, [gameDetails, address]);
-
-//   useEffect(() => {
-//     if (isConfirmed) {
-//       refetchGameDetails();
-//       toast.success("Transaction confirmed!");
-//     }
-//   }, [isConfirmed, refetchGameDetails]);
-
-//   // ui
-//   return (
-//     <div className="container mx-auto px-4 text-retroGreen">
-//       <ConnectButton />
-//       <div className="my-8 flex flex-col lg:flex-row items-center">
-//         <div className="w-full lg:w-1/2 p-4">
-//           <Chessboard position={game.fen()} onPieceDrop={handleMove} />
-//         </div>
-//         <div className="w-full lg:w-1/2 p-4">
-//           <div className="retro-panel mb-4">
-//             <h2 className="text-2xl font-bold mb-2">Game Status</h2>
-//             <p>Game ID: {gameId !== null ? gameId : "No active game"}</p>
-//             <p>Player 1 Stake: {player1Stake} LINK</p>
-//             <p>Player 2 Stake: {player2Stake} LINK</p>
-//             <p>Game Active: {gameOver ? "No" : "Yes"}</p>
-//             <p>Current Player: {currentPlayer || "Waiting for players"}</p>
-//           </div>
-//           {!player1Joined && !gameOver && (
-//             <div className="retro-panel mb-4">
-//               <h2 className="text-xl font-bold mb-2">Create New Game</h2>
-//               <input
-//                 type="text"
-//                 value={stake}
-//                 onChange={(e) => setStake(e.target.value)}
-//                 placeholder="Enter Stake amount (LINK)"
-//                 className="w-full p-2 mb-2 bg-retroBlack text-retroGreen border border-retroGreen"
-//               />
-//               <button
-//                 onClick={handleApprove}
-//                 disabled={isCreatingGame || !isConnected || !stake}
-//                 className="w-full p-2 mb-2 bg-retroGreen text-retroBlack font-bold hover:bg-retroGreenLight disabled:opacity-50"
-//               >
-//                 Approve LINK
-//               </button>
-//               <button
-//                 onClick={handleCreateGame}
-//                 disabled={isCreatingGame || !isConnected || !stake}
-//                 className="w-full p-2 bg-retroGreen text-retroBlack font-bold hover:bg-retroGreenLight disabled:opacity-50"
-//               >
-//                 {isCreatingGame ? "Creating Game..." : "Create Game"}
-//               </button>
-//             </div>
-//           )}
-
-//           {player1Joined && !player2Joined && currentPlayer !== "player1" && (
-//             <div className="retro-panel mb-4">
-//               <h2 className="text-xl font-bold mb-2">Join Game</h2>
-//               <p>Stake required: {player1Stake} LINK</p>
-//               <button
-//                 onClick={handleApprove}
-//                 disabled={isJoiningGame || !isConnected}
-//                 className="w-full p-2 mb-2 bg-retroGreen text-retroBlack font-bold hover:bg-retroGreenLight disabled:opacity-50"
-//               >
-//                 Approve LINK
-//               </button>
-//               <button
-//                 onClick={handleJoinGame}
-//                 disabled={isJoiningGame || !isConnected}
-//                 className="w-full p-2 bg-retroGreen text-retroBlack font-bold hover:bg-retroGreenLight disabled:opacity-50"
-//               >
-//                 {isJoiningGame ? "Joining Game..." : "Join Game"}
-//               </button>
-//             </div>
-//           )}
-
-//           {gameOver && (
-//             <div className="retro-panel mb-4">
-//               <h2 className="text-xl font-bold mb-2">Game Over</h2>
-//               <button
-//                 onClick={handleWithdraw}
-//                 disabled={isWithdrawing || !isConnected}
-//                 className="w-full p-2 bg-retroGreen text-retroBlack font-bold hover:bg-retroGreenLight disabled:opacity-50"
-//               >
-//                 {isWithdrawing ? "Withdrawing..." : "Withdraw Winnings"}
-//               </button>
-//             </div>
-//           )}
-
-//           {writeError && (
-//             <div className="retro-panel mb-4 bg-red-900">
-//               <h2 className="text-xl font-bold mb-2">Error</h2>
-//               <p>{writeError.message}</p>
-//             </div>
-//           )}
-
-//           {transactionHash && (
-//             <div className="retro-panel mb-4">
-//               <h2 className="text-xl font-bold mb-2">Transaction Submitted</h2>
-//               <p className="break-all">Hash: {transactionHash}</p>
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//       <ToastContainer position="bottom-right" theme="dark" />
-//     </div>
-//   );
-// };
-
-// export default Home;
-
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import type { NextPage } from "next";
 import { useEffect, useState } from "react";
@@ -545,6 +182,32 @@ const Home: NextPage = () => {
     }
   };
 
+  // const handleMove = (sourceSquare: Square, targetSquare: Square) => {
+  //   if (!player1Joined || !player2Joined || !currentPlayer) {
+  //     toast.info(
+  //       "Both Player 1 and Player 2 need to join before you can play."
+  //     );
+  //     return false;
+  //   }
+
+  //   try {
+  //     dispatch(makeMove({ from: sourceSquare, to: targetSquare }));
+  //     // Check if a piece was captured and handle it
+  //     const capturedPiece = game.get(targetSquare);
+  //     if (capturedPiece && capturedPiece.color !== game.turn()) {
+  //       handlePieceTaken(capturedPiece.type);
+  //     }
+  //     if (game.isGameOver()) {
+  //       handleGameEnd();
+  //     }
+  //     return true;
+  //   } catch (error) {
+  //     console.error("Invalid move:", error);
+  //     toast.error("Invalid move. Please try again.");
+  //     return false;
+  //   }
+  // };
+
   const handleMove = (sourceSquare: Square, targetSquare: Square) => {
     if (!player1Joined || !player2Joined || !currentPlayer) {
       toast.info(
@@ -554,12 +217,19 @@ const Home: NextPage = () => {
     }
 
     try {
-      dispatch(makeMove({ from: sourceSquare, to: targetSquare }));
-      // Check if a piece was captured and handle it
-      const capturedPiece = game.get(targetSquare);
-      if (capturedPiece && capturedPiece.color !== game.turn()) {
-        handlePieceTaken(capturedPiece.type);
+      // Get the piece at the target square before the move
+      const targetPiece = game.get(targetSquare);
+
+      // Make the move
+      const moveResult = dispatch(
+        makeMove({ from: sourceSquare, to: targetSquare })
+      );
+
+      // If the move was successful and a piece was captured
+      if (moveResult && targetPiece && targetPiece.color !== game.turn()) {
+        handlePieceTaken(targetPiece.type);
       }
+
       if (game.isGameOver()) {
         handleGameEnd();
       }

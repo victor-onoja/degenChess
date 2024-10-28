@@ -22,6 +22,17 @@ const gameSlice = createSlice({
       state.game.move({ from, to, promotion: "q" });
       state.gameOver = state.game.isGameOver();
     },
+    // makeMove: (state, action: PayloadAction<{ from: Square; to: Square }>) => {
+    //   const { from, to } = action.payload;
+    //   try {
+    //     state.game.move({ from, to, promotion: "q" });
+    //     state.gameOver = state.game.isGameOver();
+    //     return true; // Move was successful
+    //   } catch (error) {
+    //     console.error("Invalid move:", error);
+    //     return false; // Move was not successful
+    //   }
+    // },
     setCurrentPlayer: (state, action: PayloadAction<string | null>) => {
       state.currentPlayer = action.payload;
     },
