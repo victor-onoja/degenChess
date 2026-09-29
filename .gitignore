@@ -43,3 +43,6 @@ yarn-error.log*
 /cache
 
 .env
+
+# raw 3D art (large; optimised models go in public/models)
+/art
