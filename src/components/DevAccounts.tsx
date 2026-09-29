@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { DEV_ACCOUNTS } from "../wagmi";
 import { sameAddress } from "../lib/format";
@@ -8,6 +9,10 @@ export function DevAccounts() {
   const { connectors, connect } = useConnect();
   const { disconnectAsync } = useDisconnect();
   const mocks = connectors.filter((c) => c.type === "mock");
+  // The connector list differs between server and client render; only render once mounted.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
 
   return (
     <div className="flex items-center gap-2 text-sm">

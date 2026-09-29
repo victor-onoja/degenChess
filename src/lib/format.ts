@@ -1,9 +1,10 @@
-import { formatEther } from "viem";
+import { formatUnits } from "viem";
+import { TOKEN_DECIMALS } from "../config";
 
 export const formatToken = (value: bigint | undefined) =>
   value === undefined
     ? "-"
-    : Number(formatEther(value)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+    : Number(formatUnits(value, TOKEN_DECIMALS)).toLocaleString(undefined, { maximumFractionDigits: 4 });
 
 export const shortAddress = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
 

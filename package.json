@@ -11,10 +11,13 @@
     "test": "hardhat test",
     "chain": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
-    "deploy:arbitrum-sepolia": "hardhat run scripts/deploy.js --network arbitrumSepolia"
+    "deploy:monad-testnet": "hardhat run scripts/deploy.js --network monadTestnet"
   },
   "dependencies": {
-    "@rainbow-me/rainbowkit": "^2.1.6",
+    "@category-labs/mera": "^0.2.0",
+    "@rainbow-me/rainbowkit": "^2.2.11",
+    "@scure/bip32": "^2.4.0",
+    "@scure/bip39": "^2.4.0",
     "@tanstack/react-query": "^5.51.11",
     "autoprefixer": "^10.4.20",
     "chess.js": "^1.0.0-beta.8",
@@ -25,8 +28,8 @@
     "react-dom": "^18.3.1",
     "react-toastify": "^10.0.5",
     "tailwindcss": "^3.4.12",
-    "viem": "2.17.0",
-    "wagmi": "^2.12.9"
+    "viem": "^2.57.0",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",

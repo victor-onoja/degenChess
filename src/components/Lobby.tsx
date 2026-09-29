@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { parseEther, parseEventLogs } from "viem";
+import { parseEventLogs, parseUnits, zeroAddress } from "viem";
 import { degenChessAbi } from "../contracts/abi";
-import { IS_LOCAL, TOKEN_SYMBOL } from "../config";
+import { TOKEN_DECIMALS, TOKEN_MINTABLE, TOKEN_SYMBOL } from "../config";
 import { chessContract, POLL_MS, Status, toGameInfo, tokenContract, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress, shortAddress } from "../lib/format";
 import { useTx } from "../lib/useTx";
@@ -11,7 +11,7 @@ const RECENT_GAMES = 25;
 
 function parseStake(value: string): bigint | null {
   try {
-    const v = parseEther(value.trim());
+    const v = parseUnits(value.trim(), TOKEN_DECIMALS);
     return v > 0n ? v : null;
   } catch {
     return null;
@@ -57,7 +57,7 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
       await send(`Approve ${TOKEN_SYMBOL}`, { ...tokenContract, functionName: "approve", args: [chessContract.address, stake] });
       return;
     }
-    const receipt = await send("Create game", { ...chessContract, functionName: "createGame", args: [stake] });
+    const receipt = await send("Create game", { ...chessContract, functionName: "createGame", args: [stake, zeroAddress] });
     const created = receipt && parseEventLogs({ abi: degenChessAbi, logs: receipt.logs, eventName: "GameCreated" })[0];
     if (created) onOpenGame(created.args.gameId);
   }
@@ -94,10 +94,14 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
           {pending ?? (needsApproval ? `Approve ${stakeInput} ${TOKEN_SYMBOL}` : "Create Game")}
         </button>
         {insufficient && <p className="mt-2 text-red-400">Not enough {TOKEN_SYMBOL}.</p>}
-        {IS_LOCAL && isConnected && (
+        {TOKEN_MINTABLE && isConnected && (
           <button
             onClick={() =>
-              send("Mint test LINK", { ...tokenContract, functionName: "mint", args: [address!, parseEther("100")] })
+              send(`Mint test ${TOKEN_SYMBOL}`, {
+                ...tokenContract,
+                functionName: "mint",
+                args: [address!, parseUnits("100", TOKEN_DECIMALS)],
+              })
             }
             disabled={pending !== null}
             className="retro-button-sm mt-3"

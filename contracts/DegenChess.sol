@@ -14,6 +14,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// without a backend. The contract tracks the board to account for captures, but does NOT
 /// validate full chess legality - clients validate with chess.js and the owner can arbitrate
 /// disputes. A checkmated player who refuses to resign loses on timeout.
+///
+/// Game keys: each player may register a second address (a prompt-free session key held in the
+/// browser) that can play for them - move, offer/accept draws, claim timeouts - but can never
+/// resign, cancel or withdraw. Money actions always need the player's own key.
 contract DegenChess is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -35,6 +39,8 @@ contract DegenChess is ReentrancyGuard {
     struct Game {
         address white; // creator
         address black; // joiner
+        address whiteKey; // optional game keys (see contract docs)
+        address blackKey;
         uint256 stake; // per player
         uint256 whiteBalance; // stake +/- capture transfers
         uint256 blackBalance;
@@ -76,6 +82,7 @@ contract DegenChess is ReentrancyGuard {
     event GameCreated(uint256 indexed gameId, address indexed white, uint256 stake);
     event GameCancelled(uint256 indexed gameId);
     event PlayerJoined(uint256 indexed gameId, address indexed black);
+    event GameKeySet(uint256 indexed gameId, address indexed player, address key);
     event MoveMade(uint256 indexed gameId, address indexed player, uint16 move, uint8 captured, uint256 value);
     event DrawOffered(uint256 indexed gameId, address indexed by);
     event GameEnded(uint256 indexed gameId, Result result, uint256 whitePayout, uint256 blackPayout, uint256 fee);
@@ -90,6 +97,7 @@ contract DegenChess is ReentrancyGuard {
     error TimeoutNotReached();
     error NoDrawOffer();
     error NothingToWithdraw();
+    error GasForwardFailed();
 
     constructor(address _paymentToken, uint256 _moveTimeout) {
         paymentToken = IERC20(_paymentToken);
@@ -100,7 +108,9 @@ contract DegenChess is ReentrancyGuard {
 
     // ------------------------------------------------------------------ lifecycle
 
-    function createGame(uint256 _stake) external nonReentrant returns (uint256 gameId) {
+    /// @param _gameKey optional session key allowed to play for the creator (address(0) for none).
+    ///        Any MON sent is forwarded to it to pay for its moves.
+    function createGame(uint256 _stake, address _gameKey) external payable nonReentrant returns (uint256 gameId) {
         // Keeps capture values non-zero and exact-ish; LINK has 18 decimals so this is tiny.
         if (_stake < TOTAL_WEIGHT) revert InvalidStake();
         paymentToken.safeTransferFrom(msg.sender, address(this), _stake);
@@ -112,6 +122,7 @@ contract DegenChess is ReentrancyGuard {
         g.whiteBalance = _stake;
         g.status = Status.Open;
         emit GameCreated(gameId, msg.sender, _stake);
+        _setKey(g, gameId, _gameKey);
     }
 
     /// @notice Creator can take their stake back while nobody has joined.
@@ -127,7 +138,7 @@ contract DegenChess is ReentrancyGuard {
         paymentToken.safeTransfer(g.white, amount);
     }
 
-    function joinGame(uint256 _gameId) external nonReentrant {
+    function joinGame(uint256 _gameId, address _gameKey) external payable nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Open) revert WrongStatus();
         if (msg.sender == g.white) revert NotPlayer();
@@ -139,6 +150,15 @@ contract DegenChess is ReentrancyGuard {
         g.status = Status.Active;
         g.lastMoveAt = uint64(block.timestamp);
         emit PlayerJoined(_gameId, msg.sender);
+        _setKey(g, _gameId, _gameKey);
+    }
+
+    /// @notice Replace (or revoke with address(0)) your game key, e.g. after switching devices.
+    function setGameKey(uint256 _gameId, address _gameKey) external payable nonReentrant {
+        Game storage g = games[_gameId];
+        if (g.status != Status.Open && g.status != Status.Active) revert WrongStatus();
+        if (msg.sender != g.white && msg.sender != g.black) revert NotPlayer();
+        _setKey(g, _gameId, _gameKey);
     }
 
     // ------------------------------------------------------------------ moves
@@ -148,7 +168,8 @@ contract DegenChess is ReentrancyGuard {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
         bool whiteToMove = g.moves.length % 2 == 0;
-        if (msg.sender != (whiteToMove ? g.white : g.black)) revert NotYourTurn();
+        address mover = _playerFor(g, msg.sender);
+        if (mover == address(0) || mover != (whiteToMove ? g.white : g.black)) revert NotYourTurn();
 
         uint256 from = _move & 63;
         uint256 to = (_move >> 6) & 63;
@@ -197,7 +218,7 @@ contract DegenChess is ReentrancyGuard {
         g.board = board;
         g.moves.push(_move);
         g.lastMoveAt = uint64(block.timestamp);
-        if (g.drawOfferedBy != address(0) && g.drawOfferedBy != msg.sender) {
+        if (g.drawOfferedBy != address(0) && g.drawOfferedBy != mover) {
             g.drawOfferedBy = address(0); // moving declines an outstanding draw offer
         }
 
@@ -205,7 +226,7 @@ contract DegenChess is ReentrancyGuard {
         if (captured != 0) {
             value = _transferCaptureValue(g, whiteToMove, captured & 7);
         }
-        emit MoveMade(_gameId, msg.sender, _move, captured & 7, value);
+        emit MoveMade(_gameId, mover, _move, captured & 7, value);
     }
 
     // ------------------------------------------------------------------ endings
@@ -224,7 +245,7 @@ contract DegenChess is ReentrancyGuard {
         if (g.status != Status.Active) revert WrongStatus();
         bool whiteToMove = g.moves.length % 2 == 0;
         address waiting = whiteToMove ? g.black : g.white;
-        if (msg.sender != waiting) revert NotPlayer();
+        if (_playerFor(g, msg.sender) != waiting) revert NotPlayer();
         if (block.timestamp <= g.lastMoveAt + moveTimeout) revert TimeoutNotReached();
         _finish(_gameId, whiteToMove ? Result.BlackWins : Result.WhiteWins);
     }
@@ -232,16 +253,18 @@ contract DegenChess is ReentrancyGuard {
     function offerDraw(uint256 _gameId) external {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
-        if (msg.sender != g.white && msg.sender != g.black) revert NotPlayer();
-        g.drawOfferedBy = msg.sender;
-        emit DrawOffered(_gameId, msg.sender);
+        address player = _playerFor(g, msg.sender);
+        if (player == address(0)) revert NotPlayer();
+        g.drawOfferedBy = player;
+        emit DrawOffered(_gameId, player);
     }
 
     function acceptDraw(uint256 _gameId) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
-        if (msg.sender != g.white && msg.sender != g.black) revert NotPlayer();
-        if (g.drawOfferedBy == address(0) || g.drawOfferedBy == msg.sender) revert NoDrawOffer();
+        address player = _playerFor(g, msg.sender);
+        if (player == address(0)) revert NotPlayer();
+        if (g.drawOfferedBy == address(0) || g.drawOfferedBy == player) revert NoDrawOffer();
         _finish(_gameId, Result.Draw);
     }
 
@@ -309,6 +332,11 @@ contract DegenChess is ReentrancyGuard {
         return games[_gameId].board;
     }
 
+    function getGameKeys(uint256 _gameId) external view returns (address whiteKey, address blackKey) {
+        Game storage g = games[_gameId];
+        return (g.whiteKey, g.blackKey);
+    }
+
     function getWithdrawn(uint256 _gameId) external view returns (bool white, bool black) {
         Game storage g = games[_gameId];
         return (g.whiteWithdrawn, g.blackWithdrawn);
@@ -319,6 +347,27 @@ contract DegenChess is ReentrancyGuard {
     }
 
     // ------------------------------------------------------------------ internals
+
+    /// @dev The player `_sender` acts for: themselves, or the player whose game key it is.
+    function _playerFor(Game storage g, address _sender) internal view returns (address) {
+        if (_sender == g.white || _sender == g.black) return _sender;
+        if (_sender != address(0) && _sender == g.whiteKey) return g.white;
+        if (_sender != address(0) && _sender == g.blackKey) return g.black;
+        return address(0);
+    }
+
+    /// @dev Registers msg.sender's game key and forwards any attached MON to it for gas.
+    function _setKey(Game storage g, uint256 _gameId, address _key) internal {
+        if (_key == g.white || _key == g.black) _key = address(0); // a player's own address is not a key
+        if (msg.sender == g.white) g.whiteKey = _key;
+        else g.blackKey = _key;
+        emit GameKeySet(_gameId, msg.sender, _key);
+        if (msg.value > 0) {
+            if (_key == address(0)) revert GasForwardFailed();
+            (bool ok,) = _key.call{value: msg.value}("");
+            if (!ok) revert GasForwardFailed();
+        }
+    }
 
     function _transferCaptureValue(Game storage g, bool whiteCaptured, uint8 kind) internal returns (uint256 value) {
         value = (g.stake * _weight(kind)) / TOTAL_WEIGHT;

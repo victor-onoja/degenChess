@@ -12,7 +12,7 @@ const erc20 = [
   "function balanceOf(address) view returns (uint256)",
   "function allowance(address,address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
-  "function mint(address,uint256)", // MockLINK only (local dev)
+  "function mint(address,uint256)", // MockUSD only (testnet/local)
 ];
 
 fs.mkdirSync(path.dirname(out), { recursive: true });

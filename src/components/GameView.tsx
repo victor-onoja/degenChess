@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
 import { Chessboard } from "react-chessboard";
 import { Chess, Square } from "chess.js";
+import { zeroAddress } from "viem";
 import { TOKEN_SYMBOL } from "../config";
 import { chessContract, POLL_MS, Result, Status, tokenContract, useGame, useTokenState } from "../lib/contract";
 import { encodeMove, replay } from "../lib/moves";
@@ -205,7 +206,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
                       functionName: "approve",
                       args: [chessContract.address, info.stake],
                     })
-                  : send("Join game", { ...chessContract, functionName: "joinGame", args: [gameId] })
+                  : send("Join game", { ...chessContract, functionName: "joinGame", args: [gameId, zeroAddress] })
               }
             >
               {pending ??

@@ -1,10 +1,11 @@
 const { expect } = require("chai");
 const hre = require("hardhat");
 const { loadFixture, time } = require("@nomicfoundation/hardhat-toolbox-viem/network-helpers");
-const { parseEther, getAddress } = require("viem");
+const { parseUnits, parseEther, getAddress, zeroAddress } = require("viem");
 const { Chess } = require("chess.js");
 
-const STAKE = parseEther("10");
+const usd = (n) => parseUnits(String(n), 6);
+const STAKE = usd(10);
 const TIMEOUT = 3600n;
 
 const PROMO = { n: 2, b: 3, r: 4, q: 5 };
@@ -37,21 +38,21 @@ function rng(seed) {
 }
 
 async function deployFixture() {
-  const [owner, white, black, stranger] = await hre.viem.getWalletClients();
-  const link = await hre.viem.deployContract("MockLINK");
+  const [owner, white, black, stranger, whiteKey, blackKey] = await hre.viem.getWalletClients();
+  const link = await hre.viem.deployContract("MockUSD");
   const chess = await hre.viem.deployContract("DegenChess", [link.address, TIMEOUT]);
   for (const w of [white, black, stranger]) {
-    await link.write.mint([w.account.address, parseEther("1000")]);
-    await link.write.approve([chess.address, parseEther("1000")], { account: w.account });
+    await link.write.mint([w.account.address, usd(1000)]);
+    await link.write.approve([chess.address, usd(1000)], { account: w.account });
   }
   const as = (wallet) => ({ account: wallet.account });
-  return { owner, white, black, stranger, link, chess, as };
+  return { owner, white, black, stranger, whiteKey, blackKey, link, chess, as };
 }
 
 async function activeGameFixture() {
   const f = await deployFixture();
-  await f.chess.write.createGame([STAKE], f.as(f.white));
-  await f.chess.write.joinGame([0n], f.as(f.black));
+  await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white));
+  await f.chess.write.joinGame([0n, zeroAddress], f.as(f.black));
   return f;
 }
 
@@ -83,20 +84,20 @@ describe("DegenChess", () => {
     it("lets the creator cancel an unjoined game for a full refund", async () => {
       const f = await loadFixture(deployFixture);
       const before = await f.link.read.balanceOf([f.white.account.address]);
-      await f.chess.write.createGame([STAKE], f.as(f.white));
+      await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white));
       await expect(f.chess.write.cancelGame([0n], f.as(f.black))).to.be.rejectedWith("NotPlayer");
       await f.chess.write.cancelGame([0n], f.as(f.white));
       expect(await f.link.read.balanceOf([f.white.account.address])).to.equal(before);
-      await expect(f.chess.write.joinGame([0n], f.as(f.black))).to.be.rejectedWith("WrongStatus");
+      await expect(f.chess.write.joinGame([0n, zeroAddress], f.as(f.black))).to.be.rejectedWith("WrongStatus");
     });
 
     it("rejects joining your own game, a full game, or a tiny stake", async () => {
       const f = await loadFixture(deployFixture);
-      await expect(f.chess.write.createGame([1n], f.as(f.white))).to.be.rejectedWith("InvalidStake");
-      await f.chess.write.createGame([STAKE], f.as(f.white));
-      await expect(f.chess.write.joinGame([0n], f.as(f.white))).to.be.rejectedWith("NotPlayer");
-      await f.chess.write.joinGame([0n], f.as(f.black));
-      await expect(f.chess.write.joinGame([0n], f.as(f.stranger))).to.be.rejectedWith("WrongStatus");
+      await expect(f.chess.write.createGame([1n, zeroAddress], f.as(f.white))).to.be.rejectedWith("InvalidStake");
+      await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white));
+      await expect(f.chess.write.joinGame([0n, zeroAddress], f.as(f.white))).to.be.rejectedWith("NotPlayer");
+      await f.chess.write.joinGame([0n, zeroAddress], f.as(f.black));
+      await expect(f.chess.write.joinGame([0n, zeroAddress], f.as(f.stranger))).to.be.rejectedWith("WrongStatus");
     });
   });
 
@@ -138,8 +139,8 @@ describe("DegenChess", () => {
       this.timeout(120_000);
       for (let seed = 1; seed <= 6; seed++) {
         const f = await deployFixture();
-        await f.chess.write.createGame([STAKE], f.as(f.white));
-        await f.chess.write.joinGame([0n], f.as(f.black));
+        await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white));
+        await f.chess.write.joinGame([0n, zeroAddress], f.as(f.black));
         const rand = rng(seed * 7919);
         const game = new Chess();
         for (let ply = 0; ply < 200 && !game.isGameOver(); ply++) {
@@ -254,6 +255,88 @@ describe("DegenChess", () => {
       await expect(f.chess.write.makeMove([0n, encodeMove({ from: "e2", to: "e4" })], f.as(f.white))).to.be.rejectedWith(
         "WrongStatus"
       );
+    });
+  });
+  describe("game keys", () => {
+    async function keyedGameFixture() {
+      const f = await deployFixture();
+      await f.chess.write.createGame([STAKE, f.whiteKey.account.address], {
+        ...f.as(f.white),
+        value: parseEther("0.5"),
+      });
+      await f.chess.write.joinGame([0n, f.blackKey.account.address], f.as(f.black));
+      return f;
+    }
+
+    it("registers keys and forwards attached MON to the key for gas", async () => {
+      const f = await deployFixture();
+      const client = await hre.viem.getPublicClient();
+      const before = await client.getBalance({ address: f.whiteKey.account.address });
+      await f.chess.write.createGame([STAKE, f.whiteKey.account.address], {
+        ...f.as(f.white),
+        value: parseEther("0.5"),
+      });
+      expect((await client.getBalance({ address: f.whiteKey.account.address })) - before).to.equal(parseEther("0.5"));
+      expect(await client.getBalance({ address: f.chess.address })).to.equal(0n);
+      const [wk, bk] = await f.chess.read.getGameKeys([0n]);
+      expect(wk).to.equal(getAddress(f.whiteKey.account.address));
+      expect(bk).to.equal(zeroAddress);
+      // Sending MON without a key to receive it is refused rather than trapped in the contract.
+      await expect(
+        f.chess.write.createGame([STAKE, zeroAddress], { ...f.as(f.white), value: 1n })
+      ).to.be.rejectedWith("GasForwardFailed");
+    });
+
+    it("lets keys play moves and draws on their player's behalf", async () => {
+      const f = await loadFixture(keyedGameFixture);
+      const game = new Chess();
+      for (const san of ["e4", "e5"]) {
+        const m = game.move(san);
+        await f.chess.write.makeMove([0n, encodeMove(m)], f.as(m.color === "w" ? f.whiteKey : f.blackKey));
+      }
+      // A key can't move out of turn or for the other side.
+      await expect(
+        f.chess.write.makeMove([0n, encodeMove({ from: "d7", to: "d5" })], f.as(f.blackKey))
+      ).to.be.rejectedWith("NotYourTurn");
+      await f.chess.write.offerDraw([0n], f.as(f.whiteKey));
+      expect((await gameInfo(f.chess)).drawOfferedBy).to.equal(getAddress(f.white.account.address));
+      await f.chess.write.acceptDraw([0n], f.as(f.blackKey));
+      expect((await gameInfo(f.chess)).result).to.equal(3);
+    });
+
+    it("never lets a key resign, cancel or withdraw", async () => {
+      const f = await loadFixture(keyedGameFixture);
+      await expect(f.chess.write.resign([0n], f.as(f.whiteKey))).to.be.rejectedWith("NotPlayer");
+      await f.chess.write.resign([0n], f.as(f.black));
+      await expect(f.chess.write.withdraw([0n], f.as(f.whiteKey))).to.be.rejectedWith("NothingToWithdraw");
+
+      const f2 = await deployFixture();
+      await f2.chess.write.createGame([STAKE, f2.whiteKey.account.address], f2.as(f2.white));
+      await expect(f2.chess.write.cancelGame([0n], f2.as(f2.whiteKey))).to.be.rejectedWith("NotPlayer");
+    });
+
+    it("keys are scoped to their game, and can be rotated or revoked", async () => {
+      const f = await loadFixture(keyedGameFixture);
+      await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white)); // game 1, no key
+      await f.chess.write.joinGame([1n, zeroAddress], f.as(f.black));
+      const e4 = encodeMove({ from: "e2", to: "e4" });
+      await expect(f.chess.write.makeMove([1n, e4], f.as(f.whiteKey))).to.be.rejectedWith("NotYourTurn");
+
+      await expect(f.chess.write.setGameKey([0n, f.stranger.account.address], f.as(f.whiteKey))).to.be.rejectedWith(
+        "NotPlayer"
+      );
+      await f.chess.write.setGameKey([0n, zeroAddress], f.as(f.white));
+      await expect(f.chess.write.makeMove([0n, e4], f.as(f.whiteKey))).to.be.rejectedWith("NotYourTurn");
+      await f.chess.write.setGameKey([0n, f.stranger.account.address], f.as(f.white));
+      await f.chess.write.makeMove([0n, e4], f.as(f.stranger));
+    });
+
+    it("ignores a key that is one of the players", async () => {
+      const f = await deployFixture();
+      await f.chess.write.createGame([STAKE, zeroAddress], f.as(f.white));
+      await f.chess.write.joinGame([0n, f.white.account.address], f.as(f.black));
+      const [, bk] = await f.chess.read.getGameKeys([0n]);
+      expect(bk).to.equal(zeroAddress);
     });
   });
 });

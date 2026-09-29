@@ -20,6 +20,11 @@ export const degenChessAbi = [
   },
   {
     "inputs": [],
+    "name": "GasForwardFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidMove",
     "type": "error"
   },
@@ -171,6 +176,31 @@ export const degenChessAbi = [
       }
     ],
     "name": "GameEnded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "key",
+        "type": "address"
+      }
+    ],
+    "name": "GameKeySet",
     "type": "event"
   },
   {
@@ -356,6 +386,11 @@ export const degenChessAbi = [
         "internalType": "uint256",
         "name": "_stake",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_gameKey",
+        "type": "address"
       }
     ],
     "name": "createGame",
@@ -366,7 +401,7 @@ export const degenChessAbi = [
         "type": "uint256"
       }
     ],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -473,6 +508,30 @@ export const degenChessAbi = [
         "type": "uint256"
       }
     ],
+    "name": "getGameKeys",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "whiteKey",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "blackKey",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_gameId",
+        "type": "uint256"
+      }
+    ],
     "name": "getMoves",
     "outputs": [
       {
@@ -527,11 +586,16 @@ export const degenChessAbi = [
         "internalType": "uint256",
         "name": "_gameId",
         "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_gameKey",
+        "type": "address"
       }
     ],
     "name": "joinGame",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -639,6 +703,24 @@ export const degenChessAbi = [
     "name": "resign",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_gameId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_gameKey",
+        "type": "address"
+      }
+    ],
+    "name": "setGameKey",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
