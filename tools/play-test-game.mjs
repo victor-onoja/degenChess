@@ -27,7 +27,7 @@ const line = LINES[process.argv[2] ?? "mate"];
 if (!line) throw new Error(`unknown line; use one of ${Object.keys(LINES).join(", ")}`);
 
 const abi = parseAbi([
-  "function createGame(uint256 stake, address gameKey) payable returns (uint256)",
+  "function createGame(uint256 stake, address gameKey, uint32 clockSeconds, uint32 incrementSeconds) payable returns (uint256)",
   "function joinGame(uint256 gameId, address gameKey) payable",
   "function makeMove(uint256 gameId, uint16 move)",
   "event GameCreated(uint256 indexed gameId, address indexed white, uint256 stake)",
@@ -62,7 +62,7 @@ await send(white, { address: TOKEN, abi: erc20, functionName: "mint", args: [whi
 await send(black, { address: TOKEN, abi: erc20, functionName: "mint", args: [black.address, stake] });
 await send(white, { address: TOKEN, abi: erc20, functionName: "approve", args: [CHESS, stake] });
 await send(black, { address: TOKEN, abi: erc20, functionName: "approve", args: [CHESS, stake] });
-const created = await send(white, { address: CHESS, abi, functionName: "createGame", args: [stake, zeroAddress] });
+const created = await send(white, { address: CHESS, abi, functionName: "createGame", args: [stake, zeroAddress, 0, 0] });
 const gameId = parseEventLogs({ abi, logs: created.logs, eventName: "GameCreated" })[0].args.gameId;
 await send(black, { address: CHESS, abi, functionName: "joinGame", args: [gameId, zeroAddress] });
 

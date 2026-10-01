@@ -30,8 +30,8 @@ applied twice.
 
 | Contract | Address |
 | --- | --- |
-| DegenChess | `0x7dd1ca9c5992e4e4af60039abeecbbb2e5c51d95` |
-| ChessReferee | `0x7bb28b305f3df3c9b7ae080f18b43ac902547076` |
+| DegenChess | `0x7ae0bbe6747b4571990088d2522bf7da62297c48` |
+| ChessReferee | `0xa44cb8a45c17094782c8b04ca252639525b61a20` |
 | Forwarder (simulation `MockKeystoneForwarder`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
 
 ## Run it

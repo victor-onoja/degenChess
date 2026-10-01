@@ -1,17 +1,21 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useBalance, useReadContract } from "wagmi";
+import { useBalance, useReadContract, useReadContracts } from "wagmi";
 import { parseEther } from "viem";
 import { Chessboard } from "react-chessboard";
 import { Chess, type Move, type PieceSymbol, type Square } from "chess.js";
 import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
-import { chessContract, POLL_MS, Result, Status, useGame } from "../lib/contract";
+import { chessContract, POLL_MS, Result, Status, toGameInfo, useGame } from "../lib/contract";
 import { encodeMove, replay } from "../lib/moves";
-import { formatDuration, formatToken, sameAddress, shortAddress, ZERO_ADDRESS } from "../lib/format";
+import { formatClock } from "../lib/clock";
+import { formatDuration, formatToken, sameAddress, ZERO_ADDRESS } from "../lib/format";
+import { useNames } from "../lib/names";
 import { isMuted, setMuted, sfx } from "../lib/sound";
 import { useElementSize } from "../lib/useElementSize";
 import { AccountBar } from "./AccountBar";
+import { parseEventLogs } from "viem";
+import { degenChessAbi } from "../contracts/abi";
 import { withApproval } from "./Lobby";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
@@ -30,7 +34,15 @@ function useNow() {
   return now;
 }
 
-export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => void }) {
+export function GameView({
+  gameId,
+  onExit,
+  onOpenGame,
+}: {
+  gameId: bigint;
+  onExit: () => void;
+  onOpenGame: (id: bigint) => void;
+}) {
   const account = useDegenAccount();
   const { unlocked, gameKey, busy: pending, sendGame, sendMoney, gameKeyTopUp } = account;
   const address = account.address ?? undefined;
@@ -48,6 +60,24 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
   const { data: gameKeys } = useReadContract({ ...chessContract, functionName: "getGameKeys", args: [gameId] });
   // When a referee (the Chainlink CRE workflow's contract) is registered, finished games settle themselves.
   const { data: arbiter } = useReadContract({ ...chessContract, functionName: "arbiter" });
+  const { data: clock } = useReadContract({
+    ...chessContract,
+    functionName: "getClock",
+    args: [gameId],
+    query: { refetchInterval: POLL_MS },
+  });
+  const { label } = useNames([info?.white, info?.black]);
+
+  // Rematch: look at the games created after this one for an open game from the opponent at the same stake.
+  const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { refetchInterval: POLL_MS } });
+  const laterIds: bigint[] = [];
+  if (info?.status === Status.Finished) {
+    for (let id = gameId + 1n; id < (gameCount ?? 0n) && laterIds.length < 20; id++) laterIds.push(id);
+  }
+  const { data: laterGames } = useReadContracts({
+    contracts: laterIds.map((id) => ({ ...chessContract, functionName: "getGame" as const, args: [id] as const })),
+    query: { enabled: laterIds.length > 0, refetchInterval: POLL_MS },
+  });
   const hasReferee = !!arbiter && arbiter !== ZERO_ADDRESS;
 
   const { data: keyGas } = useBalance({
@@ -136,8 +166,13 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
   // Moves are signed by the in-memory game key, which must be the one registered for this game.
   const registeredKey = myColor === "w" ? gameKeys?.[0] : myColor === "b" ? gameKeys?.[1] : undefined;
   const keyReady = unlocked && sameAddress(registeredKey, gameKey ?? undefined);
-  const deadline = Number(info.lastMoveAt) + Number(moveTimeout ?? 0n);
-  const timeLeft = deadline - now;
+  // Clock: each stored time is as of that player's turn start, so the side on move is charged the time since then.
+  const [clockBase, clockIncrement, whiteTime, blackTime] = clock ?? [0, 0, 0, 0];
+  const clockOn = clockBase > 0;
+  const sinceLastMove = active ? Math.max(now - Number(info.lastMoveAt), 0) : 0;
+  const clockLeft = { w: whiteTime - (turn === "w" ? sinceLastMove : 0), b: blackTime - (turn === "b" ? sinceLastMove : 0) };
+  // Seconds until the side to move loses on time.
+  const timeLeft = clockOn ? clockLeft[turn] : Number(info.lastMoveAt) + Number(moveTimeout ?? 0n) - now;
   const pieceValue = (t: string) => (info.stake * (WEIGHT[t] ?? 0n)) / 39n;
   const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver();
 
@@ -189,6 +224,12 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
         : myColor
           ? "Checkmate! Your opponent should resign; otherwise claim the win when their move timer runs out."
           : "Checkmate.";
+  } else if (active && clockOn && timeLeft <= 0) {
+    boardNotice = myTurn
+      ? "You ran out of time. Your opponent can claim the win."
+      : myColor
+        ? "Your opponent ran out of time. Claim the win below."
+        : "Out of time.";
   } else if (active && game.isDraw()) {
     boardNotice = hasReferee
       ? "Drawn by the rules of chess. The referee is settling the game..."
@@ -221,12 +262,17 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
         <span className="text-2xl">{bull ? "🐂" : "🐻"}</span>
         <div className="min-w-0">
           <div className="truncate text-xs opacity-75">
-            {bull ? "Bulls" : "Bears"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : shortAddress(addr)}
+            {bull ? "Bulls" : "Bears"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
             {myColor === color ? " (you)" : ""}
           </div>
           <div className={`text-lg font-bold leading-tight ${bull ? "text-[#3dff8b]" : "text-[#ff6b84]"}`}>
             {formatToken(balance)} <span className="text-xs font-medium opacity-70">{TOKEN_SYMBOL}</span>
           </div>
+          {clockOn && info.status !== Status.Open && (
+            <div className={`font-mono text-sm font-bold ${onMove && clockLeft[color] < 20 ? "text-[#ffd23f]" : "text-white"}`}>
+              {formatClock(clockLeft[color])}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -239,6 +285,15 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
       { ...chessContract, functionName: "setGameKey", args: [gameId, id.gameKey], value: await gameKeyTopUp(id.gameKey) },
     ]);
   const hasAccount = !!address || account.returning;
+
+  // An open game the opponent created after this one, for the same stake: their rematch offer.
+  const rematch =
+    laterIds
+      .map((id, i) => {
+        const r = laterGames?.[i];
+        return r?.status === "success" ? { id, ...toGameInfo(r.result) } : null;
+      })
+      .find((g) => g !== null && g.status === Status.Open && sameAddress(g.white, opponent) && g.stake === info.stake) ?? null;
 
   // Round so small layout shifts (a status line wrapping) don't re-frame the camera.
   const insets = { top: Math.ceil(topSize.height / 24) * 24, bottom: Math.ceil(bottomSize.height / 24) * 24 };
@@ -310,11 +365,13 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
               <span className={`text-[#3dff8b] ${active && turn === "w" ? "underline" : ""}`}>
                 🐂 {formatToken(info.whiteBalance)}
                 {myColor === "w" ? " (you)" : ""}
+                {clockOn && active ? ` ${formatClock(clockLeft.w)}` : ""}
               </span>
               <div className="stake-bar flex-1">
                 <div style={{ width: `${bullShare}%` }} />
               </div>
               <span className={`text-[#ff6b84] ${active && turn === "b" ? "underline" : ""}`}>
+                {clockOn && active ? `${formatClock(clockLeft.b)} ` : ""}
                 {myColor === "b" ? "(you) " : ""}
                 {formatToken(info.blackBalance)} 🐻
               </span>
@@ -339,8 +396,12 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
             {active && (
               <span className="opacity-70">
                 {" "}
-                &middot; ply {history.length + 1} &middot;{" "}
-                {timeLeft > 0 ? `${formatDuration(timeLeft)} left` : "move timer expired"}
+                &middot; ply {history.length + 1}
+                {clockOn
+                  ? timeLeft <= 0
+                    ? " · out of time"
+                    : ` · +${clockIncrement}s per move`
+                  : ` · ${timeLeft > 0 ? `${formatDuration(timeLeft)} left` : "move timer expired"}`}
               </span>
             )}
           </p>
@@ -382,7 +443,7 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
         {slimDock ? (
           <div className="glass pointer-events-auto mx-auto flex w-full max-w-2xl items-center gap-2 px-3 py-2">
             <p className="min-w-0 flex-1 truncate text-sm">
-              {pending ? `${pending}...` : myTurn ? "Your move - tap a piece." : `Waiting for ${shortAddress(opponent)}...`}
+              {pending ? `${pending}...` : myTurn ? "Your move - tap a piece." : `Waiting for ${label(opponent)}...`}
             </p>
             <button className="btn-ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
               ⋯
@@ -473,7 +534,7 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
                     ? `${pending}...`
                     : myTurn
                       ? "Your move - tap a piece."
-                      : `Waiting for ${shortAddress(opponent)} to move...`}
+                      : `Waiting for ${label(opponent)} to move...`}
                 </p>
                 <button
                   className="btn-ghost"
@@ -509,6 +570,32 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
                       : `Withdraw ${formatToken(myBalance)} ${TOKEN_SYMBOL}`}
                 </button>
               )}
+              {myColor &&
+                (rematch ? (
+                  <button className="btn" onClick={() => onOpenGame(rematch.id)}>
+                    {label(opponent)} wants a rematch &rarr; game #{rematch.id.toString()}
+                  </button>
+                ) : (
+                  <button
+                    className="btn-ghost"
+                    disabled={pending !== null}
+                    onClick={async () => {
+                      const receipt = await sendMoney(`Rematch for ${formatToken(info.stake)} ${TOKEN_SYMBOL}`, async (id) =>
+                        withApproval(id.address, info.stake, {
+                          ...chessContract,
+                          functionName: "createGame",
+                          args: [info.stake, id.gameKey, clockBase, clockIncrement],
+                          value: await gameKeyTopUp(id.gameKey),
+                        })
+                      );
+                      const created =
+                        receipt && parseEventLogs({ abi: degenChessAbi, logs: receipt.logs, eventName: "GameCreated" })[0];
+                      if (created) onOpenGame(created.args.gameId);
+                    }}
+                  >
+                    Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play Bulls)
+                  </button>
+                ))}
             </>
           )}
 

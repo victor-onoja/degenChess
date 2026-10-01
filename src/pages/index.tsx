@@ -1,6 +1,7 @@
 import type { NextPage } from "next";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
+import { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CONTRACT_ADDRESS } from "../config";
@@ -9,6 +10,7 @@ import { AccountBar } from "../components/AccountBar";
 import { Lobby } from "../components/Lobby";
 import { GameView } from "../components/GameView";
 import { Seo } from "../components/Seo";
+import { cleanName, NAME_RULE } from "../lib/names";
 
 const AttractArena = dynamic(() => import("../components/arena/AttractArena"), { ssr: false });
 
@@ -22,6 +24,7 @@ const Home: NextPage = () => {
   const router = useRouter();
   const { address, returning, busy, onboarding, signUp, unlock } = useDegenAccount();
   const hasAccount = address !== null || returning;
+  const [name, setName] = useState("");
 
   // The game being viewed lives in the URL (?game=3) so it can be shared with an opponent.
   const gameParam = typeof router.query.game === "string" ? router.query.game : null;
@@ -33,7 +36,7 @@ const Home: NextPage = () => {
     return (
       <>
         <Seo title={`Game #${gameId}`} />
-        <GameView key={gameId.toString()} gameId={gameId} onExit={() => openGame(null)} />
+        <GameView key={gameId.toString()} gameId={gameId} onExit={() => openGame(null)} onOpenGame={openGame} />
         <ToastContainer position="top-center" theme="dark" />
       </>
     );
@@ -68,7 +71,19 @@ const Home: NextPage = () => {
                 Bulls vs Bears, for real stakes. Take a piece, take its value, settled on Monad in under a second.
               </p>
               <div className="mt-5 flex flex-col items-center gap-3">
-                <button className="btn !px-10 !py-4 text-lg" disabled={busy !== null} onClick={() => void signUp()}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(cleanName(e.target.value))}
+                  placeholder="Pick a username (optional)"
+                  aria-label="Username"
+                  maxLength={16}
+                  className="w-64 text-center"
+                />
+                <button
+                  className="btn !px-10 !py-4 text-lg"
+                  disabled={busy !== null || (name !== "" && !NAME_RULE.test(name))}
+                  onClick={() => void signUp(NAME_RULE.test(name) ? name : undefined)}
+                >
                   {busy ?? "Play now"}
                 </button>
                 <button className="text-sm text-white/80 underline" disabled={busy !== null} onClick={() => void unlock()}>

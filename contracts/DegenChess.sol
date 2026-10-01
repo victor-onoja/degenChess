@@ -49,6 +49,11 @@ contract DegenChess is ReentrancyGuard {
         uint256 blackGains;
         uint256 board; // 64 squares x 4 bits, square 0 = a1, 63 = h8
         uint64 lastMoveAt;
+        // Chess clock, in seconds. clockBase == 0 means no clock: each move just has `moveTimeout`.
+        uint32 clockBase;
+        uint32 clockIncrement; // added to a player's clock after each of their moves
+        uint32 whiteTime; // time left when that player's turn last started
+        uint32 blackTime;
         Status status;
         Result result;
         address drawOfferedBy;
@@ -102,6 +107,7 @@ contract DegenChess is ReentrancyGuard {
     error InvalidStake();
     error InvalidMove();
     error TimeoutNotReached();
+    error TimeExpired();
     error NoDrawOffer();
     error NothingToWithdraw();
     error GasForwardFailed();
@@ -117,7 +123,14 @@ contract DegenChess is ReentrancyGuard {
 
     /// @param _gameKey optional session key allowed to play for the creator (address(0) for none).
     ///        Any MON sent is forwarded to it to pay for its moves.
-    function createGame(uint256 _stake, address _gameKey) external payable nonReentrant returns (uint256 gameId) {
+    /// @param _clockSeconds Thinking time per player for the whole game (0 = no clock).
+    /// @param _incrementSeconds Added to a player's clock after each move they make.
+    function createGame(uint256 _stake, address _gameKey, uint32 _clockSeconds, uint32 _incrementSeconds)
+        external
+        payable
+        nonReentrant
+        returns (uint256 gameId)
+    {
         // Keeps capture values non-zero and exact-ish; LINK has 18 decimals so this is tiny.
         if (_stake < TOTAL_WEIGHT) revert InvalidStake();
         paymentToken.safeTransferFrom(msg.sender, address(this), _stake);
@@ -127,6 +140,8 @@ contract DegenChess is ReentrancyGuard {
         g.white = msg.sender;
         g.stake = _stake;
         g.whiteBalance = _stake;
+        g.clockBase = _clockSeconds;
+        g.clockIncrement = _incrementSeconds;
         g.status = Status.Open;
         emit GameCreated(gameId, msg.sender, _stake);
         _setKey(g, gameId, _gameKey);
@@ -156,6 +171,8 @@ contract DegenChess is ReentrancyGuard {
         g.board = initialBoard;
         g.status = Status.Active;
         g.lastMoveAt = uint64(block.timestamp);
+        g.whiteTime = g.clockBase;
+        g.blackTime = g.clockBase;
         emit PlayerJoined(_gameId, msg.sender);
         _setKey(g, _gameId, _gameKey);
     }
@@ -177,6 +194,16 @@ contract DegenChess is ReentrancyGuard {
         bool whiteToMove = g.moves.length % 2 == 0;
         address mover = _playerFor(g, msg.sender);
         if (mover == address(0) || mover != (whiteToMove ? g.white : g.black)) revert NotYourTurn();
+
+        if (g.clockBase != 0) {
+            // Charge the mover for the time since the previous move; a fallen flag can't move.
+            uint256 elapsed = block.timestamp - g.lastMoveAt;
+            uint32 left = whiteToMove ? g.whiteTime : g.blackTime;
+            if (elapsed >= left) revert TimeExpired();
+            left = uint32(left - elapsed) + g.clockIncrement;
+            if (whiteToMove) g.whiteTime = left;
+            else g.blackTime = left;
+        }
 
         uint256 from = _move & 63;
         uint256 to = (_move >> 6) & 63;
@@ -253,7 +280,8 @@ contract DegenChess is ReentrancyGuard {
         bool whiteToMove = g.moves.length % 2 == 0;
         address waiting = whiteToMove ? g.black : g.white;
         if (_playerFor(g, msg.sender) != waiting) revert NotPlayer();
-        if (block.timestamp <= g.lastMoveAt + moveTimeout) revert TimeoutNotReached();
+        uint256 limit = g.clockBase != 0 ? (whiteToMove ? g.whiteTime : g.blackTime) : moveTimeout;
+        if (block.timestamp < g.lastMoveAt + limit) revert TimeoutNotReached();
         _finish(_gameId, whiteToMove ? Result.BlackWins : Result.WhiteWins, false);
     }
 
@@ -361,6 +389,13 @@ contract DegenChess is ReentrancyGuard {
     function getGameKeys(uint256 _gameId) external view returns (address whiteKey, address blackKey) {
         Game storage g = games[_gameId];
         return (g.whiteKey, g.blackKey);
+    }
+
+    /// @return base 0 when the game has no clock. whiteTime/blackTime are as of that player's last turn start;
+    ///         subtract (now - lastMoveAt) for the side to move.
+    function getClock(uint256 _gameId) external view returns (uint32 base, uint32 increment, uint32 whiteTime, uint32 blackTime) {
+        Game storage g = games[_gameId];
+        return (g.clockBase, g.clockIncrement, g.whiteTime, g.blackTime);
     }
 
     function getWithdrawn(uint256 _gameId) external view returns (bool white, bool black) {

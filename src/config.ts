@@ -9,6 +9,7 @@ export const CHAIN = IS_LOCAL ? hardhat : monadTestnet;
 const address = (local: string | undefined, live: string) => ((IS_LOCAL ? local : live) ?? "") as `0x${string}`;
 export const CONTRACT_ADDRESS = address(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, MONAD_TESTNET.chess);
 export const TOKEN_ADDRESS = address(process.env.NEXT_PUBLIC_TOKEN_ADDRESS, MONAD_TESTNET.token);
+export const NAMES_ADDRESS = address(process.env.NEXT_PUBLIC_NAMES_ADDRESS, MONAD_TESTNET.names);
 
 export const TOKEN_SYMBOL = process.env.NEXT_PUBLIC_TOKEN_SYMBOL ?? "tUSD";
 export const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS ?? 6);

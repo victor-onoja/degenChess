@@ -23,6 +23,8 @@ import { parseAbi } from "viem";
 
 export const degenChessAbi = ${JSON.stringify(read("DegenChess", "DegenChess.sol"), null, 2)} as const;
 
+export const playerNamesAbi = ${JSON.stringify(read("PlayerNames", "PlayerNames.sol"), null, 2)} as const;
+
 export const erc20Abi = parseAbi(${JSON.stringify(erc20, null, 2)});
 `
 );

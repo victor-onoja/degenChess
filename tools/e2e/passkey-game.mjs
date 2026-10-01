@@ -79,7 +79,9 @@ function assertEqual(actual, expected, what) {
 const p1 = await player(1);
 const p2 = await player(2);
 
-step("P1 signs up with one passkey ceremony");
+step("P1 signs up with one passkey ceremony, claiming a username");
+const username = `bull_${Date.now().toString(36).slice(-6)}`;
+await p1.page.getByLabel("Username").fill(username);
 await click(p1, "Play now");
 await p1.page.getByText("You're in.").waitFor({ timeout: 60000 });
 console.log("  " + (await p1.page.getByText("You're in.").innerText()));
@@ -104,6 +106,9 @@ await click(p2, /^Join as Bears/);
 await p1.page.getByText("Bulls to move").waitFor({ timeout: 60000 });
 await idle(p2);
 assertEqual((await p2.prompts()) - base2, 1, "P2 prompts for joining");
+await p2.page.getByText(username).first().waitFor({ timeout: 30000 });
+console.log(`  ok: P2 sees the opponent's username (${username}) and a running clock`);
+await p2.page.getByText(/^\d:\d\d$/).first().waitFor({ timeout: 30000 });
 
 step("Moves are prompt-free");
 const before = [await p1.prompts(), await p2.prompts()];
@@ -182,6 +187,14 @@ await click(p1, /^Withdraw /);
 await p1.page.getByRole("button", { name: "Withdrawn" }).waitFor({ timeout: 60000 });
 console.log("  " + (await p1.page.locator("section").first().innerText()).replace(/\n+/g, " | "));
 await shot(p1, "4-finished");
+
+step("Rematch: P1 offers, P2 is shown the offer");
+await idle(p1);
+await click(p1, /^Rematch /);
+await p1.page.getByText("Waiting for an opponent").waitFor({ timeout: 60000 });
+await click(p2, /wants a rematch/);
+await p2.page.getByRole("button", { name: /^Join as Bears/ }).waitFor({ timeout: 30000 });
+await shot(p2, "5-rematch");
 
 await browser.close();
 console.log("E2E OK");

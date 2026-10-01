@@ -16,7 +16,7 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **Live link (Monad testnet):** <https://degen-chess.vercel.app>
 
-**Contract (Monad testnet, chain 10143):** `0x60f552d97862ad8b1697443e48cf0e75182168cb`
+**Contract (Monad testnet, chain 10143):** `0x7ae0bbe6747b4571990088d2522bf7da62297c48`
 
 **Primary track:** Consumer Products & Payments
 

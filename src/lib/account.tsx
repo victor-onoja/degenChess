@@ -12,8 +12,8 @@ import {
   type TransactionReceipt,
 } from "viem";
 import { toast } from "react-toastify";
-import { CHAIN, CONTRACT_ADDRESS, TOKEN_ADDRESS } from "../config";
-import { erc20Abi } from "../contracts/abi";
+import { CHAIN, CONTRACT_ADDRESS, NAMES_ADDRESS, TOKEN_ADDRESS } from "../config";
+import { erc20Abi, playerNamesAbi } from "../contracts/abi";
 import {
   createAccount,
   forgetCredentialHint,
@@ -49,7 +49,8 @@ interface AccountContext {
   busy: string | null;
   /** Set after sign-up: how long it took to reach the first confirmed transaction. */
   onboarding: { seconds: number } | null;
-  signUp: () => Promise<void>;
+  /** Creates the passkey account; `name` (optional) is claimed as the username in the same ceremony. */
+  signUp: (name?: string) => Promise<void>;
   unlock: () => Promise<boolean>;
   lock: () => void;
   signOut: () => void;
@@ -206,7 +207,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     [queryClient]
   );
 
-  const signUp = useCallback(async () => {
+  const signUp = useCallback(async (name?: string) => {
     const started = Date.now();
     await track("Creating your account", async () => {
       const sessions = await createAccount();
@@ -222,6 +223,15 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           args: [CONTRACT_ADDRESS, maxUint256],
         });
         setOnboarding({ seconds: (Date.now() - started) / 1000 });
+        if (name && NAMES_ADDRESS) {
+          // Best effort: a taken name shouldn't fail the whole sign-up.
+          await write(sessions.money.account, {
+            address: NAMES_ADDRESS,
+            abi: playerNamesAbi,
+            functionName: "setName",
+            args: [name],
+          }).catch(() => toast.warn(`The name "${name}" is taken. You can pick another from the menu.`));
+        }
       } finally {
         sessions.money.end();
       }

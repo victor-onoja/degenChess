@@ -76,6 +76,11 @@ export const degenChessAbi = [
   },
   {
     "inputs": [],
+    "name": "TimeExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "TimeoutNotReached",
     "type": "error"
   },
@@ -466,6 +471,16 @@ export const degenChessAbi = [
         "internalType": "address",
         "name": "_gameKey",
         "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_clockSeconds",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_incrementSeconds",
+        "type": "uint32"
       }
     ],
     "name": "createGame",
@@ -506,6 +521,40 @@ export const degenChessAbi = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getClock",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "base",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "increment",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "whiteTime",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "blackTime",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -827,6 +876,108 @@ export const degenChessAbi = [
   {
     "inputs": [],
     "name": "withdrawFees",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
+
+export const playerNamesAbi = [
+  {
+    "inputs": [],
+    "name": "InvalidName",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NameTaken",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "NameSet",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "nameOf",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "_players",
+        "type": "address[]"
+      }
+    ],
+    "name": "namesOf",
+    "outputs": [
+      {
+        "internalType": "string[]",
+        "name": "names",
+        "type": "string[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "ownerOfName",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
+      }
+    ],
+    "name": "setName",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

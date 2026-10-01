@@ -38,10 +38,15 @@ async function main() {
     console.log(`ChessReferee deployed to ${referee.address} (forwarder ${forwarder}) and set as arbiter`);
   }
 
+  // Usernames outlive game redeployments: reuse NAMES_ADDRESS when there is one.
+  const names = process.env.NAMES_ADDRESS || (await hre.viem.deployContract("PlayerNames")).address;
+  console.log(`PlayerNames at ${names}`);
+
   console.log("\nFor localhost, put this in .env.local. For Monad testnet, update src/deployments.ts and cre/referee/config.staging.json:");
   console.log(`NEXT_PUBLIC_CHAIN=${local ? "localhost" : hre.network.name}`);
   console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${chess.address}`);
   console.log(`NEXT_PUBLIC_TOKEN_ADDRESS=${token}`);
+  console.log(`NEXT_PUBLIC_NAMES_ADDRESS=${names}`);
   if (referee) console.log(`REFEREE_ADDRESS=${referee.address}`);
 }
 

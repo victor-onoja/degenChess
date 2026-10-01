@@ -13,7 +13,7 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): DegenChess `0x7dd1ca9c5992e4e4af60039abeecbbb2e5c51d95`, ChessReferee `0x7bb28b305f3df3c9b7ae080f18b43ac902547076`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): DegenChess `0x7ae0bbe6747b4571990088d2522bf7da62297c48`, ChessReferee `0xa44cb8a45c17094782c8b04ca252639525b61a20`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
 Run the tests with `npm install && npm test` (22 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
