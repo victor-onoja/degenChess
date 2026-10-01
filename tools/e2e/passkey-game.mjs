@@ -163,10 +163,18 @@ step("Locking wipes the game key: the board stops accepting moves until unlocked
 await click(p1, "Lock");
 await p1.page.getByRole("button", { name: "Unlock with passkey to keep playing" }).waitFor();
 
-step("Bears resign (money action: passkey prompt), both withdraw");
-await click(p2, /^Resign$/);
-await p1.page.getByText("Finished - Bulls win").waitFor({ timeout: 60000 });
-assertEqual(await p2.prompts(), before[1] + 2, "P2 prompts after resigning");
+if (process.env.REFEREE === "1") {
+  // With the Chainlink referee running, checkmate settles itself: nobody has to resign.
+  step("The referee settles the checkmate automatically, both withdraw");
+  await p1.page.getByText("Finished - Bulls win").waitFor({ timeout: 120000 });
+  await p2.page.getByText("Finished - Bulls win").waitFor({ timeout: 60000 });
+  assertEqual(await p2.prompts(), before[1] + 1, "P2 prompts at settlement (no resignation needed)");
+} else {
+  step("Bears resign (money action: passkey prompt), both withdraw");
+  await click(p2, /^Resign$/);
+  await p1.page.getByText("Finished - Bulls win").waitFor({ timeout: 60000 });
+  assertEqual(await p2.prompts(), before[1] + 2, "P2 prompts after resigning");
+}
 await idle(p2);
 await click(p2, /^Withdraw /);
 await p2.page.getByRole("button", { name: "Withdrawn" }).waitFor({ timeout: 60000 });

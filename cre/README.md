@@ -53,7 +53,7 @@ cd cre && cre workflow simulate referee --non-interactive --trigger-index 0 \
   --evm-tx-hash <hash printed above> --evm-event-index 0 --broadcast --target staging-settings
 
 # or keep a referee running for live games
-node tools/referee-watch.mjs
+npm run referee
 ```
 
 `--broadcast` sends the verdict as a real transaction on Monad testnet. Without it the workflow runs

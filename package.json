@@ -12,7 +12,8 @@
     "chain": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:monad-testnet": "hardhat run scripts/deploy.js --network monadTestnet",
-    "models": "tools/build-models.sh"
+    "models": "tools/build-models.sh",
+    "referee": "node tools/referee-watch.mjs"
   },
   "dependencies": {
     "@category-labs/mera": "^0.2.0",
