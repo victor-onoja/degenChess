@@ -1,19 +1,17 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { useAccount, useSwitchChain } from "wagmi";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { CHAIN, CONTRACT_ADDRESS, IS_LOCAL } from "../config";
+import { CONTRACT_ADDRESS } from "../config";
+import { useDegenAccount } from "../lib/account";
+import { AccountBar } from "../components/AccountBar";
 import { Lobby } from "../components/Lobby";
 import { GameView } from "../components/GameView";
-import { DevAccounts } from "../components/DevAccounts";
 
 const Home: NextPage = () => {
   const router = useRouter();
-  const { isConnected, chainId } = useAccount();
-  const { switchChain } = useSwitchChain();
+  const { onboarding } = useDegenAccount();
 
   // The game being viewed lives in the URL (?game=3) so it can be shared with an opponent.
   const gameParam = typeof router.query.game === "string" ? router.query.game : null;
@@ -32,10 +30,7 @@ const Home: NextPage = () => {
         <button onClick={() => openGame(null)} className="text-left bg-transparent p-0 hover:shadow-none">
           <h1 className="font-retro text-xl text-retroGreen">DegenChess</h1>
         </button>
-        <div className="flex flex-wrap items-center gap-3">
-          {IS_LOCAL && <DevAccounts />}
-          <ConnectButton />
-        </div>
+        <AccountBar />
       </header>
 
       {!CONTRACT_ADDRESS ? (
@@ -44,12 +39,10 @@ const Home: NextPage = () => {
         </div>
       ) : (
         <>
-          {isConnected && chainId !== CHAIN.id && (
-            <div className="retro-panel mb-4 flex items-center justify-between gap-2 text-yellow-300">
-              <span>Wrong network. DegenChess runs on {CHAIN.name}.</span>
-              <button className="retro-button-sm" onClick={() => switchChain({ chainId: CHAIN.id })}>
-                Switch
-              </button>
+          {onboarding && (
+            <div className="retro-panel mb-4 text-retroGreenLight">
+              You&apos;re in. 1 passkey tap &middot; {onboarding.seconds.toFixed(1)}s to your first transaction on
+              Monad. No seed phrase, no extension.
             </div>
           )}
           {gameId !== null ? (

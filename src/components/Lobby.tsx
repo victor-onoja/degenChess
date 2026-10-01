@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { parseEventLogs, parseUnits, zeroAddress } from "viem";
+import { useReadContract, useReadContracts } from "wagmi";
+import { maxUint256, parseEventLogs, parseUnits } from "viem";
 import { degenChessAbi } from "../contracts/abi";
 import { TOKEN_DECIMALS, TOKEN_MINTABLE, TOKEN_SYMBOL } from "../config";
+import { publicClient, useDegenAccount, type Call } from "../lib/account";
 import { chessContract, POLL_MS, Status, toGameInfo, tokenContract, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress, shortAddress } from "../lib/format";
-import { useTx } from "../lib/useTx";
 
 const RECENT_GAMES = 25;
 
@@ -18,15 +18,25 @@ function parseStake(value: string): bigint | null {
   }
 }
 
+/** Approve (only if needed) + the staking call, signed together under one passkey prompt. */
+export async function withApproval(owner: `0x${string}`, amount: bigint, call: Call): Promise<Call[]> {
+  const allowance = await publicClient.readContract({
+    ...tokenContract,
+    functionName: "allowance",
+    args: [owner, chessContract.address],
+  });
+  const approve: Call = { ...tokenContract, functionName: "approve", args: [chessContract.address, maxUint256] };
+  return allowance < amount ? [approve, call] : [call];
+}
+
 export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
-  const { address, isConnected } = useAccount();
-  const { balance, allowance } = useTokenState();
-  const { send, pending } = useTx();
+  const { address, returning, busy, sendMoney, gameKeyTopUp } = useDegenAccount();
+  const { balance } = useTokenState();
   const [stakeInput, setStakeInput] = useState("1");
   const [idInput, setIdInput] = useState("");
 
+  const hasAccount = address !== null || returning;
   const stake = parseStake(stakeInput);
-  const needsApproval = stake !== null && (allowance ?? 0n) < stake;
   const insufficient = stake !== null && balance !== undefined && balance < stake;
 
   const { data: gameCount } = useReadContract({
@@ -48,16 +58,19 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     .filter((g) => g !== null);
   const openGames = games.filter((g) => g.status === Status.Open);
   const myGames = games.filter(
-    (g) => g.status !== Status.Cancelled && (sameAddress(g.white, address) || sameAddress(g.black, address))
+    (g) => g.status !== Status.Cancelled && (sameAddress(g.white, address ?? undefined) || sameAddress(g.black, address ?? undefined))
   );
 
   async function createGame() {
     if (stake === null) return;
-    if (needsApproval) {
-      await send(`Approve ${TOKEN_SYMBOL}`, { ...tokenContract, functionName: "approve", args: [chessContract.address, stake] });
-      return;
-    }
-    const receipt = await send("Create game", { ...chessContract, functionName: "createGame", args: [stake, zeroAddress] });
+    const receipt = await sendMoney(`Stake ${stakeInput} ${TOKEN_SYMBOL} & create game`, async (id) =>
+      withApproval(id.address, stake, {
+        ...chessContract,
+        functionName: "createGame",
+        args: [stake, id.gameKey],
+        value: await gameKeyTopUp(id.gameKey),
+      })
+    );
     const created = receipt && parseEventLogs({ abi: degenChessAbi, logs: receipt.logs, eventName: "GameCreated" })[0];
     if (created) onOpenGame(created.args.gameId);
   }
@@ -78,32 +91,33 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
       <section className="retro-panel">
         <h2 className="panel-title">Create Game</h2>
         <p className="mb-2 opacity-80">
-          You play White. Your opponent matches your stake. Every capture moves that piece&apos;s value
-          (pawn 1, knight/bishop 3, rook 5, queen 9 out of 39) from the victim to the capturer.
+          You play the Bulls (White). Your opponent matches your stake. Every capture moves that piece&apos;s
+          value (pawn 1, knight/bishop 3, rook 5, queen 9 out of 39) from the victim to the capturer.
         </p>
         <label className="block mb-1">Stake ({TOKEN_SYMBOL})</label>
         <input value={stakeInput} onChange={(e) => setStakeInput(e.target.value)} className="w-full mb-2" inputMode="decimal" />
-        <p className="mb-2 text-sm opacity-80">
-          Balance: {formatToken(balance)} {TOKEN_SYMBOL}
-        </p>
+        {address && (
+          <p className="mb-2 text-sm opacity-80">
+            Balance: {formatToken(balance)} {TOKEN_SYMBOL}
+          </p>
+        )}
         <button
           onClick={createGame}
-          disabled={!isConnected || stake === null || insufficient || pending !== null}
+          disabled={!hasAccount || stake === null || insufficient || busy !== null}
           className="retro-button w-full"
         >
-          {pending ?? (needsApproval ? `Approve ${stakeInput} ${TOKEN_SYMBOL}` : "Create Game")}
+          {busy ?? (hasAccount ? "Create Game" : "Press Play now to get started")}
         </button>
+        {hasAccount && <p className="mt-2 text-sm opacity-80">Staking asks for your passkey. Moves never do.</p>}
         {insufficient && <p className="mt-2 text-red-400">Not enough {TOKEN_SYMBOL}.</p>}
-        {TOKEN_MINTABLE && isConnected && (
+        {TOKEN_MINTABLE && address && (
           <button
             onClick={() =>
-              send(`Mint test ${TOKEN_SYMBOL}`, {
-                ...tokenContract,
-                functionName: "mint",
-                args: [address!, parseUnits("100", TOKEN_DECIMALS)],
-              })
+              sendMoney(`Mint test ${TOKEN_SYMBOL}`, (id) => [
+                { ...tokenContract, functionName: "mint", args: [id.address, parseUnits("100", TOKEN_DECIMALS)] },
+              ])
             }
-            disabled={pending !== null}
+            disabled={busy !== null}
             className="retro-button-sm mt-3"
           >
             Mint 100 test {TOKEN_SYMBOL}
@@ -116,7 +130,7 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         {openGames.length === 0 ? (
           <p className="opacity-80">No open games. Create one!</p>
         ) : (
-          <ul>{openGames.map((g) => gameRow(g, sameAddress(g.white, address) ? "View" : "Join"))}</ul>
+          <ul>{openGames.map((g) => gameRow(g, sameAddress(g.white, address ?? undefined) ? "View" : "Join"))}</ul>
         )}
 
         {myGames.length > 0 && (

@@ -1,4 +1,5 @@
-import { useAccount, useReadContract } from "wagmi";
+import { useReadContract } from "wagmi";
+import { useDegenAccount } from "./account";
 import { degenChessAbi, erc20Abi } from "../contracts/abi";
 import { CHAIN, CONTRACT_ADDRESS, TOKEN_ADDRESS } from "../config";
 
@@ -54,7 +55,7 @@ export function useGame(gameId: bigint | null) {
 
 /** The connected wallet's token balance and allowance for the chess contract. */
 export function useTokenState() {
-  const { address } = useAccount();
+  const { address } = useDegenAccount();
   const enabled = { enabled: !!address };
   const balance = useReadContract({
     ...tokenContract,

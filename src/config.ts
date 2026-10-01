@@ -10,6 +10,3 @@ export const TOKEN_SYMBOL = process.env.NEXT_PUBLIC_TOKEN_SYMBOL ?? "tUSD";
 export const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS ?? 6);
 /** The testnet stake token (MockUSD) lets anyone mint; hide the faucet for a real stablecoin. */
 export const TOKEN_MINTABLE = process.env.NEXT_PUBLIC_TOKEN_MINTABLE !== "false";
-
-export const WALLETCONNECT_PROJECT_ID =
-  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "637dc6b08ddd56005484d930c03d17d7";

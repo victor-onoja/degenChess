@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAccount, useReadContract } from "wagmi";
+import { useBalance, useReadContract } from "wagmi";
+import { parseEther } from "viem";
 import { Chessboard } from "react-chessboard";
 import { Chess, Square } from "chess.js";
-import { zeroAddress } from "viem";
 import { TOKEN_SYMBOL } from "../config";
-import { chessContract, POLL_MS, Result, Status, tokenContract, useGame, useTokenState } from "../lib/contract";
+import { useDegenAccount } from "../lib/account";
+import { chessContract, POLL_MS, Result, Status, useGame } from "../lib/contract";
 import { encodeMove, replay } from "../lib/moves";
 import { formatDuration, formatToken, sameAddress, shortAddress, ZERO_ADDRESS } from "../lib/format";
-import { useTx } from "../lib/useTx";
+import { withApproval } from "./Lobby";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
+const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
 const PIECE_SYMBOL: Record<string, string> = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
 
 function useNow() {
@@ -22,10 +24,10 @@ function useNow() {
 }
 
 export function GameView({ gameId }: { gameId: bigint }) {
-  const { address } = useAccount();
+  const account = useDegenAccount();
+  const { unlocked, gameKey, busy: pending, sendGame, sendMoney, gameKeyTopUp } = account;
+  const address = account.address ?? undefined;
   const { game: info, isLoading } = useGame(gameId);
-  const { allowance } = useTokenState();
-  const { send, pending } = useTx();
   const now = useNow();
 
   const { data: moves } = useReadContract({
@@ -36,6 +38,14 @@ export function GameView({ gameId }: { gameId: bigint }) {
   });
   const { data: withdrawn } = useReadContract({ ...chessContract, functionName: "getWithdrawn", args: [gameId] });
   const { data: moveTimeout } = useReadContract({ ...chessContract, functionName: "moveTimeout" });
+  const { data: gameKeys } = useReadContract({ ...chessContract, functionName: "getGameKeys", args: [gameId] });
+
+  const { data: keyGas } = useBalance({
+    address: gameKey ?? undefined,
+    chainId: chessContract.chainId,
+    query: { enabled: !!gameKey, refetchInterval: POLL_MS * 3 },
+  });
+  const lowMoveGas = keyGas !== undefined && keyGas.value < LOW_MOVE_GAS;
 
   const { game, history, illegalAt } = useMemo(() => replay(moves ?? []), [moves]);
   const [optimisticFen, setOptimisticFen] = useState<string | null>(null);
@@ -51,6 +61,9 @@ export function GameView({ gameId }: { gameId: bigint }) {
   const active = info.status === Status.Active;
   const turn = game.turn();
   const myTurn = active && myColor === turn;
+  // Moves are signed by the in-memory game key, which must be the one registered for this game.
+  const registeredKey = myColor === "w" ? gameKeys?.[0] : myColor === "b" ? gameKeys?.[1] : undefined;
+  const keyReady = unlocked && sameAddress(registeredKey, gameKey ?? undefined);
   const deadline = Number(info.lastMoveAt) + Number(moveTimeout ?? 0n);
   const timeLeft = deadline - now;
   const pieceValue = (t: string) => (info.stake * WEIGHT[t]) / 39n;
@@ -64,7 +77,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
       return false; // illegal: snap the piece back
     }
     setOptimisticFen(next.fen());
-    const ok = await send(`Move ${move.san}`, {
+    const ok = await sendGame(`Move ${move.san}`, {
       ...chessContract,
       functionName: "makeMove",
       args: [gameId, encodeMove(move)],
@@ -105,7 +118,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
   }
 
   const resultText =
-    info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
+    info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "Bulls win" : "Bears win";
 
   const player = (label: string, addr: string, balance: bigint, color: "w" | "b") => (
     <div className={`flex justify-between ${active && turn === color ? "text-retroGreenLight" : ""}`}>
@@ -127,7 +140,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
           id={`game-${gameId}`}
           position={optimisticFen ?? game.fen()}
           boardOrientation={myColor === "b" ? "black" : "white"}
-          arePiecesDraggable={myTurn && pending === null && illegalAt === null && !game.isGameOver()}
+          arePiecesDraggable={myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver()}
           isDraggablePiece={({ piece }) => piece[0] === myColor}
           onPieceDrop={(from, to) => {
             void submitMove(from, to);
@@ -154,11 +167,11 @@ export function GameView({ gameId }: { gameId: bigint }) {
           <p className="mb-2">
             Stake: {formatToken(info.stake)} {TOKEN_SYMBOL} each
           </p>
-          {player("White", info.white, info.whiteBalance, "w")}
-          {player("Black", info.black, info.blackBalance, "b")}
+          {player("🐂 Bulls", info.white, info.whiteBalance, "w")}
+          {player("🐻 Bears", info.black, info.blackBalance, "b")}
           {active && (
             <p className="mt-2">
-              {turn === "w" ? "White" : "Black"} to move &middot; ply {history.length + 1} &middot;{" "}
+              {turn === "w" ? "Bulls" : "Bears"} to move &middot; ply {history.length + 1} &middot;{" "}
               {timeLeft > 0 ? `${formatDuration(timeLeft)} left` : "move timer expired"}
             </p>
           )}
@@ -171,7 +184,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
           <h2 className="panel-title">Captures</h2>
           {(["w", "b"] as const).map((c) => (
             <p key={c}>
-              {c === "w" ? "White" : "Black"}: {captures[c].map((p) => PIECE_SYMBOL[p]).join(" ") || "-"}{" "}
+              {c === "w" ? "Bulls" : "Bears"}: {captures[c].map((p) => PIECE_SYMBOL[p]).join(" ") || "-"}{" "}
               <span className="opacity-80">
                 (+{formatToken(captures[c].reduce((sum, p) => sum + pieceValue(p), 0n))} {TOKEN_SYMBOL})
               </span>
@@ -188,7 +201,9 @@ export function GameView({ gameId }: { gameId: bigint }) {
               <button
                 className="retro-button"
                 disabled={pending !== null}
-                onClick={() => send("Cancel game", { ...chessContract, functionName: "cancelGame", args: [gameId] })}
+                onClick={() =>
+                  sendMoney("Cancel game", () => [{ ...chessContract, functionName: "cancelGame", args: [gameId] }])
+                }
               >
                 {pending ?? "Cancel & Refund"}
               </button>
@@ -198,31 +213,74 @@ export function GameView({ gameId }: { gameId: bigint }) {
           {info.status === Status.Open && myColor === null && (
             <button
               className="retro-button"
-              disabled={!address || pending !== null}
+              disabled={!(address || account.returning) || pending !== null}
               onClick={() =>
-                (allowance ?? 0n) < info.stake
-                  ? send(`Approve ${TOKEN_SYMBOL}`, {
-                      ...tokenContract,
-                      functionName: "approve",
-                      args: [chessContract.address, info.stake],
-                    })
-                  : send("Join game", { ...chessContract, functionName: "joinGame", args: [gameId, zeroAddress] })
+                sendMoney(`Stake ${formatToken(info.stake)} ${TOKEN_SYMBOL} & join`, async (id) =>
+                  withApproval(id.address, info.stake, {
+                    ...chessContract,
+                    functionName: "joinGame",
+                    args: [gameId, id.gameKey],
+                    value: await gameKeyTopUp(id.gameKey),
+                  })
+                )
               }
             >
               {pending ??
-                ((allowance ?? 0n) < info.stake
-                  ? `Approve ${formatToken(info.stake)} ${TOKEN_SYMBOL}`
-                  : `Join as Black (${formatToken(info.stake)} ${TOKEN_SYMBOL})`)}
+                (address || account.returning
+                  ? `Join as Bears (${formatToken(info.stake)} ${TOKEN_SYMBOL})`
+                  : "Press Play now to join")}
             </button>
           )}
 
-          {active && myColor && (
+          {active && myColor && !unlocked && (
+            <button className="retro-button" disabled={pending !== null} onClick={() => void account.unlock()}>
+              Unlock with passkey to keep playing
+            </button>
+          )}
+          {active && myColor && unlocked && !keyReady && gameKey && (
+            <button
+              className="retro-button"
+              disabled={pending !== null}
+              onClick={() =>
+                sendMoney("Enable prompt-free moves", async (id) => [
+                  {
+                    ...chessContract,
+                    functionName: "setGameKey",
+                    args: [gameId, id.gameKey],
+                    value: await gameKeyTopUp(id.gameKey),
+                  },
+                ])
+              }
+            >
+              Enable prompt-free moves on this device
+            </button>
+          )}
+
+          {active && myColor && keyReady && (
             <>
+              {lowMoveGas && (
+                <button
+                  className="retro-button"
+                  disabled={pending !== null}
+                  onClick={() =>
+                    sendMoney("Top up move gas", async (id) => [
+                      {
+                        ...chessContract,
+                        functionName: "setGameKey",
+                        args: [gameId, id.gameKey],
+                        value: await gameKeyTopUp(id.gameKey),
+                      },
+                    ])
+                  }
+                >
+                  Move gas is running low - top up
+                </button>
+              )}
               {drawOfferedByOpponent && (
                 <button
                   className="retro-button"
                   disabled={pending !== null}
-                  onClick={() => send("Accept draw", { ...chessContract, functionName: "acceptDraw", args: [gameId] })}
+                  onClick={() => sendGame("Accept draw", { ...chessContract, functionName: "acceptDraw", args: [gameId] })}
                 >
                   Accept draw offer
                 </button>
@@ -232,7 +290,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
                   className="retro-button"
                   disabled={pending !== null}
                   onClick={() =>
-                    send("Claim timeout win", { ...chessContract, functionName: "claimTimeout", args: [gameId] })
+                    sendGame("Claim timeout win", { ...chessContract, functionName: "claimTimeout", args: [gameId] })
                   }
                 >
                   Claim win on timeout
@@ -242,7 +300,7 @@ export function GameView({ gameId }: { gameId: bigint }) {
                 <button
                   className="retro-button flex-1"
                   disabled={pending !== null || iOfferedDraw}
-                  onClick={() => send("Offer draw", { ...chessContract, functionName: "offerDraw", args: [gameId] })}
+                  onClick={() => sendGame("Offer draw", { ...chessContract, functionName: "offerDraw", args: [gameId] })}
                 >
                   {iOfferedDraw ? "Draw offered" : "Offer draw"}
                 </button>
@@ -250,9 +308,8 @@ export function GameView({ gameId }: { gameId: bigint }) {
                   className="retro-button flex-1 danger"
                   disabled={pending !== null}
                   onClick={() => {
-                    if (window.confirm("Resign this game?")) {
-                      void send("Resign", { ...chessContract, functionName: "resign", args: [gameId] });
-                    }
+                    // Resigning settles money, so it is confirmed with the passkey rather than the game key.
+                    void sendMoney("Resign", () => [{ ...chessContract, functionName: "resign", args: [gameId] }]);
                   }}
                 >
                   Resign
@@ -267,7 +324,9 @@ export function GameView({ gameId }: { gameId: bigint }) {
             <button
               className="retro-button"
               disabled={pending !== null || alreadyWithdrawn || myBalance === 0n}
-              onClick={() => send("Withdraw", { ...chessContract, functionName: "withdraw", args: [gameId] })}
+              onClick={() =>
+                sendMoney("Withdraw", () => [{ ...chessContract, functionName: "withdraw", args: [gameId] }])
+              }
             >
               {alreadyWithdrawn
                 ? "Withdrawn"
