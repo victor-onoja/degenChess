@@ -23,6 +23,10 @@ A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39
 - **Cancel:** the creator can cancel and get a full refund until someone joins.
 - **Game keys:** each player can register a second, prompt-free key for a game. It can move, offer or accept draws and claim timeouts, but never resign, cancel or withdraw. MON sent with `createGame`/`joinGame` is forwarded to it for gas.
 
+### The arena
+
+Games are played in a full-screen three.js arena (react-three-fiber): rigged Bulls and Bears walk to their squares, strike and fall on captures, and coins fly from the captured piece to the capturer's vault. A HUD floats over it with a live "tug-of-war" bar showing how the pot is currently split. There is a 2D board one tap away, sound is synthesized in the browser, and phones automatically get a lighter render. `/arena` is a chain-free sandbox with a scripted demo game.
+
 ### Accounts: one passkey, two keys
 
 There is no wallet extension and no seed phrase. [Mera](https://mera.category.xyz) derives two keys from one passkey:
