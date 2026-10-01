@@ -60,3 +60,27 @@ input {
     cursor: not-allowed;
   }
 }
+
+.arena-capture-label {
+  white-space: nowrap;
+  font-family: "VT323", monospace;
+  font-size: 26px;
+  font-weight: bold;
+  color: #ffd23f;
+  background: rgba(0, 0, 0, 0.78);
+  border: 2px solid #ffd23f;
+  border-radius: 8px;
+  padding: 0 10px;
+  animation: arena-rise 2.2s ease-out forwards;
+}
+@keyframes arena-rise {
+  from { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  to { transform: translateY(-46px); opacity: 0; }
+}
+.arena-loading {
+  white-space: nowrap;
+  color: #00ff41;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+}

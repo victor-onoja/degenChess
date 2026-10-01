@@ -12,6 +12,8 @@ const step = (msg) => console.log("-", msg);
 
 async function player(n) {
   const ctx = await browser.newContext({ viewport: { width: 1300, height: 900 } });
+  // This test drives the 2D board by drag and drop; the view choice is a non-secret UI preference.
+  await ctx.addInitScript(() => localStorage.setItem("degenchess.view", "2d"));
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
   await cdp.send("WebAuthn.enable");

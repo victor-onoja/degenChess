@@ -39,7 +39,7 @@ const Home: NextPage = () => {
         </div>
       ) : (
         <>
-          {onboarding && (
+          {onboarding && gameId === null && (
             <div className="retro-panel mb-4 text-retroGreenLight">
               You&apos;re in. 1 passkey tap &middot; {onboarding.seconds.toFixed(1)}s to your first transaction on
               Monad. No seed phrase, no extension.

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useBalance, useReadContract } from "wagmi";
 import { parseEther } from "viem";
 import { Chessboard } from "react-chessboard";
-import { Chess, Square } from "chess.js";
+import { Chess, type Move, type PieceSymbol, type Square } from "chess.js";
 import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { chessContract, POLL_MS, Result, Status, useGame } from "../lib/contract";
@@ -11,6 +12,9 @@ import { formatDuration, formatToken, sameAddress, shortAddress, ZERO_ADDRESS } 
 import { withApproval } from "./Lobby";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
+const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
+const VIEW_PREF = "degenchess.view";
+
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
 const PIECE_SYMBOL: Record<string, string> = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
 
@@ -48,8 +52,28 @@ export function GameView({ gameId }: { gameId: bigint }) {
   const lowMoveGas = keyGas !== undefined && keyGas.value < LOW_MOVE_GAS;
 
   const { game, history, illegalAt } = useMemo(() => replay(moves ?? []), [moves]);
-  const [optimisticFen, setOptimisticFen] = useState<string | null>(null);
-  useEffect(() => setOptimisticFen(null), [moves?.length]);
+  // A move shown on the board while its transaction confirms; `ply` pins it to the position it was made in.
+  const [optimistic, setOptimistic] = useState<{ ply: number; fen: string; move: Move } | null>(null);
+  const pendingMove = optimistic && optimistic.ply === history.length ? optimistic : null;
+  const arenaHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
+
+  const [view, setView] = useState<"3d" | "2d">("3d");
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_PREF);
+      if (saved === "2d" || saved === "3d") setView(saved);
+    } catch {}
+  }, []);
+  const chooseView = (next: "3d" | "2d") => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_PREF, next);
+    } catch {}
+  };
+  const legalTargets = useCallback(
+    (from: Square) => game.moves({ square: from, verbose: true }).map((m) => ({ to: m.to, promotion: !!m.promotion })),
+    [game]
+  );
 
   if (isLoading) return <div className="retro-panel">Loading game #{gameId.toString()}...</div>;
   if (!info || info.status === Status.None) {
@@ -66,7 +90,8 @@ export function GameView({ gameId }: { gameId: bigint }) {
   const keyReady = unlocked && sameAddress(registeredKey, gameKey ?? undefined);
   const deadline = Number(info.lastMoveAt) + Number(moveTimeout ?? 0n);
   const timeLeft = deadline - now;
-  const pieceValue = (t: string) => (info.stake * WEIGHT[t]) / 39n;
+  const pieceValue = (t: string) => (info.stake * (WEIGHT[t] ?? 0n)) / 39n;
+  const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver();
 
   async function submitMove(from: Square, to: Square, promotion?: string) {
     const next = new Chess(game.fen());
@@ -76,13 +101,13 @@ export function GameView({ gameId }: { gameId: bigint }) {
     } catch {
       return false; // illegal: snap the piece back
     }
-    setOptimisticFen(next.fen());
+    setOptimistic({ ply: history.length, fen: next.fen(), move });
     const ok = await sendGame(`Move ${move.san}`, {
       ...chessContract,
       functionName: "makeMove",
       args: [gameId, encodeMove(move)],
     });
-    if (!ok) setOptimisticFen(null);
+    if (!ok) setOptimistic(null);
     return true;
   }
 
@@ -136,25 +161,47 @@ export function GameView({ gameId }: { gameId: bigint }) {
   return (
     <div className="flex flex-col gap-4 lg:flex-row">
       <div className="w-full lg:w-1/2">
-        <Chessboard
-          id={`game-${gameId}`}
-          position={optimisticFen ?? game.fen()}
-          boardOrientation={myColor === "b" ? "black" : "white"}
-          arePiecesDraggable={myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver()}
-          isDraggablePiece={({ piece }) => piece[0] === myColor}
-          onPieceDrop={(from, to) => {
-            void submitMove(from, to);
-            return true;
-          }}
-          onPromotionPieceSelect={(piece, from, to) => {
-            if (!piece || !from || !to) return false;
-            void submitMove(from, to, piece[1].toLowerCase());
-            return true;
-          }}
-          customSquareStyles={squareStyles}
-          customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
-          customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
-        />
+        <div className="mb-2 flex justify-end gap-2">
+          {(["3d", "2d"] as const).map((v) => (
+            <button
+              key={v}
+              className={`retro-button-sm ${view === v ? "" : "opacity-50"}`}
+              onClick={() => chooseView(v)}
+            >
+              {v.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        {view === "3d" ? (
+          <Arena3D
+            history={arenaHistory}
+            orientation={myColor ?? "w"}
+            movable={canMove && !pendingMove ? myColor : null}
+            legalTargets={legalTargets}
+            onMove={(from, to, promotion) => void submitMove(from, to, promotion)}
+            captureLabel={(kind: PieceSymbol) => `+${formatToken(pieceValue(kind))} ${TOKEN_SYMBOL}`}
+          />
+        ) : (
+          <Chessboard
+            id={`game-${gameId}`}
+            position={pendingMove?.fen ?? game.fen()}
+            boardOrientation={myColor === "b" ? "black" : "white"}
+            arePiecesDraggable={canMove}
+            isDraggablePiece={({ piece }) => piece[0] === myColor}
+            onPieceDrop={(from, to) => {
+              void submitMove(from, to);
+              return true;
+            }}
+            onPromotionPieceSelect={(piece, from, to) => {
+              if (!piece || !from || !to) return false;
+              void submitMove(from, to, piece[1].toLowerCase());
+              return true;
+            }}
+            customSquareStyles={squareStyles}
+            customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
+            customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+          />
+        )}
         {boardNotice && <p className="retro-panel mt-4 text-yellow-300">{boardNotice}</p>}
       </div>
 
