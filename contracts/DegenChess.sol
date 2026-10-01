@@ -12,8 +12,9 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///
 /// Moves are recorded on-chain (turn enforced), which also lets both clients stay in sync
 /// without a backend. The contract tracks the board to account for captures, but does NOT
-/// validate full chess legality - clients validate with chess.js and the owner can arbitrate
-/// disputes. A checkmated player who refuses to resign loses on timeout.
+/// validate full chess legality. A Chainlink CRE workflow replays every game off-chain and settles it
+/// through the arbiter: checkmates and rule draws are declared automatically and an illegal move
+/// forfeits the game. The owner can arbitrate as a fallback, and a stalled game ends on timeout.
 ///
 /// Game keys: each player may register a second address (a prompt-free session key held in the
 /// browser) that can play for them - move, offer/accept draws, claim timeouts - but can never
@@ -73,6 +74,10 @@ contract DegenChess is ReentrancyGuard {
 
     IERC20 public immutable paymentToken;
     address public immutable owner;
+    /// @notice Optional second arbiter: the Chainlink CRE referee contract that settles games automatically.
+    address public arbiter;
+    /// @notice Fees collected at settlement, waiting for the owner to withdraw them.
+    uint256 public accruedFees;
     uint256 public immutable moveTimeout;
     uint256 public immutable initialBoard;
 
@@ -87,6 +92,8 @@ contract DegenChess is ReentrancyGuard {
     event DrawOffered(uint256 indexed gameId, address indexed by);
     event GameEnded(uint256 indexed gameId, Result result, uint256 whitePayout, uint256 blackPayout, uint256 fee);
     event Withdrawn(uint256 indexed gameId, address indexed player, uint256 amount);
+    event ArbiterSet(address indexed arbiter);
+    event Arbitrated(uint256 indexed gameId, address indexed by, Result result, bool forfeit);
 
     error NotOwner();
     error NotPlayer();
@@ -234,8 +241,8 @@ contract DegenChess is ReentrancyGuard {
     function resign(uint256 _gameId) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
-        if (msg.sender == g.white) _finish(_gameId, Result.BlackWins);
-        else if (msg.sender == g.black) _finish(_gameId, Result.WhiteWins);
+        if (msg.sender == g.white) _finish(_gameId, Result.BlackWins, false);
+        else if (msg.sender == g.black) _finish(_gameId, Result.WhiteWins, false);
         else revert NotPlayer();
     }
 
@@ -247,7 +254,7 @@ contract DegenChess is ReentrancyGuard {
         address waiting = whiteToMove ? g.black : g.white;
         if (_playerFor(g, msg.sender) != waiting) revert NotPlayer();
         if (block.timestamp <= g.lastMoveAt + moveTimeout) revert TimeoutNotReached();
-        _finish(_gameId, whiteToMove ? Result.BlackWins : Result.WhiteWins);
+        _finish(_gameId, whiteToMove ? Result.BlackWins : Result.WhiteWins, false);
     }
 
     function offerDraw(uint256 _gameId) external {
@@ -265,14 +272,33 @@ contract DegenChess is ReentrancyGuard {
         address player = _playerFor(g, msg.sender);
         if (player == address(0)) revert NotPlayer();
         if (g.drawOfferedBy == address(0) || g.drawOfferedBy == player) revert NoDrawOffer();
-        _finish(_gameId, Result.Draw);
+        _finish(_gameId, Result.Draw, false);
     }
 
-    /// @notice Dispute resolution (e.g. an illegal move was submitted by a modified client).
-    function arbitrate(uint256 _gameId, Result _result) external nonReentrant {
-        if (msg.sender != owner) revert NotOwner();
+    /// @notice Settles a game from outside it: the referee declaring checkmate or a rule draw, or
+    ///         penalising an illegal move submitted by a modified client.
+    /// @param _forfeit The loser keeps nothing, not even capture gains. Used for cheating, where the
+    ///        "gains" may themselves come from illegal captures.
+    function arbitrate(uint256 _gameId, Result _result, bool _forfeit) external nonReentrant {
+        if (msg.sender != owner && msg.sender != arbiter) revert NotOwner();
         if (games[_gameId].status != Status.Active || _result == Result.None) revert WrongStatus();
-        _finish(_gameId, _result);
+        emit Arbitrated(_gameId, msg.sender, _result, _forfeit);
+        _finish(_gameId, _result, _forfeit);
+    }
+
+    function setArbiter(address _arbiter) external {
+        if (msg.sender != owner) revert NotOwner();
+        arbiter = _arbiter;
+        emit ArbiterSet(_arbiter);
+    }
+
+    /// @notice Fees accrue instead of being pushed at settlement, so a failing transfer to the owner
+    ///         can never block a game from finishing.
+    function withdrawFees() external nonReentrant {
+        if (msg.sender != owner) revert NotOwner();
+        uint256 amount = accruedFees;
+        accruedFees = 0;
+        paymentToken.safeTransfer(owner, amount);
     }
 
     function withdraw(uint256 _gameId) external nonReentrant {
@@ -385,7 +411,7 @@ contract DegenChess is ReentrancyGuard {
         }
     }
 
-    function _finish(uint256 _gameId, Result _result) internal {
+    function _finish(uint256 _gameId, Result _result, bool _forfeit) internal {
         Game storage g = games[_gameId];
         g.status = Status.Finished;
         g.result = _result;
@@ -397,11 +423,11 @@ contract DegenChess is ReentrancyGuard {
 
         // Winner takes everything except what the loser earned through captures.
         if (_result == Result.WhiteWins) {
-            uint256 keep = g.blackGains < blackBal ? g.blackGains : blackBal;
+            uint256 keep = _forfeit ? 0 : (g.blackGains < blackBal ? g.blackGains : blackBal);
             whiteBal += blackBal - keep;
             blackBal = keep;
         } else if (_result == Result.BlackWins) {
-            uint256 keep = g.whiteGains < whiteBal ? g.whiteGains : whiteBal;
+            uint256 keep = _forfeit ? 0 : (g.whiteGains < whiteBal ? g.whiteGains : whiteBal);
             blackBal += whiteBal - keep;
             whiteBal = keep;
         }
@@ -414,7 +440,7 @@ contract DegenChess is ReentrancyGuard {
         g.whiteBalance = whitePayout;
         g.blackBalance = blackPayout;
         emit GameEnded(_gameId, _result, whitePayout, blackPayout, fee);
-        if (fee > 0) paymentToken.safeTransfer(owner, fee);
+        accruedFees += fee;
     }
 
     function _weight(uint8 kind) internal pure returns (uint256) {

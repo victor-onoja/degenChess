@@ -169,6 +169,7 @@ describe("DegenChess", () => {
         const after = await gameInfo(f.chess);
         if (after.whiteBalance > 0n) await f.chess.write.withdraw([0n], f.as(f.white));
         if (after.blackBalance > 0n) await f.chess.write.withdraw([0n], f.as(f.black));
+        await f.chess.write.withdrawFees(f.as(f.owner));
         expect(await f.link.read.balanceOf([f.chess.address]), `seed ${seed}`).to.equal(0n);
       }
     });
@@ -194,6 +195,10 @@ describe("DegenChess", () => {
       expect(g.whiteBalance + g.blackBalance + fee <= total).to.equal(true);
       expect(blackGains > 0n).to.equal(true);
 
+      // Fees accrue in the contract and only the owner can pull them.
+      expect(await f.chess.read.accruedFees()).to.equal(total - g.whiteBalance - g.blackBalance);
+      await expect(f.chess.write.withdrawFees(f.as(f.white))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.withdrawFees(f.as(f.owner));
       const ownerBal = await f.link.read.balanceOf([f.owner.account.address]);
       expect(ownerBal).to.equal(total - g.whiteBalance - g.blackBalance);
       expect(ownerBal - fee <= 1n).to.equal(true);
@@ -213,6 +218,7 @@ describe("DegenChess", () => {
       expect(g.result).to.equal(1); // WhiteWins
       await f.chess.write.withdraw([0n], f.as(f.white));
       if (g.blackBalance > 0n) await f.chess.write.withdraw([0n], f.as(f.black));
+      await f.chess.write.withdrawFees(f.as(f.owner));
       expect(await f.link.read.balanceOf([f.chess.address])).to.equal(0n);
     });
 
@@ -248,9 +254,9 @@ describe("DegenChess", () => {
 
     it("only the owner can arbitrate, and nobody can end a game they are not in", async () => {
       const f = await loadFixture(activeGameFixture);
-      await expect(f.chess.write.arbitrate([0n, 1], f.as(f.white))).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.arbitrate([0n, 1, false], f.as(f.white))).to.be.rejectedWith("NotOwner");
       await expect(f.chess.write.resign([0n], f.as(f.stranger))).to.be.rejectedWith("NotPlayer");
-      await f.chess.write.arbitrate([0n, 2], f.as(f.owner));
+      await f.chess.write.arbitrate([0n, 2, false], f.as(f.owner));
       expect((await gameInfo(f.chess)).result).to.equal(2);
       await expect(f.chess.write.makeMove([0n, encodeMove({ from: "e2", to: "e4" })], f.as(f.white))).to.be.rejectedWith(
         "WrongStatus"
@@ -337,6 +343,84 @@ describe("DegenChess", () => {
       await f.chess.write.joinGame([0n, f.white.account.address], f.as(f.black));
       const [, bk] = await f.chess.read.getGameKeys([0n]);
       expect(bk).to.equal(zeroAddress);
+    });
+  });
+  describe("referee (Chainlink CRE consumer)", () => {
+    const { encodeAbiParameters } = require("viem");
+    const report = (gameId, result, forfeit, ply, reason) =>
+      encodeAbiParameters(
+        [{ type: "uint256" }, { type: "uint8" }, { type: "bool" }, { type: "uint256" }, { type: "uint8" }],
+        [gameId, result, forfeit, ply, reason]
+      );
+
+    async function refereeFixture() {
+      const f = await activeGameFixture();
+      // `stranger` plays the Chainlink forwarder.
+      const referee = await hre.viem.deployContract("ChessReferee", [f.chess.address, f.stranger.account.address]);
+      await f.chess.write.setArbiter([referee.address], f.as(f.owner));
+      return { ...f, referee, forwarder: f.stranger };
+    }
+
+    it("settles a checkmate from a forwarded report; the loser keeps capture gains", async () => {
+      const f = await loadFixture(refereeFixture);
+      await playSan(f, "e4 e5 Bc4 Nc6 d4 exd4 Qh5 Nf6 Qxf7#".split(" "));
+      await f.referee.write.onReport(["0x", report(0n, 1, false, 9n, 2)], f.as(f.forwarder));
+      const g = await gameInfo(f.chess);
+      expect(g.status).to.equal(3);
+      expect(g.result).to.equal(1); // WhiteWins
+      expect(g.blackBalance > 0n).to.equal(true); // black captured a pawn and keeps it
+      // The same verdict can't be applied twice.
+      await expect(f.referee.write.onReport(["0x", report(0n, 1, false, 9n, 2)], f.as(f.forwarder))).to.be.rejectedWith(
+        "WrongStatus"
+      );
+    });
+
+    it("an illegal move forfeits everything, including illegal capture gains", async () => {
+      const f = await loadFixture(refereeFixture);
+      await playSan(f, ["e4", "e5"]);
+      // White teleports the queen from d1 onto black's queen at d8: accepted by the contract, illegal in chess.
+      await f.chess.write.makeMove([0n, encodeMove({ from: "d1", to: "d8" })], f.as(f.white));
+      const before = await gameInfo(f.chess);
+      expect(before.whiteBalance > STAKE).to.equal(true); // the cheat paid out...
+      await f.referee.write.onReport(["0x", report(0n, 2, true, 3n, 1)], f.as(f.forwarder));
+      const g = await gameInfo(f.chess);
+      expect(g.result).to.equal(2); // BlackWins
+      expect(g.whiteBalance).to.equal(0n); // ...and is taken back in full
+      const total = STAKE * 2n;
+      expect(g.blackBalance).to.equal(total - (total * 25n) / 1000n);
+    });
+
+    it("only the forwarder can deliver reports, and only the arbiter or owner can arbitrate", async () => {
+      const f = await loadFixture(refereeFixture);
+      await expect(f.referee.write.onReport(["0x", report(0n, 1, false, 0n, 2)], f.as(f.white))).to.be.rejectedWith(
+        "NotForwarder"
+      );
+      await expect(f.chess.write.arbitrate([0n, 1, true], f.as(f.forwarder))).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.setArbiter([f.white.account.address], f.as(f.white))).to.be.rejectedWith("NotOwner");
+      await expect(f.referee.write.setForwarder([f.white.account.address], f.as(f.white))).to.be.rejectedWith("NotOwner");
+    });
+
+    it("can require a specific workflow owner in the report metadata", async () => {
+      const f = await loadFixture(refereeFixture);
+      const { concat, pad, zeroHash } = require("viem");
+      const workflowOwner = f.owner.account.address;
+      await f.referee.write.setExpectedWorkflowOwner([workflowOwner], f.as(f.owner));
+      const meta = (who) => concat([zeroHash, pad("0x", { size: 10 }), who, "0x0001"]);
+      await expect(
+        f.referee.write.onReport([meta(f.white.account.address), report(0n, 3, false, 0n, 3)], f.as(f.forwarder))
+      ).to.be.rejectedWith("WrongWorkflowOwner");
+      await expect(f.referee.write.onReport(["0x", report(0n, 3, false, 0n, 3)], f.as(f.forwarder))).to.be.rejectedWith(
+        "WrongWorkflowOwner"
+      );
+      await f.referee.write.onReport([meta(workflowOwner), report(0n, 3, false, 0n, 3)], f.as(f.forwarder));
+      expect((await gameInfo(f.chess)).result).to.equal(3); // Draw
+    });
+
+    it("advertises the IReceiver interface", async () => {
+      const f = await loadFixture(refereeFixture);
+      expect(await f.referee.read.supportsInterface(["0x01ffc9a7"])).to.equal(true); // ERC165
+      expect(await f.referee.read.supportsInterface(["0x805f2132"])).to.equal(true); // onReport(bytes,bytes)
+      expect(await f.referee.read.supportsInterface(["0xdeadbeef"])).to.equal(false);
     });
   });
 });

@@ -1,0 +1,6 @@
+{
+  "chainSelectorName": "monad-testnet",
+  "chessAddress": "0x7dd1ca9c5992e4e4af60039abeecbbb2e5c51d95",
+  "refereeAddress": "0x7bb28b305f3df3c9b7ae080f18b43ac902547076",
+  "gasLimit": "600000"
+}

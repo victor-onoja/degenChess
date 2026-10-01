@@ -18,8 +18,8 @@ A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39
 
 - **Win:** the winner gets the loser's balance minus the loser's capture gains.
 - **Draw:** each player keeps their capture-adjusted balance.
-- **Fee:** 2.5% of the pot on settlement, paid to the contract owner.
-- **Ending a game:** resign, accept a draw offer, or claim a win when your opponent's move timer runs out. A checkmated player who won't resign loses on timeout.
+- **Fee:** 2.5% of the pot on settlement.
+- **Ending a game:** checkmate and rule draws are settled by the referee. You can also resign, agree a draw, or claim a win when your opponent's move timer runs out.
 - **Cancel:** the creator can cancel and get a full refund until someone joins.
 - **Game keys:** each player can register a second, prompt-free key for a game. It can move, offer or accept draws and claim timeouts, but never resign, cancel or withdraw. MON sent with `createGame`/`joinGame` is forwarded to it for gas.
 
@@ -42,12 +42,14 @@ New players get gas (MON) and test dollars from `/api/drip`, a faucet that only 
 
 Every move is recorded on-chain, and turn order is enforced. That's also how the two browsers stay in sync, with no backend. The contract keeps the board (one `uint256`, 4 bits per square) so it can do capture accounting itself, including en passant, castling and promotion.
 
-It does **not** check full chess legality, because that is too expensive on-chain. Each client replays the moves with chess.js and flags any illegal on-chain move. For disputes, the contract owner can call `arbitrate(gameId, result)`.
+It does **not** check full chess legality in Solidity, because that is too expensive per move. A **Chainlink CRE workflow** is the referee instead ([cre/README.md](cre/README.md)): it fires on every move, replays the game with chess.js, and settles it through the `ChessReferee` contract. Checkmates and rule draws are declared automatically, and an illegal move forfeits the game, capture gains included. The owner can still call `arbitrate` as a fallback, and a stalled game ends on timeout.
 
 ## Project layout
 
 ```text
 contracts/DegenChess.sol     game contract
+contracts/ChessReferee.sol   receives Chainlink CRE verdicts and settles games
+cre/                         the referee workflow (Chainlink CRE)
 contracts/test/MockUSD.sol   mintable test dollar (tUSD) for testnet, local dev and tests
 test/DegenChess.test.js      contract tests, including random legal games cross-checked against chess.js
 scripts/deploy.js            deploy (also deploys MockUSD unless PAYMENT_TOKEN is set)

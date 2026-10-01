@@ -1,11 +1,15 @@
 import { hardhat, monadTestnet } from "wagmi/chains";
+import { MONAD_TESTNET } from "./deployments";
 
-// Configure via .env.local (see .env.example).
-export const CHAIN = process.env.NEXT_PUBLIC_CHAIN === "localhost" ? hardhat : monadTestnet;
-export const IS_LOCAL = CHAIN.id === hardhat.id;
+// NEXT_PUBLIC_CHAIN=localhost points the app at `npx hardhat node` (addresses from .env.local, see
+// .env.example). Anything else uses the Monad testnet deployment recorded in src/deployments.ts.
+export const IS_LOCAL = process.env.NEXT_PUBLIC_CHAIN === "localhost";
+export const CHAIN = IS_LOCAL ? hardhat : monadTestnet;
 
-export const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS ?? "") as `0x${string}`;
-export const TOKEN_ADDRESS = (process.env.NEXT_PUBLIC_TOKEN_ADDRESS ?? "") as `0x${string}`;
+const address = (local: string | undefined, live: string) => ((IS_LOCAL ? local : live) ?? "") as `0x${string}`;
+export const CONTRACT_ADDRESS = address(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, MONAD_TESTNET.chess);
+export const TOKEN_ADDRESS = address(process.env.NEXT_PUBLIC_TOKEN_ADDRESS, MONAD_TESTNET.token);
+
 export const TOKEN_SYMBOL = process.env.NEXT_PUBLIC_TOKEN_SYMBOL ?? "tUSD";
 export const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS ?? 6);
 /** The testnet stake token (MockUSD) lets anyone mint; hide the faucet for a real stablecoin. */

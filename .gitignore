@@ -46,3 +46,9 @@ yarn-error.log*
 
 # raw 3D art (large; optimised models go in public/models)
 /art
+
+# Chainlink CRE
+/cre/.env
+/cre/**/node_modules
+/cre/**/wasm
+/cre/**/*.wasm

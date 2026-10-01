@@ -46,6 +46,9 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
   const { data: withdrawn } = useReadContract({ ...chessContract, functionName: "getWithdrawn", args: [gameId] });
   const { data: moveTimeout } = useReadContract({ ...chessContract, functionName: "moveTimeout" });
   const { data: gameKeys } = useReadContract({ ...chessContract, functionName: "getGameKeys", args: [gameId] });
+  // When a referee (the Chainlink CRE workflow's contract) is registered, finished games settle themselves.
+  const { data: arbiter } = useReadContract({ ...chessContract, functionName: "arbiter" });
+  const hasReferee = !!arbiter && arbiter !== ZERO_ADDRESS;
 
   const { data: keyGas } = useBalance({
     address: gameKey ?? undefined,
@@ -175,16 +178,21 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
 
   let boardNotice: string | null = null;
   if (illegalAt !== null) {
-    boardNotice = `Move ${illegalAt + 1} on-chain is not a legal chess move (modified client?). Ask the contract owner to arbitrate.`;
+    boardNotice = hasReferee
+      ? `Move ${illegalAt + 1} is not a legal chess move. The referee is forfeiting the game for whoever played it.`
+      : `Move ${illegalAt + 1} on-chain is not a legal chess move (modified client?). Ask the contract owner to arbitrate.`;
   } else if (active && game.isCheckmate()) {
-    boardNotice =
-      myColor === turn
+    boardNotice = hasReferee
+      ? `Checkmate${myColor ? (myColor === turn ? " - you lost" : " - you won") : ""}. The referee is settling the game...`
+      : myColor === turn
         ? "Checkmate - you lost. Resign to settle the game."
         : myColor
           ? "Checkmate! Your opponent should resign; otherwise claim the win when their move timer runs out."
           : "Checkmate.";
   } else if (active && game.isDraw()) {
-    boardNotice = "The position is drawn by the rules of chess. Offer / accept a draw to settle.";
+    boardNotice = hasReferee
+      ? "Drawn by the rules of chess. The referee is settling the game..."
+      : "The position is drawn by the rules of chess. Offer / accept a draw to settle.";
   }
 
   const resultText =

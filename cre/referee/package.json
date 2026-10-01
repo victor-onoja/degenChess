@@ -1,0 +1,17 @@
+{
+  "name": "degenchess-referee",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test judge.test.ts"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "^1.23.0",
+    "chess.js": "^1.4.0",
+    "viem": "^2.57.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}
