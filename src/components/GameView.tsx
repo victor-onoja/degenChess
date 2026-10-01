@@ -10,6 +10,7 @@ import { chessContract, POLL_MS, Result, Status, useGame } from "../lib/contract
 import { encodeMove, replay } from "../lib/moves";
 import { formatDuration, formatToken, sameAddress, shortAddress, ZERO_ADDRESS } from "../lib/format";
 import { isMuted, setMuted, sfx } from "../lib/sound";
+import { useElementSize } from "../lib/useElementSize";
 import { AccountBar } from "./AccountBar";
 import { withApproval } from "./Lobby";
 
@@ -17,8 +18,6 @@ const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
 const VIEW_PREF = "degenchess.view";
 
-// Roughly the height of the scoreboard and the action dock, which float over the arena.
-const HUD_INSETS = { top: 170, bottom: 150 };
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
 const PIECE_SYMBOL: Record<string, string> = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
 
@@ -85,6 +84,17 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
     setMutedState(isMuted());
     setCanFullscreen(typeof document.documentElement.requestFullscreen === "function");
   }, []);
+  // The HUD takes real space above and below the board; the arena frames itself in what's left.
+  const [topEl, setTopEl] = useState<HTMLElement | null>(null);
+  const [midEl, setMidEl] = useState<HTMLElement | null>(null);
+  const [bottomEl, setBottomEl] = useState<HTMLElement | null>(null);
+  const topSize = useElementSize(topEl);
+  const midSize = useElementSize(midEl);
+  const bottomSize = useElementSize(bottomEl);
+  // Minimized HUD: a slim score strip and a one-line dock, for more board. Default on phones.
+  const [compact, setCompact] = useState(false);
+  useEffect(() => setCompact(window.innerWidth < 640), []);
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void document.documentElement.requestFullscreen().catch(() => {});
@@ -222,12 +232,20 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
     ]);
   const hasAccount = !!address || account.returning;
 
+  // Round so small layout shifts (a status line wrapping) don't re-frame the camera.
+  const insets = { top: Math.ceil(topSize.height / 24) * 24, bottom: Math.ceil(bottomSize.height / 24) * 24 };
+  const boardWidth = Math.max(Math.floor(Math.min(midSize.width, midSize.height)) - 16, 0);
+  // The one-line dock is only used mid-game when nothing needs the player's attention.
+  const needsAttention =
+    !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || (!myTurn && timeLeft <= 0);
+  const slimDock = compact && !needsAttention;
+
   return (
-    <div className="fixed inset-0 z-10 overflow-hidden bg-[#060908]">
-      {view === "3d" ? (
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#060908]">
+      {view === "3d" && (
         <Arena3D
           immersive
-          insets={HUD_INSETS}
+          insets={insets}
           history={arenaHistory}
           orientation={myColor ?? "w"}
           movable={canMove && !pendingMove ? myColor : null}
@@ -235,39 +253,23 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
           onMove={(from, to, promotion) => void submitMove(from, to, promotion)}
           captureLabel={(kind: PieceSymbol) => `+${formatToken(pieceValue(kind))} ${TOKEN_SYMBOL}`}
         />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center px-3 pb-48 pt-36">
-          <div className="w-full" style={{ maxWidth: "min(100%, calc(100dvh - 22rem))" }}>
-            <Chessboard
-              id={`game-${gameId}`}
-              position={pendingMove?.fen ?? game.fen()}
-              boardOrientation={myColor === "b" ? "black" : "white"}
-              arePiecesDraggable={canMove}
-              isDraggablePiece={({ piece }) => piece[0] === myColor}
-              onPieceDrop={(from, to) => {
-                void submitMove(from, to);
-                return true;
-              }}
-              onPromotionPieceSelect={(piece, from, to) => {
-                if (!piece || !from || !to) return false;
-                void submitMove(from, to, piece[1].toLowerCase());
-                return true;
-              }}
-              customSquareStyles={squareStyles}
-              customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
-              customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
-            />
-          </div>
-        </div>
       )}
 
       {/* Top HUD: navigation, view controls and the scoreboard. Only the controls catch clicks. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3">
+      <div ref={setTopEl} className="pointer-events-none relative z-10 flex flex-col gap-2 p-3">
         <div className="flex items-center justify-between gap-2">
           <button className="btn-ghost pointer-events-auto" onClick={onExit}>
             &larr; Lobby
           </button>
           <div className="pointer-events-auto flex gap-2">
+            <button
+              className="btn-ghost"
+              aria-label={compact ? "Expand HUD" : "Minimize HUD"}
+              title={compact ? "Show details" : "Minimize for more board"}
+              onClick={() => setCompact(!compact)}
+            >
+              {compact ? "▾" : "▴"}
+            </button>
             <button className="btn-ghost" onClick={() => chooseView(view === "3d" ? "2d" : "3d")} title="Switch board view">
               {view === "3d" ? "2D" : "3D"}
             </button>
@@ -295,17 +297,35 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
         </div>
 
         <section className="glass pointer-events-auto mx-auto w-full max-w-2xl px-3 py-2">
-          <div className="flex items-center gap-2">
-            {plate("w")}
-            <div className="shrink-0 px-1 text-center text-[11px] leading-tight opacity-75">
-              <div>Game #{gameId.toString()}</div>
-              <div>{formatToken(info.stake)} each</div>
+          {compact ? (
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <span className={`text-[#3dff8b] ${active && turn === "w" ? "underline" : ""}`}>
+                🐂 {formatToken(info.whiteBalance)}
+                {myColor === "w" ? " (you)" : ""}
+              </span>
+              <div className="stake-bar flex-1">
+                <div style={{ width: `${bullShare}%` }} />
+              </div>
+              <span className={`text-[#ff6b84] ${active && turn === "b" ? "underline" : ""}`}>
+                {myColor === "b" ? "(you) " : ""}
+                {formatToken(info.blackBalance)} 🐻
+              </span>
             </div>
-            {plate("b")}
-          </div>
-          <div className="stake-bar mt-2">
-            <div style={{ width: `${bullShare}%` }} />
-          </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                {plate("w")}
+                <div className="shrink-0 px-1 text-center text-[11px] leading-tight opacity-75">
+                  <div>Game #{gameId.toString()}</div>
+                  <div>{formatToken(info.stake)} each</div>
+                </div>
+                {plate("b")}
+              </div>
+              <div className="stake-bar mt-2">
+                <div style={{ width: `${bullShare}%` }} />
+              </div>
+            </>
+          )}
           <p className="mt-1 text-center text-xs">
             <span className="font-bold">{statusLine}</span>
             {active && (
@@ -319,8 +339,48 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
         </section>
       </div>
 
+      {/* The board's space. In 3D it is empty (the arena shows through); in 2D it holds the flat board. */}
+      <div ref={setMidEl} className={`relative z-10 min-h-0 flex-1 ${view === "3d" ? "pointer-events-none" : ""}`}>
+        {view === "2d" && boardWidth > 0 && (
+          <div className="flex h-full items-center justify-center">
+            {/* The board measures its container; passing boardWidth directly breaks its drag-and-drop setup. */}
+            <div style={{ width: boardWidth }}>
+            <Chessboard
+              id={`game-${gameId}`}
+              position={pendingMove?.fen ?? game.fen()}
+              boardOrientation={myColor === "b" ? "black" : "white"}
+              arePiecesDraggable={canMove}
+              isDraggablePiece={({ piece }) => piece[0] === myColor}
+              onPieceDrop={(from, to) => {
+                void submitMove(from, to);
+                return true;
+              }}
+              onPromotionPieceSelect={(piece, from, to) => {
+                if (!piece || !from || !to) return false;
+                void submitMove(from, to, piece[1].toLowerCase());
+                return true;
+              }}
+              customSquareStyles={squareStyles}
+              customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
+              customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+            />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Bottom dock: what you can do right now. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-3">
+      <div ref={setBottomEl} className="pointer-events-none relative z-10 p-3">
+        {slimDock ? (
+          <div className="glass pointer-events-auto mx-auto flex w-full max-w-2xl items-center gap-2 px-3 py-2">
+            <p className="min-w-0 flex-1 truncate text-sm">
+              {pending ? `${pending}...` : myTurn ? "Your move - tap a piece." : `Waiting for ${shortAddress(opponent)}...`}
+            </p>
+            <button className="btn-ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
+              ⋯
+            </button>
+          </div>
+        ) : (
         <div className="glass pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
           {boardNotice && <p className="text-sm text-yellow-300">{boardNotice}</p>}
 
@@ -454,6 +514,7 @@ export function GameView({ gameId, onExit }: { gameId: bigint; onExit: () => voi
           {info.status === Status.Cancelled && <p className="text-sm">This game was cancelled and refunded.</p>}
           {myColor === null && info.status !== Status.Open && <p className="text-sm opacity-80">You are spectating.</p>}
         </div>
+        )}
       </div>
     </div>
   );

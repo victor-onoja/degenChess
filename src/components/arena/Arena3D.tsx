@@ -507,7 +507,7 @@ function CameraRig({
     const cam = camera as THREE.PerspectiveCamera;
     if (!controls) return;
 
-    const key = `${orientation}:${attract}:${size.width}x${size.height}`;
+    const key = `${orientation}:${attract}:${size.width}x${size.height}:${insets?.top ?? 0}:${insets?.bottom ?? 0}`;
     if (fitted.current !== key) {
       fitted.current = key;
       const aspect = size.width / size.height;

@@ -12,15 +12,16 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **One-line description:** Chess where every capture pays: stake dollars, take a piece, take its value, with one passkey tap and no wallet.
 
-**Repo URL:** https://github.com/victor-onoja/degenChess
+**Repo URL:** <https://github.com/victor-onoja/degenChess>
 
-**Live link (Monad testnet):** https://degen-chess.vercel.app
+**Live link (Monad testnet):** <https://degen-chess.vercel.app>
 
 **Contract (Monad testnet, chain 10143):** `0x60f552d97862ad8b1697443e48cf0e75182168cb`
 
 **Primary track:** Consumer Products & Payments
 
 **Sponsor bounties:**
+
 - Best Mera-Powered UX on Monad (Monad Foundation). Mera is the whole account layer.
 - **TODO, pick one if built:** Best workflow with CRE (Chainlink) for automatic move-legality arbitration, or Best Use of Envio for the lobby and leaderboard.
 
@@ -48,6 +49,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 **First users:** online chess players who already bet informally (side bets in clubs, Discord servers and streams), and crypto-native players who want a skill game with stakes rather than a slot machine.
 
 **Go-to-market:**
+
 1. **Chess streamers and clubs.** A staked game with money visibly flying on every capture is watchable. Sponsor small stakes for streamer matches and club nights; every viewer gets a "play the streamer's opening for $1" link.
 2. **Share links as the growth loop.** A game is a URL. Creating one produces a link that opens straight into the 3D board with a "Join for $1" button and one-tap sign-up, so every challenge sent to a friend is an acquisition.
 3. **Crypto communities.** Bulls vs Bears is a ready-made rivalry: weekly community-vs-community matches with a leaderboard.
@@ -66,6 +68,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 > **Built since the hackathon started:** a new contract (the earlier prototype's payout maths locked funds), per-game keys so moves need no prompts, the Mera account layer, the faucet, the 3D arena and the redesign.
 >
 > **Where we'd value help:**
+>
 > 1. Move legality isn't enforced on-chain. A modified client can submit an illegal capture, and today only the contract owner can reverse it. Is a Chainlink CRE workflow that validates moves and arbitrates the right fix for a hackathon, or should we validate on-chain?
 > 2. Mera: anything we should do for session scoping or recovery beyond a contract-scoped game key and a 30-minute idle lock?
 > 3. Monad's reserve-balance rule cost us a day. Is there a recommended gas-sponsorship pattern for brand-new accounts instead of a faucet?

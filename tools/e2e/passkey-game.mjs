@@ -30,6 +30,7 @@ async function player(n) {
     },
   });
   page.on("pageerror", (e) => console.log(`[P${n} pageerror]`, e.message.slice(0, 300)));
+  page.on("console", (m) => m.type() === "error" && !/404|Failed to load resource/.test(m.text()) && console.log(`[P${n} console]`, m.text().slice(0, 400)));
   /** Number of passkey ceremonies so far (each assertion bumps the credential's sign counter). */
   const prompts = async () => {
     const { credentials } = await cdp.send("WebAuthn.getCredentials", { authenticatorId });
@@ -44,7 +45,11 @@ const idle = (p) =>
   p.page.waitForFunction(() => !document.querySelector(".Toastify__toast--loading"), null, { timeout: 60000 });
 async function click(p, name) {
   const b = p.page.getByRole("button", { name, exact: true });
-  await b.waitFor({ timeout: 60000 });
+  await b.waitFor({ timeout: 60000 }).catch(async (e) => {
+    await shot(p, `fail-p${p.n}`);
+    console.log(`  P${p.n} page text:`, (await p.page.locator("body").innerText()).replace(/\n+/g, " | ").slice(0, 500));
+    throw e;
+  });
   await b.click({ timeout: 60000 });
 }
 
@@ -108,6 +113,26 @@ await move(p1, p2, "f1", "c4");
 await move(p2, p1, "b8", "c6");
 assertEqual(await p1.prompts(), before[0], "P1 prompts during moves (unchanged)");
 assertEqual(await p2.prompts(), before[1], "P2 prompts during moves (unchanged)");
+
+if (SHOTS) {
+  step("Phone-sized window: minimized HUD in 2D and 3D (screenshots only)");
+  await p2.page.setViewportSize({ width: 390, height: 844 });
+  await p2.page.waitForTimeout(600);
+  await shot(p2, "phone-2d-full");
+  await click(p2, "Minimize HUD");
+  await p2.page.waitForTimeout(600);
+  await shot(p2, "phone-2d-min");
+  await click(p2, "3D");
+  await p2.page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Mustering"), null, { timeout: 90000 });
+  await p2.page.waitForTimeout(3000);
+  await shot(p2, "phone-3d-min");
+  await p2.page.getByRole("button", { name: "Expand HUD" }).first().click();
+  await p2.page.waitForTimeout(1500);
+  await shot(p2, "phone-3d-full");
+  await click(p2, "2D");
+  await p2.page.setViewportSize({ width: 1300, height: 900 });
+  await p2.page.waitForTimeout(600);
+}
 
 step("Stateless test: wipe P2's storage mid-game and reload");
 const gameUrl = p2.page.url();
