@@ -19,6 +19,19 @@ const lastDrip = new Map<string, number>();
 // The faucet account sends one request at a time so concurrent sign-ups can't collide on nonces.
 let queue: Promise<unknown> = Promise.resolve();
 
+// Block of the faucet's most recent transaction (per server instance), for the reserve-balance gap.
+let lastTxBlock = 0n;
+const QUIET_BLOCKS = 4n;
+
+/** Waits until the faucet has been quiet for a few blocks (bounded, so local chains don't hang). */
+async function quietGap(publicClient: { getBlockNumber: () => Promise<bigint> }) {
+  const deadline = Date.now() + 3000;
+  while (lastTxBlock > 0n && Date.now() < deadline) {
+    if ((await publicClient.getBlockNumber()) >= lastTxBlock + QUIET_BLOCKS) return;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}
+
 function faucetAccount() {
   const key = process.env.FAUCET_PRIVATE_KEY ?? (IS_LOCAL ? HARDHAT_KEY : process.env.DEPLOYER_PRIVATE_KEY);
   if (!key) return null;
@@ -46,7 +59,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       publicClient.readContract({ address: TOKEN_ADDRESS, abi: erc20Abi, functionName: "balanceOf", args: [address] }),
     ]);
 
+    // Monad's reserve-balance rule: an account under 10 MON can only send MON in a transaction if it
+    // has sent nothing else in the previous 3 blocks. So the MON transfer goes first, after a quiet
+    // gap, and its receipt is checked; the mint (no value) follows.
     let blockNumber: bigint | undefined;
+    if (mon < MON_FLOOR) {
+      for (let attempt = 0; ; attempt++) {
+        await quietGap(publicClient);
+        const hash = await wallet.sendTransaction({ to: address, value: MON_DRIP });
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        lastTxBlock = receipt.blockNumber;
+        if (receipt.status === "success") {
+          blockNumber = receipt.blockNumber;
+          break;
+        }
+        if (attempt >= 2) throw new Error("MON transfer reverted (faucet balance or reserve rule)");
+      }
+    }
     if (usd < USD_FLOOR) {
       const hash = await wallet.writeContract({
         address: TOKEN_ADDRESS,
@@ -54,11 +83,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         functionName: "mint",
         args: [address, USD_DRIP],
       });
-      blockNumber = (await publicClient.waitForTransactionReceipt({ hash })).blockNumber;
-    }
-    if (mon < MON_FLOOR) {
-      const hash = await wallet.sendTransaction({ to: address, value: MON_DRIP });
-      blockNumber = (await publicClient.waitForTransactionReceipt({ hash })).blockNumber;
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      lastTxBlock = receipt.blockNumber;
+      if (receipt.status !== "success") throw new Error("mint reverted");
+      blockNumber ??= receipt.blockNumber;
     }
     return { funded: blockNumber !== undefined, blockNumber: blockNumber?.toString() };
   };

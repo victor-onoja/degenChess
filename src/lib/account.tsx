@@ -74,24 +74,35 @@ const SETTLE_BLOCKS = 3n; // Monad checks gas affordability against the balance 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export function shortError(e: unknown): string {
-  if (e instanceof BaseError) return e.shortMessage.split("\n")[0];
+  if (e instanceof BaseError) {
+    // Monad reports balance problems as a generic "invalid parameters" RPC error; the detail says why.
+    if (/insufficient balance|reserve balance/i.test(e.details ?? "")) return "not enough MON for gas yet - try again in a moment";
+    return e.shortMessage.split("\n")[0];
+  }
   return e instanceof Error ? e.message : String(e);
 }
 
 const isLaggedBalance = (e: unknown) =>
   e instanceof BaseError && /insufficient balance|reserve balance/i.test(`${e.details} ${e.shortMessage}`);
 
-/** Wait until funds received in `block` are spendable (or ~1.5s on chains that don't keep producing blocks). */
+/** Wait until `block` is 3 blocks deep (bounded, for chains that don't keep producing blocks). */
 async function settle(block: bigint) {
-  const deadline = Date.now() + 1500;
+  const deadline = Date.now() + 3000;
   while (Date.now() < deadline) {
     if ((await publicClient.getBlockNumber()) >= block + SETTLE_BLOCKS) return;
     await sleep(250);
   }
 }
 
+// Monad's reserve-balance rule: an account under 10 MON may only send MON along with a transaction
+// if it has sent nothing else in the previous 3 blocks. Track each sender's last transaction so
+// value-carrying calls (the ones that forward gas to the game key) wait out that gap.
+const lastTxBlock = new Map<string, bigint>();
+
 async function write(account: LocalAccount, call: Call): Promise<TransactionReceipt> {
   const wallet = createWalletClient({ account, chain: CHAIN, transport: http() });
+  const previous = lastTxBlock.get(account.address);
+  if ((call.value ?? 0n) > 0n && previous !== undefined) await settle(previous + 1n);
   for (let attempt = 0; ; attempt++) {
     try {
       const request = call as any;
@@ -99,10 +110,11 @@ async function write(account: LocalAccount, call: Call): Promise<TransactionRece
       // Monad bills the gas limit, so keep the safety margin small.
       const hash = await wallet.writeContract({ ...request, gas: (estimate * 115n) / 100n });
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      lastTxBlock.set(account.address, receipt.blockNumber);
       if (receipt.status !== "success") throw new Error("transaction reverted");
       return receipt;
     } catch (e) {
-      if (attempt < 3 && isLaggedBalance(e)) {
+      if (attempt < 5 && isLaggedBalance(e)) {
         await sleep(1200);
         continue;
       }
