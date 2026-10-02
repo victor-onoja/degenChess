@@ -54,3 +54,4 @@ yarn-error.log*
 /cre/**/*.wasm
 /cre/**/.cre_build_tmp.js
 .referee-state.json
+/deploy/referee/.env*

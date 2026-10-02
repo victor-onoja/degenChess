@@ -1,8 +1,9 @@
 # The DegenChess referee as a container: watches the game contract and runs the Chainlink CRE
 # workflow whenever a game needs a verdict. See deploy/referee/README.md.
-FROM node:24-bookworm-slim
+# Debian 13: the CRE CLI needs glibc 2.38 or newer.
+FROM node:24-trixie-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates git \
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates git gnupg \
     && rm -rf /var/lib/apt/lists/*
 
 # Bun (builds the TypeScript workflow) and the Chainlink CRE CLI.
