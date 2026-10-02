@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useBalance, useReadContract, useReadContracts } from "wagmi";
 import { parseEther } from "viem";
 import { Chessboard } from "react-chessboard";
@@ -126,6 +126,13 @@ export function GameView({
       localStorage.setItem(VIEW_PREF, next);
     } catch {}
   };
+  // The square picked on the flat board for tap-to-move, and a pending promotion choice.
+  const [picked, setPicked] = useState<Square | null>(null);
+  const [promotionTo, setPromotionTo] = useState<Square | null>(null);
+  useEffect(() => {
+    setPicked(null);
+    setPromotionTo(null);
+  }, [history.length]);
   const legalTargets = useCallback(
     (from: Square) => game.moves({ square: from, verbose: true }).map((m) => ({ to: m.to, promotion: !!m.promotion })),
     [game]
@@ -216,13 +223,64 @@ export function GameView({
     return true;
   }
 
+  // Tap to move on the flat board: tap one of your pieces, then a highlighted square.
+  const pickedTargets = picked && canMove ? legalTargets(picked) : [];
+
+  function onSquareClick(square: Square) {
+    if (!canMove) return;
+    const target = picked ? pickedTargets.find((t) => t.to === square) : undefined;
+    if (picked && target) {
+      if (target.promotion) return setPromotionTo(square);
+      setPicked(null);
+      void submitMove(picked, square);
+      return;
+    }
+    const piece = game.get(square);
+    setPicked(piece && piece.color === myColor && square !== picked ? square : null);
+  }
+
   const lastMove = history[history.length - 1];
-  const squareStyles = lastMove
-    ? {
-        [lastMove.from]: { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.45)" },
-        [lastMove.to]: { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.9)" },
-      }
-    : {};
+  const squareStyles: Record<string, CSSProperties> = {};
+  if (lastMove) {
+    squareStyles[lastMove.from] = { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.45)" };
+    squareStyles[lastMove.to] = { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.9)" };
+  }
+  if (picked) squareStyles[picked] = { boxShadow: "inset 0 0 0 4px #ffc233" };
+  for (const t of pickedTargets) {
+    squareStyles[t.to] = game.get(t.to)
+      ? { background: "radial-gradient(circle, transparent 58%, rgba(255, 194, 51, 0.85) 60%)" }
+      : { background: "radial-gradient(circle, rgba(255, 194, 51, 0.9) 18%, transparent 20%)" };
+  }
+
+  // Everything the flat board needs, shared by the 2D and split views.
+  const boardProps = {
+    id: `game-${gameId}`,
+    position: pendingMove?.fen ?? game.fen(),
+    boardOrientation: (myColor === "b" ? "black" : "white") as "white" | "black",
+    arePiecesDraggable: canMove,
+    isDraggablePiece: ({ piece }: { piece: string }) => piece[0] === myColor,
+    onPieceDragBegin: () => setPicked(null),
+    onPieceDrop: (from: Square, to: Square) => {
+      void submitMove(from, to);
+      return true;
+    },
+    onSquareClick,
+    showPromotionDialog: promotionTo !== null,
+    promotionToSquare: promotionTo,
+    onPromotionPieceSelect: (piece?: string, from?: Square, to?: Square) => {
+      const source = from ?? picked;
+      const target = to ?? promotionTo;
+      setPicked(null);
+      setPromotionTo(null);
+      if (!piece || !source || !target) return false;
+      void submitMove(source, target, piece[1].toLowerCase());
+      return true;
+    },
+    customSquareStyles: squareStyles,
+    customPieces: BOARD_PIECES,
+    customDarkSquareStyle: { backgroundColor: "#44359a" },
+    customLightSquareStyle: { backgroundColor: "#7a68ee" },
+  };
 
   const captures = { w: [] as string[], b: [] as string[] };
   for (const m of history) if (m.captured) captures[m.color].push(m.captured);
@@ -246,12 +304,9 @@ export function GameView({
         : myColor
           ? "Checkmate! Your opponent should resign; otherwise claim the win when their move timer runs out."
           : "Checkmate.";
-  } else if (active && clockOn && timeLeft <= 0) {
-    boardNotice = myTurn
-      ? "You ran out of time. Your opponent can claim the win."
-      : myColor
-        ? "Your opponent ran out of time. Claim the win below."
-        : "Out of time.";
+  } else if (flagFell && !(myColor && keyReady)) {
+    // Players with a ready board see who ran out of time, and the claim, in the dock below.
+    boardNotice = myColor ? "Out of time. Unlock to see what happens next." : "Out of time. The other side can now claim the win.";
   } else if (active && game.isDraw()) {
     boardNotice = hasReferee
       ? "Drawn by the rules of chess. The referee is settling the game..."
@@ -448,52 +503,14 @@ export function GameView({
           <div className="flex h-full items-center justify-center">
             {/* The board measures its container; passing boardWidth directly breaks its drag-and-drop setup. */}
             <div style={{ width: boardWidth }}>
-              <Chessboard
-                id={`game-${gameId}`}
-                position={pendingMove?.fen ?? game.fen()}
-                boardOrientation={myColor === "b" ? "black" : "white"}
-                arePiecesDraggable={canMove}
-                isDraggablePiece={({ piece }) => piece[0] === myColor}
-                onPieceDrop={(from, to) => {
-                  void submitMove(from, to);
-                  return true;
-                }}
-                onPromotionPieceSelect={(piece, from, to) => {
-                  if (!piece || !from || !to) return false;
-                  void submitMove(from, to, piece[1].toLowerCase());
-                  return true;
-                }}
-                customSquareStyles={squareStyles}
-                customPieces={BOARD_PIECES}
-                customDarkSquareStyle={{ backgroundColor: "#44359a" }}
-                customLightSquareStyle={{ backgroundColor: "#7a68ee" }}
-              />
+              <Chessboard {...boardProps} />
             </div>
           </div>
         )}
         {mode === "split" && splitWidth > 0 && (
           <div className="flex h-full items-center justify-center gap-3 px-3">
             <div className="shrink-0" style={{ width: splitWidth }}>
-              <Chessboard
-                id={`game-${gameId}`}
-                position={pendingMove?.fen ?? game.fen()}
-                boardOrientation={myColor === "b" ? "black" : "white"}
-                arePiecesDraggable={canMove}
-                isDraggablePiece={({ piece }) => piece[0] === myColor}
-                onPieceDrop={(from, to) => {
-                  void submitMove(from, to);
-                  return true;
-                }}
-                onPromotionPieceSelect={(piece, from, to) => {
-                  if (!piece || !from || !to) return false;
-                  void submitMove(from, to, piece[1].toLowerCase());
-                  return true;
-                }}
-                customSquareStyles={squareStyles}
-                customPieces={BOARD_PIECES}
-                customDarkSquareStyle={{ backgroundColor: "#44359a" }}
-                customLightSquareStyle={{ backgroundColor: "#7a68ee" }}
-              />
+              <Chessboard {...boardProps} />
             </div>
             <div className="shrink-0" style={{ width: splitWidth, height: splitWidth }}>
               <Arena3D
@@ -526,21 +543,23 @@ export function GameView({
           {boardNotice && <p className="text-sm font-bold">{boardNotice}</p>}
 
           {/* What each side has taken: the pieces themselves, and what they were worth. */}
-          <div className="flex justify-between gap-3 text-xs">
+          <div className="grid grid-cols-2 gap-3 text-xs">
             {(["w", "b"] as const).map((c) => (
-              <span key={c} className={`flex min-w-0 items-center gap-1 ${c === "b" ? "flex-row-reverse" : ""}`}>
-                <span className="soft shrink-0">{c === "w" ? "White" : "Black"} took</span>
+              <div key={c} className={`flex min-w-0 flex-col gap-0.5 ${c === "b" ? "items-end text-right" : ""}`}>
+                <span>
+                  <span className="soft">{c === "w" ? "White" : "Black"} took</span>{" "}
+                  <span className="amount">
+                    +{formatToken(captures[c].reduce((sum, p) => sum + pieceValue(p), 0n))} {TOKEN_SYMBOL}
+                  </span>
+                </span>
                 {captures[c].length > 0 && (
-                  <span className="flex min-w-0 flex-wrap">
+                  <span className={`flex min-w-0 flex-wrap ${c === "b" ? "justify-end" : ""}`}>
                     {captures[c].map((p, i) => (
                       <PieceIcon key={i} kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-5 w-5" />
                     ))}
                   </span>
                 )}
-                <span className="amount shrink-0">
-                  +{formatToken(captures[c].reduce((sum, p) => sum + pieceValue(p), 0n))} {TOKEN_SYMBOL}
-                </span>
-              </span>
+              </div>
             ))}
           </div>
 
