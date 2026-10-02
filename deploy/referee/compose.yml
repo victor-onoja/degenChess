@@ -1,0 +1,12 @@
+name: degenchess-referee
+services:
+  referee:
+    build: .
+    restart: unless-stopped
+    env_file: .env # CRE_API_KEY and CRE_ETH_PRIVATE_KEY
+    volumes:
+      - state:/state
+    logging:
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  state:

@@ -8,7 +8,7 @@
 // Needs: `cre login` done once, `bun install` in cre/referee, and cre/.env containing
 // CRE_ETH_PRIVATE_KEY=<key with testnet MON>.     Run: node tools/referee-watch.mjs
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { createPublicClient, http, parseAbi, parseAbiItem } from "viem";
 import { monadTestnet } from "viem/chains";
@@ -61,8 +61,19 @@ async function onMove(log) {
   if (!delivered) settling.delete(gameId);
 }
 
-let from = process.env.FROM_BLOCK ? BigInt(process.env.FROM_BLOCK) : await pub.getBlockNumber();
-console.log(`referee watching ${config.chessAddress} from block ${from}`);
+// Remember how far we got, so a restart catches up on the moves made while it was down.
+// (State is per contract: a redeploy starts fresh.)
+const STATE_FILE = process.env.STATE_FILE ?? ".referee-state.json";
+function savedBlock() {
+  try {
+    const state = JSON.parse(readFileSync(STATE_FILE, "utf8"));
+    return state.chessAddress === config.chessAddress ? BigInt(state.nextBlock) : null;
+  } catch {
+    return null;
+  }
+}
+let from = process.env.FROM_BLOCK ? BigInt(process.env.FROM_BLOCK) : (savedBlock() ?? (await pub.getBlockNumber()));
+console.log(`referee watching ${config.chessAddress} from block ${from}${existsSync(STATE_FILE) ? " (resumed)" : ""}`);
 for (;;) {
   try {
     const head = await pub.getBlockNumber();
@@ -71,9 +82,11 @@ for (;;) {
       const logs = await pub.getLogs({ address: config.chessAddress, event: MOVE_MADE, fromBlock: from, toBlock: to });
       for (const log of logs) await onMove(log);
       from = to + 1n;
+      writeFileSync(STATE_FILE, JSON.stringify({ chessAddress: config.chessAddress, nextBlock: from.toString() }));
     }
   } catch (e) {
     console.error("poll failed:", e.shortMessage ?? e.message);
   }
-  await new Promise((r) => setTimeout(r, 1500));
+  // Poll every 1.5s when caught up; go flat out while catching up after downtime.
+  if (from > (await pub.getBlockNumber().catch(() => from))) await new Promise((r) => setTimeout(r, 1500));
 }
