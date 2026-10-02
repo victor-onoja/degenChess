@@ -43,7 +43,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 - The name is **DegenChess**. This is the only fixed part of the identity.
 - The owner's statement of what the product is (2 October 2026): "DegenChess is for chess lovers and web3 lovers. It's chess, but in a web3 reality or dimension. The pieces are alive and are all valuable; that's why this chess is the way it is. Every piece wants to win for the player. Even if you played chess previously, DegenChess is different, and there's real money involved."
 - The identity must be its own. Directions borrowed from another world (a trading terminal, a newspaper column, a fight poster, a clock) were rejected for "tying to something else".
-- Confirmed: the pieces stay recognisable chess pieces but are alive (eyes, breathing, reactions), and each carries its value visibly. The lobby is "the Yard": every game is a small living board showing its real position.
+- Confirmed: the pieces stay recognisable chess pieces but are alive (breathing, turning towards the play, reactions; the owner rejected stuck-on eyes), and each carries its value visibly. The lobby is "the Yard": every game is a small living board showing its real position.
 - Colours, type and the logo treatment are open. The two sides no longer need to be Bulls and Bears.
 - The owner wants the result to read as the work of people with real design ability, "creative and unexpected", with every element looking intentional. Earlier versions were judged "ugly and basic".
 - What would make a polished result feel wrong: a template look (hero followed by rows of cards), and busyness that makes Play or a game hard to find.

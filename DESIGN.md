@@ -4,7 +4,7 @@ The living board. DegenChess is chess in a dimension where the pieces are alive 
 
 ## Principles
 
-1. The pieces are the characters. They stay recognisable chess pieces, with eyes, breath and reactions. Nothing else on a screen competes with them.
+1. The pieces are the characters. They stay recognisable chess pieces, with breath and reactions; there are no faces. Nothing else on a screen competes with them.
 2. Gold means money and only money: piece cores, amounts, the action that stakes. It is never decoration.
 3. Everything sits on the board's grid. Controls are squares and ranks of squares, flat and square-cornered. No cards, no glass, no gradients on text.
 4. Real data only. Every small board in the Yard is a real game at its real position.
@@ -43,7 +43,7 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 
 ## The 3D board
 
-The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a pair of plain oval eyes and a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, blink, look at the last move and at the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
+The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, turn towards the last move and the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
 
 ## Motion
 

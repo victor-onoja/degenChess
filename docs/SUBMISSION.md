@@ -40,7 +40,7 @@ There is no wallet to install and no seed phrase. You tap "Play now", confirm wi
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-The game is played on a full-screen 3D board where the pieces are alive. They are a classic Staunton set, bone white against obsidian black, but each has eyes that follow the play and a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
+The game is played on a full-screen 3D board where the pieces are alive. They are a classic Staunton set, bone white against obsidian black, but each turns towards the play, breathes, and carries a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
 
 Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
 
@@ -83,7 +83,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ## Videos
 
-Record at 1080p. Use the production site for everything except the arena close-ups, where `/arena` (the chain-free sandbox with "Play demo game") gives clean footage. Judges must be able to open the links: upload as unlisted YouTube or Loom and test them in a private window.
+Record at 1080p. Use the production site; the landing page's backdrop replays a demo game for clean close-ups. Judges must be able to open the links: upload as unlisted YouTube or Loom and test them in a private window.
 
 ### Technical demo (3 minutes)
 

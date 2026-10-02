@@ -11,7 +11,7 @@ import { sfx } from "../../lib/sound";
 import { ChessPiece, PIECE_HEIGHT, type PieceParts } from "./pieces3d";
 import { ANATOMY } from "../../lib/pieceShapes";
 
-// The arena: a living board floating in an indigo dimension. Pieces watch the play, breathe, blink,
+// The arena: a living board floating in an indigo dimension. Pieces turn towards the play, breathe,
 // flinch when attacked and lean in when they can capture. Each carries its share of the stake as a
 // glowing core; a capture tears the core out of the victim and it flies into the piece that took it.
 
@@ -74,7 +74,7 @@ function Piece({
   gaze: MutableRefObject<Gaze>;
   selectable: boolean;
   selected: boolean;
-  /** Attacked by an enemy piece: trembles, eyes wide. */
+  /** Attacked by an enemy piece: trembles. */
   nervous: boolean;
   /** Has a capture available on this turn: leans in. */
   eager: boolean;
@@ -90,7 +90,6 @@ function Piece({
   const lift = useRef(0);
   const fall = useRef(0);
   const swell = useRef(0);
-  const blink = useRef({ next: now() + 1 + Math.random() * 4, until: 0 });
   const phase = useMemo(() => Math.random() * 10, []);
   const home = piece.color === "w" ? Math.PI : 0; // pieces face the enemy
 
@@ -168,7 +167,6 @@ function Piece({
     // Turn a little towards whatever has everyone's attention.
     group.getWorldPosition(scratch);
     let look = 0;
-    let lookUp = 0;
     if (gaze.current.until > now()) {
       const dx = gaze.current.target.x - scratch.x;
       const dz = gaze.current.target.z - scratch.z;
@@ -176,11 +174,6 @@ function Piece({
       let rel = Math.atan2(dx, dz) - home;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
       look = THREE.MathUtils.clamp(rel, -1.1, 1.1);
-      lookUp = THREE.MathUtils.clamp(
-        (gaze.current.target.y - (scratch.y + ANATOMY[piece.kind].eyeY)) / Math.max(Math.hypot(dx, dz), 0.6),
-        -0.4,
-        0.5
-      );
     } else {
       look = Math.sin(t * 0.31) * 0.35; // idle: glance around
     }
@@ -191,19 +184,6 @@ function Piece({
     mesh.rotation.set(Math.cos(heading) * lean, home + turn.current, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
 
     const p = parts.current;
-    if (p?.eyes) {
-      p.eyes.rotation.y += ((settled ? look * 0.65 : 0) - p.eyes.rotation.y) * 0.15;
-      p.eyes.rotation.x += (-lookUp - p.eyes.rotation.x) * 0.15;
-      const b = blink.current;
-      const wall = now();
-      if (wall > b.next) {
-        b.until = wall + 0.11;
-        b.next = wall + 2.5 + Math.random() * 4.5;
-      }
-      const closed = wall < b.until || toppled;
-      const wide = nervous ? 1.25 : eager ? 0.75 : 1;
-      p.eyes.scale.set(1, closed ? 0.12 : wide, 1);
-    }
     if (p?.core) {
       const beat = heartbeat(t * (nervous ? 1.6 : 1));
       p.core.visible = !coreGone;
