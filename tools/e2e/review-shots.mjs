@@ -27,5 +27,25 @@ for (const [label, viewport] of [
   await page.screenshot({ path: `${DIR}/${label}-watch.png` });
   await ctx.close();
 }
+// Signed in and then locked, at phone size: the header must stay out of the board's way.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+  const page = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal", hasResidentKey: true, hasUserVerification: true, isUserVerified: true, hasPrf: true, automaticPresenceSimulation: true },
+  });
+  await page.goto(APP);
+  await page.getByLabel("Username").fill(`shot_${Date.now().toString(36).slice(-5)}`);
+  await page.getByRole("button", { name: "Play now", exact: true }).click();
+  await page.getByText("You're in.").waitFor({ timeout: 60000 });
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: `${DIR}/mobile-signed-in.png`, fullPage: true });
+  await page.getByRole("button", { name: "Lock", exact: true }).click();
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `${DIR}/mobile-locked.png` });
+  await ctx.close();
+}
 await browser.close();
 console.log("shots in", DIR);

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { parseEventLogs, parseUnits } from "viem";
 import { degenChessAbi } from "../contracts/abi";
-import { TOKEN_DECIMALS, TOKEN_MINTABLE, TOKEN_SYMBOL } from "../config";
+import { TOKEN_DECIMALS, TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { TIME_CONTROLS } from "../lib/clock";
-import { chessContract, Result, Status, tokenContract, useTokenState } from "../lib/contract";
+import { chessContract, Result, Status, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress } from "../lib/format";
 import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
@@ -55,8 +55,8 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     <div className="yard__start">
       <h3 className="panel-title">Start a board</h3>
 
-      <p id="stake-label" className="soft mb-1 text-sm">
-        Your stake, in {TOKEN_SYMBOL}. Your opponent matches it.
+      <p id="stake-label" className="field-label">
+        Stake <span className="soft font-normal">in {TOKEN_SYMBOL}, matched by your opponent</span>
       </p>
       <div className="rank mb-4" role="group" aria-labelledby="stake-label">
         {STAKE_PRESETS.map((preset) => (
@@ -74,8 +74,8 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         />
       </div>
 
-      <p id="clock-label" className="soft mb-1 text-sm">
-        Minutes each, plus seconds added per move.
+      <p id="clock-label" className="field-label">
+        Clock <span className="soft font-normal">minutes each + seconds per move</span>
       </p>
       <div className="rank mb-4" role="group" aria-labelledby="clock-label">
         {TIME_CONTROLS.map((c) => (
@@ -91,35 +91,23 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
       </button>
       <p className="soft mt-2 text-sm">
         {short ? (
-          <span style={{ color: "var(--alert)" }}>You have {formatToken(balance)} {TOKEN_SYMBOL}. Lower the stake or mint more.</span>
+          <span style={{ color: "var(--alert)" }}>You have {formatToken(balance)} {TOKEN_SYMBOL}. Lower the stake.</span>
         ) : hasAccount ? (
           "Staking asks for your passkey. Moves never do."
         ) : (
           "You play White and move first."
         )}
       </p>
-      {TOKEN_MINTABLE && address && (
-        <button
-          className="link mt-1 text-sm"
-          disabled={busy !== null}
-          onClick={() =>
-            sendMoney(`Mint test ${TOKEN_SYMBOL}`, (id) => [
-              { ...tokenContract, functionName: "mint", args: [id.address, parseUnits("100", TOKEN_DECIMALS)] },
-            ])
-          }
-        >
-          Mint 100 test {TOKEN_SYMBOL}
-        </button>
-      )}
     </div>
   );
 }
 
-type Tab = "open" | "live" | "done";
+type Tab = "open" | "live" | "done" | "mine";
 const TABS: { id: Tab; name: string; empty: string }[] = [
   { id: "open", name: "Waiting", empty: "Nobody is waiting for an opponent. Start a board and send the link to someone." },
   { id: "live", name: "Live", empty: "No games are being played right now." },
   { id: "done", name: "Finished", empty: "No finished games yet." },
+  { id: "mine", name: "Yours", empty: "You have not finished a game yet." },
 ];
 
 /** True on phone-width screens, where the yard shows two boards at a time instead of three. */
@@ -154,9 +142,12 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     open: games.filter((g) => g.status === Status.Open),
     live: [...live.filter(mine), ...live.filter((g) => !mine(g))],
     done: games.filter((g) => g.status === Status.Finished),
+    mine: games.filter((g) => g.status === Status.Finished && mine(g)),
   };
   // Until a tab is chosen, show the first that has anything in it.
-  const tab = picked ?? TABS.find((t) => lists[t.id].length > 0)?.id ?? "open";
+  // Your own results only make sense once you have an account.
+  const tabs = TABS.filter((t) => t.id !== "mine" || address);
+  const tab = picked ?? tabs.find((t) => lists[t.id].length > 0)?.id ?? "open";
   const perPage = narrow ? 2 : 3;
   const pages = Math.max(Math.ceil(lists[tab].length / perPage), 1);
   const current = Math.min(page, pages - 1);
@@ -197,11 +188,11 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     <div className="yard">
       <StartBoard onOpenGame={onOpenGame} />
       <div>
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          {TABS.map((t) => (
+        <div className="mb-5 grid grid-flow-col auto-cols-fr gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+          {tabs.map((t) => (
             <button
               key={t.id}
-              className="ghost"
+              className="ghost justify-center !px-2 text-sm sm:!px-4 sm:text-base"
               aria-pressed={tab === t.id}
               onClick={() => {
                 setPicked(t.id);

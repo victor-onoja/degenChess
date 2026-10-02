@@ -34,6 +34,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Claude Code's local skills and settings (the owner's tools, not part of the app)
+/.claude/
+
 # typescript
 *.tsbuildinfo
 

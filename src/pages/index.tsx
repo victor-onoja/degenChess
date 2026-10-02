@@ -7,7 +7,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CONTRACT_ADDRESS } from "../config";
 import { useDegenAccount } from "../lib/account";
-import { cleanName, NAME_RULE } from "../lib/names";
+import { cleanName, NAME_RULE, useNames } from "../lib/names";
 import { AccountBar } from "../components/AccountBar";
 import { GameView } from "../components/GameView";
 import { Seo } from "../components/Seo";
@@ -37,7 +37,9 @@ const FACTS = [
 
 const Home: NextPage = () => {
   const router = useRouter();
-  const { address, returning, busy, onboarding, signUp, unlock } = useDegenAccount();
+  const { address, unlocked, returning, busy, onboarding, signUp, unlock, signOut } = useDegenAccount();
+  const { nameOf } = useNames([address]);
+  const lockedName = nameOf(address);
   const hasAccount = address !== null || returning;
   const [name, setName] = useState("");
 
@@ -66,8 +68,8 @@ const Home: NextPage = () => {
         <AttractArena />
         <div className="stage__ground" />
 
-        <header className="absolute inset-x-0 top-0 z-10 mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 sm:px-10 sm:py-6">
-          <Wordmark />
+        <header className="absolute inset-x-0 top-0 z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-5 py-4 sm:px-10 sm:py-6">
+          <Wordmark compact={hasAccount} />
           {hasAccount ? (
             <AccountBar />
           ) : (
@@ -82,6 +84,14 @@ const Home: NextPage = () => {
             <h1 className="statement" style={hasAccount ? { fontSize: "clamp(2rem, 6vw, 3.6rem)" } : undefined}>
               Every piece has skin in the game.
             </h1>
+            {hasAccount && !unlocked && (
+              <p className="soft mt-3 text-sm">
+                Locked in this tab{lockedName ? ` as ${lockedName}` : ""}.{" "}
+                <button className="link" disabled={busy !== null} onClick={signOut}>
+                  Switch account
+                </button>
+              </p>
+            )}
             {!hasAccount && (
               <>
                 <p className="lead mt-4">
@@ -120,15 +130,13 @@ const Home: NextPage = () => {
 
       <main className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-10">
         <section id="yard" className="scroll-mt-6 pt-16">
-          <h2 className="heading">The yard</h2>
-          <p className="lead mt-3">Every board out here is a real game. Sit down at one, watch one, or start your own.</p>
           {onboarding && (
             <p className="mt-6 max-w-xl font-bold">
               You&apos;re in. 1 passkey tap, {onboarding.seconds.toFixed(1)}s to your first transaction on Monad. No seed phrase,
               no extension.
             </p>
           )}
-          <div className="mt-9">
+          <div className={onboarding ? "mt-9" : ""}>
             {CONTRACT_ADDRESS ? (
               <Yard onOpenGame={openGame} />
             ) : (
