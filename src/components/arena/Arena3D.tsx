@@ -10,6 +10,7 @@ import { trackPieces, type MoveEvent, type TrackedPiece } from "../../lib/pieces
 import { sfx } from "../../lib/sound";
 import { ChessPiece, PIECE_HEIGHT, type PieceParts } from "./pieces3d";
 import { ANATOMY } from "../../lib/pieceShapes";
+import { Figure, readArmy, type Army, type FigureParts } from "./armies";
 
 // The arena: a living board floating in an indigo dimension. Pieces turn towards the play, breathe,
 // flinch when attacked and lean in when they can capture. Each carries its share of the stake as a
@@ -68,6 +69,7 @@ function Piece({
   inCheck,
   toppled,
   onPick,
+  army,
 }: {
   piece: TrackedPiece;
   animation: Animation;
@@ -82,10 +84,13 @@ function Piece({
   /** A mated king falls over. */
   toppled: boolean;
   onPick: (square: Square) => void;
+  /** Played by a character instead of a chess piece. */
+  army?: Army | null;
 }) {
   const outer = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
-  const parts = useRef<PieceParts>(null);
+  const parts = useRef<PieceParts & Partial<FigureParts>>(null);
+  const figure = !!army;
   const turn = useRef(0);
   const lift = useRef(0);
   const fall = useRef(0);
@@ -136,14 +141,19 @@ function Piece({
           const k = since / tl.hop;
           const ease = k * k * (3 - 2 * k);
           const arc = Math.sin(Math.PI * k);
-          const height = (piece.kind === "n" ? 1.25 : 0.55) + (role === "mover" && event.victimId ? 0.45 : 0);
+          // Characters walk (a knight leaps); chess pieces hop with a squash and stretch.
+          const height = figure
+            ? piece.kind === "n"
+              ? 0.7
+              : 0.06
+            : (piece.kind === "n" ? 1.25 : 0.55) + (role === "mover" && event.victimId ? 0.45 : 0);
           x = fx + dx * ease;
           z = fz + dz * ease;
           y = arc * height;
-          stretch = 1 + arc * 0.16;
-          lean = Math.cos(Math.PI * k) * 0.22;
+          stretch = figure ? 1 : 1 + arc * 0.16;
+          lean = figure ? 0 : Math.cos(Math.PI * k) * 0.22;
           heading = Math.atan2(dx, dz);
-        } else if (since < tl.total) {
+        } else if (since < tl.total && !figure) {
           const after = since - tl.hop;
           stretch = 1 - 0.24 * Math.exp(-after * 13) * Math.cos(after * 34);
         }
@@ -181,9 +191,22 @@ function Piece({
 
     mesh.position.y = y + lift.current;
     mesh.scale.set(breath / Math.sqrt(stretch), breath * stretch, breath / Math.sqrt(stretch));
-    mesh.rotation.set(Math.cos(heading) * lean, home + turn.current, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
-
     const p = parts.current;
+    if (figure) {
+      // A walking character faces where it is going, then turns back to face the enemy.
+      const facing = settled ? home + turn.current : heading;
+      let d = facing - mesh.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      mesh.rotation.set(0, mesh.rotation.y + d * (settled ? 0.12 : 0.35), 0, "YXZ");
+      const since = event ? now() - start : Infinity;
+      const tl = event ? timeline(event) : null;
+      if (toppled) p?.act?.("Death_A");
+      else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("1H_Melee_Attack_Chop");
+      else p?.act?.(settled ? "Idle" : "Walking_A");
+    } else {
+      mesh.rotation.set(Math.cos(heading) * lean, home + turn.current, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
+    }
+
     if (p?.core) {
       const beat = heartbeat(t * (nervous ? 1.6 : 1));
       p.core.visible = !coreGone;
@@ -216,7 +239,7 @@ function Piece({
         </mesh>
       )}
       <group ref={body} rotation-y={home}>
-        <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />
+        {army ? <Figure ref={parts as never} army={army} kind={piece.kind} /> : <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />}
       </group>
     </group>
   );
@@ -580,6 +603,67 @@ export interface ArenaProps {
   insets?: { top: number; bottom: number };
 }
 
+// ------------------------------------------------------------------ the multiverse
+
+/** A checkerboard texture for the far boards: other games, in other dimensions. */
+function ghostTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 64;
+  const g = canvas.getContext("2d")!;
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    g.fillStyle = (r + f) % 2 ? "#3b2e8c" : "#8573ee";
+    g.fillRect(f * 8, r * 8, 8, 8);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+/**
+ * Other boards hang in the void around this one, tilted at their own angles and drifting: the same
+ * game being played in other dimensions. Cheap: a dozen textured slabs, no lights, no shadows.
+ */
+function Multiverse() {
+  const boards = useMemo(() => {
+    const texture = ghostTexture();
+    const rand = (() => {
+      let seed = 7;
+      return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    })();
+    return Array.from({ length: 14 }, (_, i) => {
+      const angle = (i / 14) * Math.PI * 2 + rand() * 0.4;
+      const distance = 16 + rand() * 18;
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.16 + rand() * 0.22, fog: false, depthWrite: false });
+      return {
+        position: [Math.cos(angle) * distance, -4 + rand() * 12, Math.sin(angle) * distance] as [number, number, number],
+        rotation: [rand() * 1.4 - 0.7, rand() * Math.PI, rand() * 1.2 - 0.6] as [number, number, number],
+        size: 3 + rand() * 4,
+        spin: (rand() - 0.5) * 0.08,
+        material,
+      };
+    });
+  }, []);
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  useFrame((_, delta) => {
+    boards.forEach((b, i) => {
+      const mesh = refs.current[i];
+      if (mesh) mesh.rotation.y += b.spin * delta;
+    });
+  });
+  return (
+    <group>
+      {boards.map((b, i) => (
+        <mesh key={i} ref={(m) => {
+            refs.current[i] = m;
+          }} position={b.position} rotation={b.rotation} material={b.material}>
+          <boxGeometry args={[b.size, 0.06, b.size]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function Scene({
   history,
   orientation,
@@ -590,7 +674,8 @@ function Scene({
   attract = false,
   insets,
   askPromotion,
-}: ArenaProps & { askPromotion: (from: Square, to: Square) => void }) {
+  army,
+}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; army: Army | null }) {
   const { pieces, last } = useMemo(() => trackPieces(history), [history]);
 
   // Animate only when exactly one new move arrives; anything else (first load, undo) snaps.
@@ -705,6 +790,7 @@ function Scene({
       </Environment>
 
       <Motes />
+      <Multiverse />
       <Board selected={selected} targets={targets.map((t) => t.to)} lastMove={lastMove} onPick={pick} onPoint={pointAt} />
       {pieces.map((piece) => (
         <Piece
@@ -719,6 +805,7 @@ function Scene({
           inCheck={piece.kind === "k" && (checked === piece.color || mated === piece.color)}
           toppled={piece.kind === "k" && mated === piece.color}
           onPick={pick}
+          army={piece.color === "w" ? army : null}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (
@@ -745,6 +832,8 @@ function Scene({
 }
 
 export default function Arena3D(props: ArenaProps) {
+  // Which army plays White: the classic set, or characters (a saved choice, or ?army= to preview).
+  const [army] = useState(readArmy);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   // Phones skip shadows and glow, and render at a lower resolution; any device drops further if it struggles.
   const [lite, setLite] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 640);
@@ -774,7 +863,7 @@ export default function Arena3D(props: ArenaProps) {
             </Html>
           }
         >
-          <Scene {...props} askPromotion={(from, to) => setPromotion({ from, to })} />
+          <Scene {...props} army={army} askPromotion={(from, to) => setPromotion({ from, to })} />
         </Suspense>
         <OrbitControls makeDefault enablePan={false} enabled={!props.attract} minPolarAngle={0.2} maxPolarAngle={1.38} />
         {!lite && (
