@@ -22,17 +22,17 @@ export default function Models() {
         <title>DegenChess models</title>
       </Head>
       <div className="flex flex-wrap items-center gap-2 p-3">
-        <span className="logo mr-2 text-xs">Models</span>
+        <span className="panel-title !mb-0 mr-2">Models</span>
         {ARMIES.map((a) => (
-          <button key={a} className={`btn-ghost capitalize ${army === a ? "!border-[#00ff66]" : ""}`} onClick={() => setArmy(a)}>
+          <button key={a} className="ghost capitalize" aria-pressed={army === a} onClick={() => setArmy(a)}>
             {a}
           </button>
         ))}
-        <span className="mx-2 opacity-40">|</span>
+        <span className="mx-1" />
         {CLIPS.map((c) => (
           <button
             key={c}
-            className={`btn-ghost capitalize ${clip === c ? "!border-[#00ff66]" : ""}`}
+            className="ghost capitalize" aria-pressed={clip === c}
             onClick={() => {
               setClip(c);
               setReplay((n) => n + 1); // clicking the current clip again replays it
@@ -41,7 +41,7 @@ export default function Models() {
             {c}
           </button>
         ))}
-        <span className="ml-2 text-sm opacity-70">Click a clip again to replay it. A red note means that clip is missing from the file.</span>
+        <span className="soft ml-2 text-sm">Click a clip again to replay it. A red note means that clip is missing from the file.</span>
       </div>
       <div className="min-h-0 flex-1">
         <ModelViewer army={army} clip={clip} replay={replay} />

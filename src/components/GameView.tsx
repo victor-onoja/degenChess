@@ -16,7 +16,9 @@ import { useElementSize } from "../lib/useElementSize";
 import { AccountBar } from "./AccountBar";
 import { parseEventLogs } from "viem";
 import { degenChessAbi } from "../contracts/abi";
-import { withApproval } from "./Lobby";
+import { withApproval } from "../lib/stake";
+import { Icon } from "./Icon";
+import { PieceIcon } from "./PieceIcon";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
@@ -24,7 +26,19 @@ const VIEW_PREF = "degenchess.view";
 type ViewMode = "3d" | "2d" | "split";
 
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
-const PIECE_SYMBOL: Record<string, string> = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
+// The flat board uses the same living pieces as everywhere else.
+const BOARD_PIECES = Object.fromEntries(
+  (["w", "b"] as const).flatMap((color) =>
+    (["p", "n", "b", "r", "q", "k"] as const).map((kind) => [
+      `${color}${kind.toUpperCase()}`,
+      ({ squareWidth }: { squareWidth: number }) => (
+        <div style={{ width: squareWidth, height: squareWidth, padding: "4% 6% 2%" }}>
+          <PieceIcon kind={kind} color={color} className="h-full w-full" />
+        </div>
+      ),
+    ])
+  )
+);
 
 function useNow() {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -150,11 +164,11 @@ export function GameView({
   }, [info, address]);
 
   const shell = (content: ReactNode) => (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-[#060908] p-4">
-      <div className="glass flex flex-col items-center gap-4 p-6">
+    <div className="fixed inset-0 z-10 flex items-center justify-center bg-[var(--field-deep)] p-4">
+      <div className="slab flex flex-col items-center gap-4 p-6">
         {content}
-        <button className="btn-ghost" onClick={onExit}>
-          &larr; Lobby
+        <button className="ghost" onClick={onExit}>
+          <Icon name="back" /> Yard
         </button>
       </div>
     </div>
@@ -201,8 +215,8 @@ export function GameView({
   const lastMove = history[history.length - 1];
   const squareStyles = lastMove
     ? {
-        [lastMove.from]: { background: "rgba(0, 255, 65, 0.25)" },
-        [lastMove.to]: { background: "rgba(0, 255, 65, 0.4)" },
+        [lastMove.from]: { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.45)" },
+        [lastMove.to]: { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.9)" },
       }
     : {};
 
@@ -241,7 +255,7 @@ export function GameView({
   }
 
   const resultText =
-    info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "Bulls win" : "Bears win";
+    info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
 
   const total = info.whiteBalance + info.blackBalance;
   const bullShare = total > 0n ? Number((info.whiteBalance * 1000n) / total) / 10 : 50;
@@ -249,7 +263,7 @@ export function GameView({
     info.status === Status.Finished
       ? `Finished - ${resultText}`
       : active
-        ? `${turn === "w" ? "Bulls" : "Bears"} to move`
+        ? `${turn === "w" ? "White" : "Black"} to move`
         : Status[info.status];
 
   const plate = (color: "w" | "b") => {
@@ -258,22 +272,18 @@ export function GameView({
     const balance = bull ? info.whiteBalance : info.blackBalance;
     const onMove = active && turn === color;
     return (
-      <div
-        className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-1 ${bull ? "" : "flex-row-reverse text-right"} ${
-          onMove ? (bull ? "turn-glow-bull" : "turn-glow-bear") : ""
-        }`}
-      >
-        <span className="text-2xl">{bull ? "🐂" : "🐻"}</span>
+      <div className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 ${bull ? "" : "flex-row-reverse text-right"} ${onMove ? "on-move" : ""}`}>
+        <PieceIcon kind="k" color={color} className="h-10 w-7 shrink-0" />
         <div className="min-w-0">
-          <div className="truncate text-xs opacity-75">
-            {bull ? "Bulls" : "Bears"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
+          <div className="soft truncate text-xs">
+            {bull ? "White" : "Black"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
             {myColor === color ? " (you)" : ""}
           </div>
-          <div className={`text-lg font-bold leading-tight ${bull ? "text-[#3dff8b]" : "text-[#ff6b84]"}`}>
-            {formatToken(balance)} <span className="text-xs font-medium opacity-70">{TOKEN_SYMBOL}</span>
+          <div className="amount text-lg leading-tight">
+            {formatToken(balance)} <span className="text-xs font-medium">{TOKEN_SYMBOL}</span>
           </div>
           {clockOn && info.status !== Status.Open && (
-            <div className={`font-mono text-sm font-bold ${onMove && clockLeft[color] < 20 ? "text-[#ffd23f]" : "text-white"}`}>
+            <div className="text-sm font-bold" style={onMove && clockLeft[color] < 20 ? { color: "var(--alert)" } : undefined}>
               {formatClock(clockLeft[color])}
             </div>
           )}
@@ -312,7 +322,7 @@ export function GameView({
   const slimDock = compact && !needsAttention;
 
   return (
-    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#060908]">
+    <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--field-deep)]">
       {mode === "3d" && (
         <Arena3D
           immersive
@@ -329,24 +339,25 @@ export function GameView({
       {/* Top HUD: navigation, view controls and the scoreboard. Only the controls catch clicks. */}
       <div ref={setTopEl} className="pointer-events-none relative z-10 flex flex-col gap-2 p-3">
         <div className="flex items-center justify-between gap-2">
-          <button className="btn-ghost pointer-events-auto" onClick={onExit}>
-            &larr; Lobby
+          <button className="ghost pointer-events-auto" onClick={onExit} aria-label="Back to the yard">
+            <Icon name="back" /> <span className="hidden sm:inline">Yard</span>
           </button>
           <div className="pointer-events-auto flex gap-2">
             <button
-              className="btn-ghost"
+              className="ghost"
               aria-label={compact ? "Expand HUD" : "Minimize HUD"}
               title={compact ? "Show details" : "Minimize for more board"}
               onClick={() => setCompact(!compact)}
             >
-              {compact ? "▾" : "▴"}
+              <Icon name={compact ? "down" : "up"} />
             </button>
             {/* Spectators always watch in 3D. */}
             {myColor !== null &&
               (["3d", "2d", "split"] as const).map((v) => (
                 <button
                   key={v}
-                  className={`btn-ghost ${mode === v ? "!border-[#00ff66] text-[#3dff8b]" : ""} ${v === "split" ? "hidden sm:inline-flex" : ""}`}
+                  className={`ghost ${v === "split" ? "hidden sm:inline-flex" : ""}`}
+                  aria-pressed={mode === v}
                   title={v === "split" ? "2D and 3D side by side" : `${v.toUpperCase()} board`}
                   onClick={() => chooseView(v)}
                 >
@@ -354,43 +365,45 @@ export function GameView({
                 </button>
               ))}
             <button
-              className="btn-ghost"
+              className="ghost"
               aria-label={muted ? "Unmute" : "Mute"}
               onClick={() => {
                 setMuted(!muted);
                 setMutedState(!muted);
               }}
             >
-              {muted ? "🔇" : "🔊"}
+              <Icon name={muted ? "soundOff" : "soundOn"} />
             </button>
             {canFullscreen && (
-              <button className="btn-ghost" aria-label="Fullscreen" onClick={toggleFullscreen}>
-                ⛶
+              <button className="ghost" aria-label="Fullscreen" onClick={toggleFullscreen}>
+                <Icon name="fullscreen" />
               </button>
             )}
             {unlocked && (
-              <button className="btn-ghost" aria-label="Lock" title="Wipe the game key from this tab" onClick={account.lock}>
-                🔒
+              <button className="ghost" aria-label="Lock" title="Wipe the game key from this tab" onClick={account.lock}>
+                <Icon name="lock" />
               </button>
             )}
           </div>
         </div>
 
-        <section className="glass pointer-events-auto mx-auto w-full max-w-2xl px-3 py-2">
+        <section className="slab pointer-events-auto mx-auto w-full max-w-2xl px-3 py-2">
           {compact ? (
             <div className="flex items-center gap-2 text-sm font-bold">
-              <span className={`text-[#3dff8b] ${active && turn === "w" ? "underline" : ""}`}>
-                🐂 {formatToken(info.whiteBalance)}
+              <span className={`flex items-center gap-1.5 ${active && turn === "w" ? "on-move" : ""}`}>
+                <PieceIcon kind="k" color="w" className="h-6 w-4" />
+                <span className="amount">{formatToken(info.whiteBalance)}</span>
                 {myColor === "w" ? " (you)" : ""}
                 {clockOn && active ? ` ${formatClock(clockLeft.w)}` : ""}
               </span>
-              <div className="stake-bar flex-1">
-                <div style={{ width: `${bullShare}%` }} />
+              <div className="split flex-1">
+                <div style={{ transform: `scaleX(${bullShare / 100})` }} />
               </div>
-              <span className={`text-[#ff6b84] ${active && turn === "b" ? "underline" : ""}`}>
+              <span className={`flex items-center gap-1.5 ${active && turn === "b" ? "on-move" : ""}`}>
                 {clockOn && active ? `${formatClock(clockLeft.b)} ` : ""}
                 {myColor === "b" ? "(you) " : ""}
-                {formatToken(info.blackBalance)} 🐻
+                <span className="amount">{formatToken(info.blackBalance)}</span>
+                <PieceIcon kind="k" color="b" className="h-6 w-4" />
               </span>
             </div>
           ) : (
@@ -403,15 +416,15 @@ export function GameView({
                 </div>
                 {plate("b")}
               </div>
-              <div className="stake-bar mt-2">
-                <div style={{ width: `${bullShare}%` }} />
+              <div className="split mt-2">
+                <div style={{ transform: `scaleX(${bullShare / 100})` }} />
               </div>
             </>
           )}
           <p className="mt-1 text-center text-xs">
             <span className="font-bold">{statusLine}</span>
             {active && (
-              <span className="opacity-70">
+              <span className="soft">
                 {" "}
                 &middot; ply {history.length + 1}
                 {clockOn
@@ -447,8 +460,9 @@ export function GameView({
                   return true;
                 }}
                 customSquareStyles={squareStyles}
-                customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
-                customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+                customPieces={BOARD_PIECES}
+                customDarkSquareStyle={{ backgroundColor: "#222a85" }}
+                customLightSquareStyle={{ backgroundColor: "#3a45b8" }}
               />
             </div>
           </div>
@@ -472,8 +486,9 @@ export function GameView({
                   return true;
                 }}
                 customSquareStyles={squareStyles}
-                customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
-                customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+                customPieces={BOARD_PIECES}
+                customDarkSquareStyle={{ backgroundColor: "#222a85" }}
+                customLightSquareStyle={{ backgroundColor: "#3a45b8" }}
               />
             </div>
             <div className="shrink-0" style={{ width: splitWidth, height: splitWidth }}>
@@ -494,23 +509,31 @@ export function GameView({
       {/* Bottom dock: what you can do right now. */}
       <div ref={setBottomEl} className="pointer-events-none relative z-10 p-3">
         {slimDock ? (
-          <div className="glass pointer-events-auto mx-auto flex w-full max-w-2xl items-center gap-2 px-3 py-2">
+          <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl items-center gap-2 px-3 py-2">
             <p className="min-w-0 flex-1 truncate text-sm">
               {pending ? `${pending}...` : myTurn ? "Your move - tap a piece." : `Waiting for ${label(opponent)}...`}
             </p>
-            <button className="btn-ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
-              ⋯
+            <button className="ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
+              <Icon name="more" />
             </button>
           </div>
         ) : (
-        <div className="glass pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
-          {boardNotice && <p className="text-sm text-yellow-300">{boardNotice}</p>}
+        <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
+          {boardNotice && <p className="text-sm font-bold">{boardNotice}</p>}
 
-          <div className="flex justify-between gap-3 text-xs opacity-85">
+          {/* What each side has taken: the pieces themselves, and what they were worth. */}
+          <div className="flex justify-between gap-3 text-xs">
             {(["w", "b"] as const).map((c) => (
-              <span key={c} className={c === "b" ? "text-right" : ""}>
-                {c === "w" ? "Bulls" : "Bears"} took {captures[c].map((p) => PIECE_SYMBOL[p]).join(" ") || "nothing yet"}{" "}
-                <span className="text-[#ffd23f]">
+              <span key={c} className={`flex min-w-0 items-center gap-1 ${c === "b" ? "flex-row-reverse" : ""}`}>
+                <span className="soft shrink-0">{c === "w" ? "White" : "Black"} took</span>
+                {captures[c].length > 0 && (
+                  <span className="flex min-w-0 flex-wrap">
+                    {captures[c].map((p, i) => (
+                      <PieceIcon key={i} kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-5 w-3.5" />
+                    ))}
+                  </span>
+                )}
+                <span className="amount shrink-0">
                   +{formatToken(captures[c].reduce((sum, p) => sum + pieceValue(p), 0n))} {TOKEN_SYMBOL}
                 </span>
               </span>
@@ -520,15 +543,18 @@ export function GameView({
           {info.status === Status.Open && myColor === "w" && (
             <>
               <p className="text-sm">Waiting for an opponent. Share game ID #{gameId.toString()} or this page&apos;s URL.</p>
-              <button className="btn-ghost" disabled={pending !== null} onClick={() => moneyCall("Cancel game", "cancelGame")}>
+              <button className="ghost" disabled={pending !== null} onClick={() => moneyCall("Cancel game", "cancelGame")}>
                 {pending ?? "Cancel & Refund"}
               </button>
             </>
           )}
 
-          {info.status === Status.Open && myColor === null && (
+          {info.status === Status.Open && myColor === null && !hasAccount && (
+            <p className="text-sm">This board is waiting for an opponent. Press Play now to sit down as Black.</p>
+          )}
+          {info.status === Status.Open && myColor === null && hasAccount && (
             <button
-              className="btn"
+              className="act"
               disabled={!hasAccount || pending !== null}
               onClick={() =>
                 sendMoney(`Stake ${formatToken(info.stake)} ${TOKEN_SYMBOL} & join`, async (id) =>
@@ -541,17 +567,17 @@ export function GameView({
                 )
               }
             >
-              {pending ?? (hasAccount ? `Join as Bears (${formatToken(info.stake)} ${TOKEN_SYMBOL})` : "Sign in below to join")}
+              {pending ?? `Join as Black (${formatToken(info.stake)} ${TOKEN_SYMBOL})`}
             </button>
           )}
 
           {active && myColor && !unlocked && (
-            <button className="btn" disabled={pending !== null} onClick={() => void account.unlock()}>
+            <button className="act" disabled={pending !== null} onClick={() => void account.unlock()}>
               Unlock with passkey to keep playing
             </button>
           )}
           {active && myColor && unlocked && !keyReady && gameKey && (
-            <button className="btn" disabled={pending !== null} onClick={() => topUpCall("Enable prompt-free moves")}>
+            <button className="act" disabled={pending !== null} onClick={() => topUpCall("Enable prompt-free moves")}>
               Enable prompt-free moves on this device
             </button>
           )}
@@ -559,13 +585,13 @@ export function GameView({
           {active && myColor && keyReady && (
             <>
               {lowMoveGas && (
-                <button className="btn" disabled={pending !== null} onClick={() => topUpCall("Top up move gas")}>
+                <button className="act" disabled={pending !== null} onClick={() => topUpCall("Top up move gas")}>
                   Move gas is running low - top up
                 </button>
               )}
               {drawOfferedByOpponent && (
                 <button
-                  className="btn"
+                  className="act"
                   disabled={pending !== null}
                   onClick={() => sendGame("Accept draw", { ...chessContract, functionName: "acceptDraw", args: [gameId] })}
                 >
@@ -574,7 +600,7 @@ export function GameView({
               )}
               {!myTurn && timeLeft <= 0 && (
                 <button
-                  className="btn"
+                  className="act"
                   disabled={pending !== null}
                   onClick={() => sendGame("Claim timeout win", { ...chessContract, functionName: "claimTimeout", args: [gameId] })}
                 >
@@ -582,7 +608,7 @@ export function GameView({
                 </button>
               )}
               <div className="flex items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm opacity-80">
+                <p className="min-w-0 flex-1 soft truncate text-sm">
                   {pending
                     ? `${pending}...`
                     : myTurn
@@ -590,14 +616,14 @@ export function GameView({
                       : `Waiting for ${label(opponent)} to move...`}
                 </p>
                 <button
-                  className="btn-ghost"
+                  className="ghost"
                   disabled={pending !== null || iOfferedDraw}
                   onClick={() => sendGame("Offer draw", { ...chessContract, functionName: "offerDraw", args: [gameId] })}
                 >
                   {iOfferedDraw ? "Draw offered" : "Offer draw"}
                 </button>
                 {/* Resigning settles money, so it is confirmed with the passkey rather than the game key. */}
-                <button className="btn danger !px-4 !py-2" disabled={pending !== null} onClick={() => moneyCall("Resign", "resign")}>
+                <button className="act act--sm danger" disabled={pending !== null} onClick={() => moneyCall("Resign", "resign")}>
                   Resign
                 </button>
               </div>
@@ -607,12 +633,12 @@ export function GameView({
           {info.status === Status.Finished && (
             <>
               <p className="text-center text-lg font-bold">
-                {info.result === Result.Draw ? "🤝 Draw" : `🏆 ${resultText}`}
-                <span className="block text-xs font-normal opacity-70">Balances above are final payouts after the 2.5% fee.</span>
+                {resultText}
+                <span className="soft block text-xs font-normal">Balances above are final payouts after the 2.5% fee.</span>
               </p>
               {myColor && (
                 <button
-                  className="btn"
+                  className="act"
                   disabled={pending !== null || alreadyWithdrawn || myBalance === 0n}
                   onClick={() => moneyCall("Withdraw", "withdraw")}
                 >
@@ -625,12 +651,12 @@ export function GameView({
               )}
               {myColor &&
                 (rematch ? (
-                  <button className="btn" onClick={() => onOpenGame(rematch.id)}>
+                  <button className="act" onClick={() => onOpenGame(rematch.id)}>
                     {label(opponent)} wants a rematch &rarr; game #{rematch.id.toString()}
                   </button>
                 ) : (
                   <button
-                    className="btn-ghost"
+                    className="ghost"
                     disabled={pending !== null}
                     onClick={async () => {
                       const receipt = await sendMoney(`Rematch for ${formatToken(info.stake)} ${TOKEN_SYMBOL}`, async (id) =>
@@ -646,7 +672,7 @@ export function GameView({
                       if (created) onOpenGame(created.args.gameId);
                     }}
                   >
-                    Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play Bulls)
+                    Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play White)
                   </button>
                 ))}
             </>
@@ -660,7 +686,7 @@ export function GameView({
           )}
 
           {info.status === Status.Cancelled && <p className="text-sm">This game was cancelled and refunded.</p>}
-          {myColor === null && info.status !== Status.Open && <p className="text-sm opacity-80">You are spectating.</p>}
+          {myColor === null && info.status !== Status.Open && <p className="soft text-sm">You are spectating.</p>}
         </div>
         )}
       </div>

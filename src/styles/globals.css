@@ -1,61 +1,224 @@
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  DegenChess: the living board.
+  An indigo field. Bone and obsidian are the two sides and the only solid surfaces.
+  Gold is light, and light means money: a core, an amount, or the action that stakes. Nothing else is gold.
+  Everything sits on the board's square module: controls are squares of a rank.
+*/
 :root {
-  --bull: #00ff66;
-  --bear: #ff3355;
-  --gold: #ffd23f;
-  --ink: #060908;
-  --text: #dff7e8;
+  --field: #161b52;
+  --field-deep: #0c0f33;
+  --sq-light: #3a45b8;
+  --sq-dark: #222a85;
+  --bone: #f1e9d6;
+  --bone-soft: #b9bde6; /* secondary text: bone pulled towards the field, never grey */
+  --obsidian: #0a0a14;
+  --gold: #ffc233;
+  --gold-hot: #ffe08a;
+  --alert: #ff5a45;
+  --line: rgba(241, 233, 214, 0.16);
+  --module: 56px; /* one square */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
 }
 
-html,
+html {
+  background: var(--field);
+  color-scheme: dark;
+  scrollbar-color: var(--sq-light) var(--field-deep);
+  scroll-behavior: smooth;
+}
+
 body {
-  padding: 0;
   margin: 0;
-  font-family: "Space Grotesk", system-ui, sans-serif;
-  font-size: 16px;
-  background-color: var(--ink);
-  color: var(--text);
+  background: var(--field);
+  color: var(--bone);
+  font-family: var(--display);
+  font-size: 17px;
+  line-height: 1.45;
+  font-variation-settings: "wdth" 100;
+  font-variant-numeric: tabular-nums lining-nums;
+  caret-color: var(--gold);
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--gold);
+  color: var(--obsidian);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--field-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sq-light);
+  border: 3px solid var(--field-deep);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  text-wrap: balance;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
 }
 
 input {
-  border: 1px solid rgba(0, 255, 102, 0.3);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.45);
-  color: var(--text);
   font: inherit;
-  outline: none;
+  color: var(--bone);
+  background: var(--field-deep);
+  border: 0;
+  border-radius: 0;
+  outline-offset: -2px;
+  min-width: 0;
 }
-input:focus {
-  border-color: var(--bull);
-  box-shadow: 0 0 0 3px rgba(0, 255, 102, 0.15);
+input::placeholder {
+  color: var(--bone-soft);
 }
 
 @layer components {
-  /* Frosted panel: readable over the 3D arena without hiding it. */
+  /* ---------------------------------------------------------------- type */
+
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    font-variation-settings: "wdth" 80;
+    text-decoration: none;
+  }
+
+  .statement {
+    font-weight: 800;
+    font-size: clamp(2.5rem, min(8.4vw, 12vh), 5.75rem);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    font-variation-settings: "wdth" 78;
+  }
+
+  .heading {
+    font-weight: 800;
+    font-size: clamp(1.9rem, 4.6vw, 3.1rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    font-variation-settings: "wdth" 82;
+  }
+
+  .lead {
+    max-width: 34rem;
+    color: var(--bone-soft);
+    font-size: 1.1rem;
+  }
+
+  .soft {
+    color: var(--bone-soft);
+  }
+
+  /* Gold belongs to money. */
+  .amount {
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .link {
+    color: var(--bone);
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+    cursor: pointer;
+  }
+  .link:hover {
+    color: var(--gold-hot);
+  }
+  .link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ---------------------------------------------------------------- surfaces */
+
+  /* A solid slab of the deep field. No glass. */
+  .slab,
   .glass,
   .retro-panel {
-    background: rgba(9, 15, 11, 0.72);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(0, 255, 102, 0.2);
-    border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    background: var(--field-deep);
+    border: 1px solid var(--line);
+    border-radius: 3px;
   }
   .retro-panel {
     padding: 20px;
   }
 
-  .panel-title {
-    @apply mb-3 text-lg font-bold tracking-wide;
-    color: #fff;
+  /* ---------------------------------------------------------------- the rank: controls as squares of the board */
+
+  .rank {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .rank__square {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--module);
+    padding: 6px 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--bone);
+    background: var(--sq-dark);
+    transition: background-color 0.18s var(--ease-out), color 0.18s var(--ease-out);
+  }
+  .rank__square:nth-child(odd) {
+    background: var(--sq-light);
+  }
+  .rank__square:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: #4d58d6;
+  }
+  .rank__square[aria-pressed="true"] {
+    background: var(--bone);
+    color: var(--obsidian);
+  }
+  .rank__square small {
+    font-size: 0.72rem;
+    font-weight: 500;
+    opacity: 0.75;
+  }
+  input.rank__square {
+    text-align: center;
+    width: 100%;
+  }
+  input.rank__square:focus-visible {
+    outline-offset: -3px;
   }
 
+  /* ---------------------------------------------------------------- actions */
+
+  /* The action that stakes, or starts: a gold square. */
+  .act,
   .btn,
   .retro-button,
   .retro-button-sm {
@@ -63,271 +226,431 @@ input:focus {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    border-radius: 12px;
-    font-weight: 700;
-    color: #03140a;
-    background: linear-gradient(180deg, #3dff8b, #00d957);
-    box-shadow: 0 4px 18px rgba(0, 255, 102, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    min-height: var(--module);
+    padding: 0 26px;
+    border-radius: 3px;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+    color: var(--obsidian);
+    background: var(--gold);
+    white-space: nowrap;
+    transition: background-color 0.18s var(--ease-out), transform 0.18s var(--ease-out);
   }
-  .btn,
-  .retro-button {
-    padding: 11px 20px;
-  }
-  .retro-button-sm {
-    padding: 6px 14px;
-    font-size: 0.9rem;
-  }
+  .act:hover:not(:disabled),
   .btn:hover:not(:disabled),
   .retro-button:hover:not(:disabled),
   .retro-button-sm:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 26px rgba(0, 255, 102, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    background: var(--gold-hot);
   }
-  .btn:active:not(:disabled),
-  .retro-button:active:not(:disabled) {
-    transform: translateY(0);
-    filter: brightness(0.92);
+  .act:active:not(:disabled),
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
   }
+  .act:disabled,
   .btn:disabled,
   .retro-button:disabled,
   .retro-button-sm:disabled {
-    opacity: 0.45;
+    background: var(--sq-dark);
+    color: var(--bone-soft);
     cursor: not-allowed;
   }
-  .btn.danger,
-  .retro-button.danger {
-    color: #fff;
-    background: linear-gradient(180deg, #ff5a75, #e02447);
-    box-shadow: 0 4px 18px rgba(255, 51, 85, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  .act--sm,
+  .retro-button-sm {
+    min-height: 38px;
+    padding: 0 16px;
+    font-size: 0.95rem;
+  }
+  /* A plain bone action: for things that do not move money. */
+  .act--bone {
+    background: var(--bone);
+  }
+  .act--bone:hover:not(:disabled) {
+    background: #fff;
+  }
+  .act.danger,
+  .btn.danger {
+    background: var(--alert);
+    color: var(--obsidian);
+  }
+  .act.danger:hover:not(:disabled),
+  .btn.danger:hover:not(:disabled) {
+    background: #ff7d6b;
   }
 
+  .ghost,
   .btn-ghost {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-width: 40px;
-    height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0 12px;
-    border-radius: 12px;
+    border-radius: 3px;
     font-weight: 700;
-    color: var(--text);
-    background: rgba(9, 15, 11, 0.72);
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    transition: border-color 0.12s ease, background 0.12s ease;
+    color: var(--bone);
+    background: var(--field-deep);
+    border: 1px solid var(--line);
+    transition: border-color 0.18s var(--ease-out), background-color 0.18s var(--ease-out);
   }
+  .ghost:hover:not(:disabled),
   .btn-ghost:hover:not(:disabled) {
-    border-color: var(--bull);
+    border-color: var(--bone);
   }
+  .ghost[aria-pressed="true"],
+  .btn-ghost[aria-pressed="true"] {
+    background: var(--bone);
+    color: var(--obsidian);
+    border-color: var(--bone);
+  }
+  .ghost:disabled,
   .btn-ghost:disabled {
-    opacity: 0.45;
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
-  .logo {
-    font-family: "Press Start 2P", cursive;
-    color: var(--bull);
-    text-shadow: 0 0 18px rgba(0, 255, 102, 0.55);
+  .panel-title {
+    font-weight: 800;
+    font-size: 1.15rem;
+    margin-bottom: 10px;
   }
 
-  /* Tug-of-war bar: how the pot is currently split between the two armies. */
+  /* ---------------------------------------------------------------- the split of the pot */
+
+  /* White's share in bone, Black's in obsidian, meeting wherever the money is. */
+  .split,
   .stake-bar {
     position: relative;
     height: 10px;
-    border-radius: 999px;
+    border-radius: 2px;
     overflow: hidden;
-    background: linear-gradient(90deg, #ff5a75, #e02447);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: var(--obsidian);
+    box-shadow: inset 0 0 0 1px var(--line);
   }
+  .split > div,
   .stake-bar > div {
+    width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #00d957, #3dff8b);
-    box-shadow: 0 0 14px rgba(0, 255, 102, 0.8);
-    transition: width 0.9s cubic-bezier(0.2, 0.9, 0.2, 1);
+    background: var(--bone);
+    transform-origin: left;
+    transition: transform 0.9s var(--ease-out);
   }
+  .split::after,
   .stake-bar::after {
     content: "";
     position: absolute;
-    left: 50%;
+    left: calc(50% - 1px);
     top: 0;
     width: 2px;
     height: 100%;
-    background: rgba(255, 255, 255, 0.6);
+    background: var(--gold);
   }
 
-  .turn-glow-bull {
-    box-shadow: 0 0 0 1px var(--bull), 0 0 22px rgba(0, 255, 102, 0.35);
-  }
-  .turn-glow-bear {
-    box-shadow: 0 0 0 1px var(--bear), 0 0 22px rgba(255, 51, 85, 0.35);
+  .on-move {
+    box-shadow: inset 0 -3px 0 var(--gold);
   }
 }
 
-.arena-capture-label {
-  white-space: nowrap;
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--gold);
-  background: rgba(0, 0, 0, 0.78);
-  border: 2px solid var(--gold);
-  border-radius: 999px;
-  padding: 2px 14px;
-  box-shadow: 0 0 22px rgba(255, 210, 63, 0.5);
-  animation: arena-rise 2.2s ease-out forwards;
-}
-@keyframes arena-rise {
-  from { transform: translateY(0) scale(0.7); opacity: 0; }
-  15% { transform: translateY(-6px) scale(1.08); opacity: 1; }
-  to { transform: translateY(-52px) scale(1); opacity: 0; }
-}
-.arena-loading {
-  white-space: nowrap;
-  color: var(--bull);
-  font-family: "Press Start 2P", cursive;
-  font-size: 12px;
-  animation: pulse 1.2s ease-in-out infinite;
-}
-@keyframes pulse {
-  50% { opacity: 0.4; }
-}
+/* ---------------------------------------------------------------- inside the arena */
 
-/* ---------------------------------------------------------------- landing */
-
-.hero-scrim {
-  /* Solid behind the copy, clear over the board above it. */
-  background:
-    linear-gradient(0deg, #060908 0%, rgba(6, 9, 8, 0.94) 34%, rgba(6, 9, 8, 0.62) 52%, rgba(6, 9, 8, 0) 72%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 14%);
-}
-
-.hero-title {
-  font-size: clamp(2.4rem, min(9vw, 11.5vh), 6rem);
-  font-weight: 700;
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  color: #fff;
-  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
-}
-
-.gradient-text {
-  background: linear-gradient(100deg, #ffd23f 0%, #3dff8b 55%, #00d957 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: none;
-  filter: drop-shadow(0 0 22px rgba(61, 255, 139, 0.35));
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
+.value-tag {
+  position: relative;
+  display: flex;
+  align-items: baseline;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #dff7e8;
-  background: rgba(9, 15, 11, 0.7);
-  border: 1px solid rgba(0, 255, 102, 0.3);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  padding: 5px 11px 6px;
+  border-radius: 3px;
+  background: var(--obsidian);
+  color: var(--bone);
+  font-family: var(--display);
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(4, 5, 20, 0.5);
+  animation: tag-in 0.35s var(--ease-out);
+}
+/* the tether: the tag belongs to the piece under it */
+.value-tag::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 16px;
+  background: var(--bone);
+  opacity: 0.6;
+}
+.value-tag__kind {
+  text-transform: capitalize;
+  font-weight: 500;
+  color: var(--bone-soft);
+}
+.value-tag__amount {
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 16px;
+}
+@keyframes tag-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
-.live-dot {
+.capture-amount {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 26px;
+  color: var(--gold);
+  white-space: nowrap;
+  text-shadow: 0 2px 0 var(--obsidian), 0 8px 22px rgba(4, 5, 20, 0.7);
+  animation: amount-rise 1.9s var(--ease-out) forwards;
+}
+@keyframes amount-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.8);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-34px);
+  }
+}
+
+.arena-loading {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--bone-soft);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- the stage (first viewport) */
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  background: var(--field-deep);
+}
+/* The field rises from the bottom so the statement always sits on solid colour. */
+.stage__ground {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(0deg, var(--field) 0%, var(--field) 20%, rgba(22, 27, 82, 0.82) 38%, rgba(22, 27, 82, 0) 62%);
+}
+.stage--short .stage__ground {
+  background: linear-gradient(0deg, var(--field) 0%, rgba(22, 27, 82, 0.7) 30%, rgba(22, 27, 82, 0) 70%);
+}
+
+/* Username and Play as two squares of one rank. */
+.entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  max-width: 30rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.entry input {
+  min-height: 64px;
+  padding: 0 18px;
+  font-size: 1.05rem;
+  background: var(--bone);
+  color: var(--obsidian);
+}
+.entry input::placeholder {
+  color: #6f6a5c;
+}
+.entry .act {
+  min-height: 64px;
+  padding: 0 34px;
+  font-size: 1.2rem;
+  border-radius: 0;
+}
+
+/* ---------------------------------------------------------------- the yard */
+
+.yard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 232px), 1fr));
+  gap: 36px 28px;
+  align-items: start;
+}
+@media (max-width: 560px) {
+  .yard {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 14px;
+  }
+  .yard > .yard__start {
+    grid-column: 1 / -1;
+  }
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--sq-dark);
+}
+.board__sq {
+  position: relative;
+  background: var(--sq-dark);
+}
+.board__sq--light {
+  background: var(--sq-light);
+}
+.board__sq svg {
+  position: absolute;
+  inset: 4% 4% 2%;
+  width: 92%;
+  height: 94%;
+}
+
+/* A game in the yard: the board is the button. */
+.table {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.table .board {
+  transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
+}
+.table:hover .board,
+.table:focus-visible .board {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 0 -8px var(--field-deep), 0 22px 30px rgba(4, 5, 20, 0.45);
+}
+
+/* A king waiting alone breathes; its core beats. */
+.waiting {
+  animation: breathe 3.6s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+@keyframes breathe {
+  50% {
+    transform: scale(1.035, 1.05);
+  }
+}
+.beat {
+  animation: beat 1.15s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+@keyframes beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  6% {
+    transform: scale(1.35);
+  }
+  16% {
+    transform: scale(1);
+  }
+  24% {
+    transform: scale(1.22);
+  }
+  36% {
+    transform: scale(1);
+  }
+}
+
+.live-mark {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--bull);
-  box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.7);
-  animation: live 1.8s ease-out infinite;
-}
-@keyframes live {
-  to { box-shadow: 0 0 0 10px rgba(0, 255, 102, 0); }
+  background: var(--alert);
+  animation: beat 1.15s ease-in-out infinite;
 }
 
-/* Username + Play now as one control. */
-.cta {
-  display: flex;
-  width: 100%;
-  max-width: 30rem;
-  padding: 6px;
-  gap: 6px;
-  border-radius: 18px;
-  background: rgba(9, 15, 11, 0.8);
-  border: 1px solid rgba(0, 255, 102, 0.35);
-  box-shadow: 0 0 40px rgba(0, 255, 102, 0.18);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-}
-.cta input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  font-size: 1rem;
-}
-.cta .btn {
-  padding: 14px 26px;
-  font-size: 1.05rem;
-  white-space: nowrap;
-}
+/* ---------------------------------------------------------------- what each one is worth */
 
-.eyebrow {
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--bull);
+.worth {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  border-radius: 3px;
+  overflow: hidden;
 }
-.section-title {
-  margin-top: 4px;
-  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
-  color: #fff;
-}
-.section-lead {
-  margin-top: 8px;
-  max-width: 38rem;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.price-card,
-.info-card {
+.worth__sq {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 18px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(16, 26, 20, 0.9), rgba(9, 15, 11, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: border-color 0.15s ease, transform 0.15s ease;
-}
-.price-card {
   align-items: center;
+  padding: 18px 6px 14px;
+  background: var(--sq-dark);
   text-align: center;
 }
-.price-card:hover,
-.info-card:hover {
-  border-color: rgba(0, 255, 102, 0.45);
-  transform: translateY(-2px);
+.worth__sq:nth-child(odd) {
+  background: var(--sq-light);
+}
+.worth__sq svg {
+  width: min(100%, 92px);
+  height: auto;
+}
+@media (max-width: 640px) {
+  .worth {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  /* keep the chequer pattern across two rows of three */
+  .worth__sq:nth-child(n) {
+    background: var(--sq-dark);
+  }
+  .worth__sq:nth-child(1),
+  .worth__sq:nth-child(3),
+  .worth__sq:nth-child(5) {
+    background: var(--sq-light);
+  }
 }
 
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  font-weight: 700;
-  color: #03140a;
-  background: linear-gradient(180deg, #3dff8b, #00d957);
+/* ---------------------------------------------------------------- how it runs */
+
+.facts {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line);
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: 8px 32px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+.facts dt {
+  font-weight: 800;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  font-variation-settings: "wdth" 84;
+}
+.facts dd {
+  margin: 0;
+  max-width: 38rem;
+  color: var(--bone-soft);
+}
+@media (max-width: 640px) {
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting,
+  .beat,
+  .live-mark,
+  .value-tag,
+  .capture-amount {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }

@@ -40,7 +40,7 @@ There is no wallet to install and no seed phrase. You tap "Play now", confirm wi
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-The game is played in a full-screen 3D arena: Bulls against Bears. The set reads like real chess pieces, ivory and gold against gunmetal and crimson, with a bull's head and a bear's head for the knights. Pieces hop to their squares, a capture shatters the victim and sends coins to the capturer, and a tug-of-war bar shows how the pot is splitting. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
+The game is played on a full-screen 3D board where the pieces are alive. They are recognisable chess pieces, bone white against obsidian black, but each has eyes that follow the play and a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
 
 Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
 
@@ -56,7 +56,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 1. **Chess streamers and clubs.** A staked game with money visibly flying on every capture is watchable. Sponsor small stakes for streamer matches and club nights; every viewer gets a "play the streamer's opening for $1" link.
 2. **Share links as the growth loop.** A game is a URL. Creating one produces a link that opens straight into the 3D board with a "Join for $1" button and one-tap sign-up, so every challenge sent to a friend is an acquisition.
-3. **Crypto communities.** Bulls vs Bears is a ready-made rivalry: weekly community-vs-community matches with a leaderboard.
+3. **Crypto communities.** Weekly community-vs-community matches with a leaderboard, watched live from the Yard.
 4. **Low-stakes default.** $1 games keep the first experience safe and make "try it once" an easy ask.
 
 **Why they stay:** stakes that move during the game make even a losing position worth playing out, and a rematch is one tap.
@@ -117,9 +117,9 @@ No voice-over; music and on-screen text.
 
 | Time | Picture | Text |
 | --- | --- | --- |
-| 0:00 | Arena circling, Bulls and Bears facing off | "Bulls vs Bears." |
-| 0:05 | A Bull charges and strikes; sparks | "Every capture..." |
-| 0:09 | Coins fly, "+$0.26" label, stake bar swings | "...pays." |
+| 0:00 | Board circling, the pieces watching each other | "Every piece has skin in the game." |
+| 0:05 | A piece hops in and strikes; the victim shatters | "Every capture..." |
+| 0:09 | The gold core flies to the capturer, "+$0.26" label, stake bar swings | "...pays." |
 | 0:14 | Phone: tap Play now, Face ID, board appears | "One tap. No wallet." |
 | 0:20 | Fast cuts of three captures | "Real stakes. Settled in under a second." |
 | 0:26 | Logo | "DegenChess. Play now on Monad." |

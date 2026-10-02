@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Chess, type Move } from "chess.js";
 import Arena3D from "./Arena3D";
+import { PIECE_WEIGHT } from "../../lib/pieceShapes";
 
 // A short, violent game: captures on both sides, a king hunt and castling.
 const DEMO = "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Nxd5 Nxf7 Kxf7 Qf3+ Ke6 Nc3 Nb4 O-O c6 d4 Qf6 Qe4 Qf5 dxe5 Qxe4 Nxe4".split(" ");
 const noTargets = () => [];
 const noMove = () => {};
 
-/** The arena as a living backdrop: replays a demo game on a loop while the camera circles. */
+/** The arena as a living backdrop: replays a demo game on a loop while the camera circles. Amounts assume a 10 tUSD stake. */
 export default function AttractArena() {
   const game = useRef(new Chess());
   const [history, setHistory] = useState<Move[]>([]);
@@ -31,7 +32,7 @@ export default function AttractArena() {
       movable={null}
       legalTargets={noTargets}
       onMove={noMove}
-      captureLabel={(kind) => `+$${{ p: "0.26", n: "0.77", b: "0.77", r: "1.28", q: "2.31", k: "0" }[kind]}`}
+      captureLabel={(kind) => `${((10 * PIECE_WEIGHT[kind]) / 39).toFixed(2)} tUSD`}
     />
   );
 }

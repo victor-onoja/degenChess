@@ -102,8 +102,8 @@ await click(p2, "Play now");
 await p2.page.getByText("You're in.").waitFor({ timeout: 60000 });
 const base2 = await p2.prompts();
 await p2.page.getByRole("button", { name: "Join" }).first().click();
-await click(p2, /^Join as Bears/);
-await p1.page.getByText("Bulls to move").waitFor({ timeout: 60000 });
+await click(p2, /^Join as Black/);
+await p1.page.getByText("White to move").waitFor({ timeout: 60000 });
 await idle(p2);
 assertEqual((await p2.prompts()) - base2, 1, "P2 prompts for joining");
 await p2.page.getByText(username).first().waitFor({ timeout: 30000 });
@@ -163,7 +163,7 @@ await shot(p2, "2-restored");
 
 step("Game continues prompt-free after the restore");
 await move(p1, p2, "d2", "d4");
-await move(p2, p1, "e5", "d4"); // Bears capture a pawn
+await move(p2, p1, "e5", "d4"); // Black captures a pawn
 await move(p1, p2, "d1", "h5");
 await move(p2, p1, "g8", "f6");
 await move(p1, p2, "h5", "f7"); // Qxf7#
@@ -178,13 +178,13 @@ await p1.page.getByRole("button", { name: "Unlock with passkey to keep playing" 
 if (process.env.REFEREE === "1") {
   // With the Chainlink referee running, checkmate settles itself: nobody has to resign.
   step("The referee settles the checkmate automatically, both withdraw");
-  await p1.page.getByText("Finished - Bulls win").waitFor({ timeout: 120000 });
-  await p2.page.getByText("Finished - Bulls win").waitFor({ timeout: 60000 });
+  await p1.page.getByText("Finished - White wins").waitFor({ timeout: 120000 });
+  await p2.page.getByText("Finished - White wins").waitFor({ timeout: 60000 });
   assertEqual(await p2.prompts(), before[1] + 1, "P2 prompts at settlement (no resignation needed)");
 } else {
-  step("Bears resign (money action: passkey prompt), both withdraw");
+  step("Black resigns (money action: passkey prompt), both withdraw");
   await click(p2, /^Resign$/);
-  await p1.page.getByText("Finished - Bulls win").waitFor({ timeout: 60000 });
+  await p1.page.getByText("Finished - White wins").waitFor({ timeout: 60000 });
   assertEqual(await p2.prompts(), before[1] + 2, "P2 prompts after resigning");
 }
 await idle(p2);
@@ -200,7 +200,7 @@ await idle(p1);
 await click(p1, /^Rematch /);
 await p1.page.getByText("Waiting for an opponent").waitFor({ timeout: 60000 });
 await click(p2, /wants a rematch/);
-await p2.page.getByRole("button", { name: /^Join as Bears/ }).waitFor({ timeout: 30000 });
+await p2.page.getByRole("button", { name: /^Join as Black/ }).waitFor({ timeout: 30000 });
 await shot(p2, "5-rematch");
 
 await browser.close();

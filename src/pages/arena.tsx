@@ -47,9 +47,9 @@ export default function ArenaSandbox() {
         <title>DegenChess arena sandbox</title>
       </Head>
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h1 className="font-retro text-sm text-retroGreen">Arena sandbox</h1>
+        <h1 className="panel-title !mb-0">Board sandbox</h1>
         <button
-          className="retro-button-sm"
+          className="act act--sm act--bone"
           onClick={() => {
             game.current = new Chess();
             setHistory([]);
@@ -59,7 +59,7 @@ export default function ArenaSandbox() {
           Play demo game
         </button>
         <button
-          className="retro-button-sm"
+          className="act act--sm act--bone"
           onClick={() => {
             setPlaying(false);
             game.current = new Chess();
@@ -69,7 +69,7 @@ export default function ArenaSandbox() {
           Reset
         </button>
         <span data-testid="ply">ply {history.length}</span>
-        <span className="opacity-80">{turn === "w" ? "Bulls" : "Bears"} to move</span>
+        <span className="soft">{turn === "w" ? "White" : "Black"} to move</span>
       </div>
       <Arena3D
         history={history}
@@ -77,7 +77,7 @@ export default function ArenaSandbox() {
         movable={playing ? null : turn}
         legalTargets={legalTargets}
         onMove={(from, to, promotion) => void push({ from, to, promotion })}
-        captureLabel={(kind) => `+${{ p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }[kind]}/39 of the stake`}
+        captureLabel={(kind) => `${{ p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }[kind]}/39 of the stake`}
       />
     </div>
   );

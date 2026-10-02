@@ -1,9 +1,9 @@
 import Head from "next/head";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://degen-chess.vercel.app";
-const TITLE = "DegenChess - chess where every capture pays";
+const TITLE = "DegenChess - every piece has skin in the game";
 const DESCRIPTION =
-  "Stake dollars on a game of chess. Every piece you capture moves its value to you instantly, on Monad. One passkey tap to start: no wallet, no seed phrase.";
+  "Chess where each piece carries a share of your stake. Take one, and its share is yours, settled instantly on Monad. One passkey tap to start: no wallet, no seed phrase.";
 
 export function Seo({ title }: { title?: string }) {
   const fullTitle = title ? `${title} | DegenChess` : TITLE;
