@@ -62,6 +62,11 @@ export const sfx = {
   steps: (seconds: number) => {
     for (let t = 0; t < seconds; t += 0.26) noise(t, 0.07, 0.16, 900);
   },
+  /** A piece touching down after a quiet move. */
+  land: (at = 0) => {
+    noise(at, 0.06, 0.2, 700);
+    tone(180, at, 0.09, "sine", 0.16, 90);
+  },
   /** The strike landing. */
   hit: (at = 0) => {
     noise(at, 0.22, 0.5, 1400);

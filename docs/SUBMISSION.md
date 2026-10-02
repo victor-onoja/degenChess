@@ -16,16 +16,16 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **Live link (Monad testnet):** <https://degen-chess.vercel.app>
 
-**Contract (Monad testnet, chain 10143):** `0x7ae0bbe6747b4571990088d2522bf7da62297c48`
+**Contract (Monad testnet, chain 10143):** `0x75e210a916fd5acd3bde6e065039cfac19fab2ac`
 
 **Primary track:** Consumer Products & Payments
 
 **Sponsor bounties:**
 
 - Best Mera-Powered UX on Monad (Monad Foundation). Mera is the whole account layer.
-- **TODO, pick one if built:** Best workflow with CRE (Chainlink) for automatic move-legality arbitration, or Best Use of Envio for the lobby and leaderboard.
+- Best workflow with CRE (Chainlink). A CRE workflow is the game's referee: it fires on every move, replays the game and settles it on-chain. See `cre/README.md`.
 
-**Logo:** `public/brand/logo-mark.png` (1024×1024, transparent) and `public/brand/logo-wide.png` (1600×480). Share image: `public/og.png`.
+**Logo:** `public/brand/logo-mark.png` (1024×1024, transparent) and `public/brand/logo-wide.png` (1600×480). Share image: `public/og.png`. Video title card: `public/brand/title-card.png`. Story poster: `public/brand/poster.png`.
 
 ### Description
 
@@ -40,7 +40,11 @@ There is no wallet to install and no seed phrase. You tap "Play now", confirm wi
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-The game is played in a full-screen 3D arena: Bulls against Bears. The pieces are animated characters that walk to their squares and fight on captures, and coins fly from the fallen piece to the capturer while a tug-of-war bar shows how the pot is splitting.
+The game is played in a full-screen 3D arena: Bulls against Bears. The set reads like real chess pieces, ivory and gold against gunmetal and crimson, with a bull's head and a bear's head for the knights. Pieces hop to their squares, a capture shatters the victim and sends coins to the capturer, and a tug-of-war bar shows how the pot is splitting. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
+
+Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
+
+Nobody has to be trusted to call the result. A Chainlink CRE workflow acts as referee: it replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move.
 
 Monad is what makes this playable. Each move is a transaction; at about 0.8 seconds to confirm, with a tiny gas fee, on-chain chess feels like chess.
 
@@ -61,19 +65,19 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ### Progress update (shareable now, for mentor support)
 
-> **DegenChess, status 1 October.** Live on Monad testnet at degen-chess.vercel.app.
+> **DegenChess, status 2 October.** Live on Monad testnet at degen-chess.vercel.app.
 >
-> **Working end to end:** passkey sign-up with Mera (one prompt, about 5 seconds to the first confirmed transaction), staked games with on-chain moves, capture payouts, resign / draw / timeout / cancel, withdrawals, and a full-screen 3D arena with 12 original animated characters. An automated two-player browser test runs the whole flow against production, including wiping a player's storage mid-game and restoring from the passkey.
+> **Working end to end:** passkey sign-up with Mera (one prompt, about 5 seconds to the first confirmed transaction), staked games with on-chain moves and capture payouts, chess clocks, usernames, rematch, withdrawals, and a 3D arena you can also play in 2D or side by side. A Chainlink CRE workflow referees every game: on testnet it has settled a checkmate, a stalemate and an illegal move (the cheater forfeited everything). An automated two-player browser test runs the whole flow, including wiping a player's storage mid-game and restoring from the passkey.
 >
-> **Built since the hackathon started:** a new contract (the earlier prototype's payout maths locked funds), per-game keys so moves need no prompts, the Mera account layer, the faucet, the 3D arena and the redesign.
+> **Built since the hackathon started:** a new contract (the earlier prototype's payout maths locked funds), per-game keys so moves need no prompts, the Mera account layer, the faucet, the referee workflow and its consumer contract, clocks, usernames, the 3D arena and the redesign.
 >
 > **Where we'd value help:**
 >
-> 1. Move legality isn't enforced on-chain. A modified client can submit an illegal capture, and today only the contract owner can reverse it. Is a Chainlink CRE workflow that validates moves and arbitrates the right fix for a hackathon, or should we validate on-chain?
+> 1. Chainlink CRE: the referee runs through `cre workflow simulate --broadcast` while our deployment-access request is pending. Can access be granted before the deadline so it runs on a DON with the production forwarder?
 > 2. Mera: anything we should do for session scoping or recovery beyond a contract-scoped game key and a 30-minute idle lock?
 > 3. Monad's reserve-balance rule cost us a day. Is there a recommended gas-sponsorship pattern for brand-new accounts instead of a faucet?
 >
-> **Next:** legality enforcement, a security review (in progress with an independent auditor), leaderboard, demo videos.
+> **Next:** a security review (brief sent to an independent auditor), leaderboard, demo videos.
 
 ---
 
@@ -89,10 +93,10 @@ Record at 1080p. Use the production site for everything except the arena close-u
 | 0:15 | Phone or second browser: tap Play now, passkey prompt, "You're in" banner with the timer | "One passkey prompt. No extension, no seed phrase. That banner is the measured time to my first confirmed transaction." |
 | 0:40 | Create a $1 game, passkey prompt; second player opens the link and joins | "Staking asks for the passkey. Mera derives two keys from it: a money key, and a game key the contract only lets make chess moves." |
 | 1:05 | Play several moves quickly, no prompts | "Moves are signed by the game key in memory. No prompts, about 0.8 seconds each, and each one is a real transaction." Show one on the explorer. |
-| 1:30 | A capture: strike, coins, stake bar shifting | "That pawn was worth one thirty-ninth of the stake. It just moved on-chain. The bar is the live split of the pot." |
+| 1:30 | A capture: the piece shatters, coins fly, the stake bar shifts | "That pawn was worth one thirty-ninth of the stake. It just moved on-chain. The bar is the live split of the pot." |
 | 1:50 | Clear site data mid-game, reload, tap "I have a passkey" | "The stateless test. Nothing secret is stored. One prompt rebuilds my account and my game key, and the game is exactly where I left it." |
 | 2:15 | Lock button; then resign with a passkey prompt; withdraw | "Lock wipes the game key. Anything that settles money needs the passkey again. The loser still withdraws what they captured." |
-| 2:40 | Code: `_playerFor` and the game-key checks in the contract; the test output | "The scoping is enforced by the contract, not the UI. 17 contract tests, plus a two-player browser test that runs against production." |
+| 2:40 | Code: `_playerFor` and the game-key checks in the contract; the test output | "The scoping is enforced by the contract, not the UI. 27 contract tests, plus a two-player browser test that runs against production." |
 | 2:55 | Back to the arena | "Live now at degen-chess.vercel.app." |
 
 ### Pitch (2 minutes)
@@ -126,10 +130,11 @@ No voice-over; music and on-screen text.
 
 In priority order.
 
-1. **Close the illegal-move gap.** It is the one thing a technical judge will find. Either validate moves on-chain or add the automatic arbiter. (Also unlocks the Chainlink bounty.)
+1. **Get the referee onto a Chainlink DON.** Deployment access is requested. Until it is granted, keep `npm run referee` running on a server through judging.
 2. **Security review.** Brief is in `docs/AUDIT.md`. Fix what comes back and say so in the submission.
-3. **Leaderboard and game history.** Gives judges something to browse and supports the growth story. (Unlocks the Envio bounty.)
-4. **Real-phone pass** on the redesigned UI, on at least one iPhone and one Android.
+3. **Leaderboard and game history.** Gives judges something to browse and supports the growth story.
+4. **Real-phone pass** on the new board and landing page, on at least one iPhone and one Android.
 5. **Faucet hardening and funding.** Keep the faucet wallet at 30+ MON through judging; add a simple per-IP limit.
-6. **Rematch button** at the end of a game.
-7. **Record the three videos** by 12 October, leaving a day for retakes.
+6. **Record the three videos** by 12 October, leaving a day for retakes. `public/brand/title-card.png` opens them.
+
+Done since the first draft of this list: the illegal-move gap (Chainlink referee), rematch, clocks, usernames.

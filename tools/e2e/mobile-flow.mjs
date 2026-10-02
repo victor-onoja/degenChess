@@ -20,7 +20,7 @@ await page.waitForTimeout(3500);
 await page.screenshot({ path: `${out}/${tag}-2-lobby.png` });
 await press(page.getByRole("button", { name: "Create Game", exact: true }));
 await page.waitForURL(/game=\d+/, { timeout: 90000 });
-await page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Mustering"), null, { timeout: 90000 });
+await page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Setting the board"), null, { timeout: 90000 });
 await page.waitForTimeout(4500);
 await page.screenshot({ path: `${out}/${tag}-3-game.png` });
 console.log("overflow-x px:", await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth));

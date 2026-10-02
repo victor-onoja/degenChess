@@ -1,43 +1,42 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Html, OrbitControls, PerformanceMonitor, useAnimations, useGLTF } from "@react-three/drei";
+import { Environment, Html, Lightformer, OrbitControls, PerformanceMonitor } from "@react-three/drei";
 import { Bloom, EffectComposer, ToneMapping } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
-import { SkeletonUtils, type OrbitControls as OrbitControlsImpl } from "three-stdlib";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { Color, Move, PieceSymbol, Square } from "chess.js";
 import { trackPieces, type MoveEvent, type TrackedPiece } from "../../lib/pieces";
 import { sfx } from "../../lib/sound";
+import { ChessPiece, PIECE_HEIGHT } from "./pieces3d";
 
 // ------------------------------------------------------------------ constants
 
 const KIND: Record<PieceSymbol, string> = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king" };
-// The models are all 1.8 units tall; a board square is 1 unit.
-const SCALE: Record<PieceSymbol, number> = { p: 0.5, n: 0.58, b: 0.6, r: 0.6, q: 0.66, k: 0.72 };
 const SIDE_COLOR: Record<Color, string> = { w: "#00ff66", b: "#ff3355" };
 // Colours brighter than 1.0 are what the bloom pass picks up as glow.
 const SIDE_GLOW: Record<Color, THREE.Color> = {
   w: new THREE.Color("#00ff66").multiplyScalar(1.2),
   b: new THREE.Color("#ff3355").multiplyScalar(1.3),
 };
+const CHECK_GLOW = new THREE.Color("#ffd23f").multiplyScalar(2.2);
+const BODY_COLOR: Record<Color, string> = { w: "#f1e3c0", b: "#2a2f3a" };
 const BANK: Record<Color, [number, number]> = { w: [5.1, 3.2], b: [-5.1, -3.2] };
-const modelUrl = (color: Color, kind: PieceSymbol) => `/models/${color === "w" ? "bulls" : "bears"}-${KIND[kind]}.glb`;
 
 const xz = (square: string): [number, number] => [square.charCodeAt(0) - 97 - 3.5, 3.5 - (Number(square[1]) - 1)];
 const now = () => performance.now() / 1000;
-
-const STOP_SHORT = 0.75; // an attacker stops this far from its victim to strike
-const DEATH_SECONDS = 2.4;
 const FOV = 42;
 
-/** How long each phase of a move's animation lasts, in seconds. */
+/**
+ * Timing of a move's animation, in seconds. A piece hops to its square; a capture is the same hop,
+ * higher, landing on the victim, which shatters on impact. Short on purpose: it has to keep up with blitz.
+ */
 function timeline(event: MoveEvent) {
   const [fx, fz] = xz(event.from);
   const [tx, tz] = xz(event.to);
   const dist = Math.hypot(tx - fx, tz - fz);
-  if (!event.victimId) return { dist, walk1: 0.3 + dist * 0.22, attack: 0, walk2: 0, dieAt: 0, total: 0.3 + dist * 0.22 };
-  const walk1 = 0.25 + Math.max(dist - STOP_SHORT, 0) * 0.22;
-  return { dist, walk1, attack: 0.9, walk2: 0.3, dieAt: walk1 + 0.4, total: walk1 + 0.9 + 0.3 };
+  const hop = 0.34 + dist * 0.045;
+  return { dist, hop, dieAt: hop, total: hop + 0.3 };
 }
 
 interface Animation {
@@ -51,55 +50,31 @@ function Piece({
   piece,
   animation,
   selectable,
+  selected,
+  inCheck,
+  toppled,
   onPick,
 }: {
   piece: TrackedPiece;
   animation: Animation;
   selectable: boolean;
+  selected: boolean;
+  /** This king is in check: its ring flashes. */
+  inCheck: boolean;
+  /** This king has been mated: it falls over. */
+  toppled: boolean;
   onPick: (square: Square) => void;
 }) {
-  const { scene, animations } = useGLTF(modelUrl(piece.color, piece.kind));
-  const model = useMemo(() => {
-    const clone = SkeletonUtils.clone(scene);
-    clone.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.frustumCulled = false; // skinned bounds are stale while animating
-      mesh.castShadow = true;
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      material.metalness = Math.min(material.metalness, 0.15); // no environment map to reflect
-      material.roughness = Math.max(material.roughness, 0.6);
-    });
-    return clone;
-  }, [scene]);
-
   const outer = useRef<THREE.Group>(null);
-  const inner = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
   const ring = useRef<THREE.Mesh>(null);
-  const { actions } = useAnimations(animations, inner);
-  const clip = useRef("");
-  const home = piece.color === "w" ? Math.PI : 0; // Bulls face up the board, Bears face down it
-
-  useEffect(() => {
-    const idle = actions.idle;
-    if (!idle) return;
-    idle.reset().play();
-    idle.time = Math.random() * idle.getClip().duration; // don't breathe in unison
-    clip.current = "idle";
-  }, [actions]);
-
-  const play = (name: "idle" | "walk" | "attack" | "death") => {
-    if (clip.current === name) return;
-    const next = actions[name];
-    if (!next) return;
-    const once = name === "attack" || name === "death";
-    next.reset();
-    next.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
-    next.clampWhenFinished = once;
-    next.fadeIn(0.15).play();
-    actions[clip.current]?.fadeOut(0.15);
-    clip.current = name;
-  };
+  const lift = useRef(0);
+  const fall = useRef(0);
+  const ringMaterial = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: SIDE_GLOW[piece.color], transparent: true, opacity: 0.7, toneMapped: false }),
+    [piece.color]
+  );
+  const home = piece.color === "w" ? Math.PI : 0; // only the knights have a front: they face the enemy
 
   const { event, start } = animation;
   const role = !event
@@ -112,57 +87,66 @@ function Piece({
           ? "rook"
           : null;
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     const group = outer.current;
-    const body = inner.current;
-    if (!group || !body) return;
+    const mesh = body.current;
+    if (!group || !mesh) return;
     const [hx, hz] = xz(piece.square);
     let x = hx;
     let z = hz;
-    let facing = home;
+    let y = 0;
+    let stretch = 1;
+    let lean = 0;
+    let heading = 0;
     let visible = piece.alive;
-    let shrink = 1;
-    let pose: "idle" | "walk" | "attack" | "death" = "idle";
+    let settled = true;
 
     if (event && role) {
       const t = now() - start;
       const tl = timeline(event);
       if (role === "victim") {
-        visible = t < tl.dieAt + DEATH_SECONDS;
-        if (t >= tl.dieAt) pose = "death";
-        shrink = 1 - THREE.MathUtils.clamp((t - tl.dieAt - DEATH_SECONDS + 0.5) / 0.5, 0, 1);
+        visible = t < tl.dieAt; // gone on impact; the Shatter effect takes over
       } else {
         const [fx, fz] = xz(role === "rook" ? event.rook!.from : event.from);
         const dx = hx - fx;
         const dz = hz - fz;
-        const length = Math.hypot(dx, dz) || 1;
-        const walking = Math.atan2(dx, dz);
-        if (role === "mover" && event.victimId) {
-          const stop = Math.max(length - STOP_SHORT, 0) / length; // fraction of the way to the stop point
-          if (t < tl.walk1) {
-            const k = (t / tl.walk1) * stop;
-            [x, z, facing, pose] = [fx + dx * k, fz + dz * k, walking, "walk"];
-          } else if (t < tl.walk1 + tl.attack) {
-            [x, z, facing, pose] = [fx + dx * stop, fz + dz * stop, walking, "attack"];
-          } else if (t < tl.total) {
-            const k = stop + ((t - tl.walk1 - tl.attack) / tl.walk2) * (1 - stop);
-            [x, z, facing, pose] = [fx + dx * k, fz + dz * k, walking, "walk"];
-          }
-        } else if (t < tl.walk1) {
-          const k = t / tl.walk1;
-          [x, z, facing, pose] = [fx + dx * k, fz + dz * k, walking, "walk"];
+        if (t < tl.hop) {
+          settled = false;
+          const k = t / tl.hop;
+          const ease = k * k * (3 - 2 * k);
+          const arc = Math.sin(Math.PI * k);
+          const height = (piece.kind === "n" ? 1.25 : 0.55) + (role === "mover" && event.victimId ? 0.45 : 0);
+          x = fx + dx * ease;
+          z = fz + dz * ease;
+          y = arc * height;
+          stretch = 1 + arc * 0.16; // stretch in flight
+          lean = Math.cos(Math.PI * k) * 0.22; // tip forward on the way up, back on the way down
+          heading = Math.atan2(dx, dz);
+        } else if (t < tl.total) {
+          // squash on landing, then spring back
+          const since = t - tl.hop;
+          stretch = 1 - 0.24 * Math.exp(-since * 13) * Math.cos(since * 34);
         }
       }
     }
 
+    lift.current += ((selected && settled ? 0.16 : 0) - lift.current) * 0.25;
+    fall.current += ((toppled ? 1 : 0) - fall.current) * 0.06;
+
     group.visible = visible;
     group.position.set(x, 0, z);
-    body.scale.setScalar(SCALE[piece.kind] * shrink);
-    // Turn towards the target heading the short way round.
-    const delta = Math.atan2(Math.sin(facing - body.rotation.y), Math.cos(facing - body.rotation.y));
-    body.rotation.y += delta * 0.25;
-    if (ring.current) ring.current.visible = pose !== "death";
-    play(pose);
+    mesh.position.y = y + lift.current;
+    mesh.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch)); // keep volume
+    // Lean along the direction of travel; a mated king tips over sideways.
+    mesh.rotation.set(Math.cos(heading) * lean, home, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
+
+    if (ring.current) {
+      ring.current.visible = visible && fall.current < 0.5;
+      const pulse = inCheck ? 0.6 + 0.4 * Math.sin(clock.elapsedTime * 9) : 0;
+      ringMaterial.color.copy(inCheck ? CHECK_GLOW : SIDE_GLOW[piece.color]);
+      ringMaterial.opacity = inCheck ? 0.5 + pulse * 0.5 : selected ? 1 : 0.7;
+      ring.current.scale.setScalar(inCheck ? 1.05 + pulse * 0.12 : 1);
+    }
   });
 
   if (!piece.alive && role !== "victim") return null;
@@ -178,14 +162,57 @@ function Piece({
       onPointerOver={() => selectable && (document.body.style.cursor = "pointer")}
       onPointerOut={() => (document.body.style.cursor = "")}
     >
-      <mesh ref={ring} rotation-x={-Math.PI / 2} position-y={0.012}>
-        <ringGeometry args={[0.36, 0.44, 32]} />
-        <meshBasicMaterial color={SIDE_GLOW[piece.color]} transparent opacity={0.7} toneMapped={false} />
+      <mesh ref={ring} rotation-x={-Math.PI / 2} position-y={0.012} material={ringMaterial}>
+        <ringGeometry args={[0.4, 0.46, 40]} />
       </mesh>
-      <group ref={inner} rotation-y={home} scale={SCALE[piece.kind]}>
-        <primitive object={model} />
+      <group ref={body} rotation-y={home}>
+        <ChessPiece kind={piece.kind} color={piece.color} />
       </group>
     </group>
+  );
+}
+
+/** The captured piece bursts into shards where it stood. */
+function Shatter({ at, start, color, height }: { at: [number, number]; start: number; color: Color; height: number }) {
+  const COUNT = 26;
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const seeds = useMemo(
+    () =>
+      Array.from({ length: COUNT }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.8 + Math.random() * 2.6;
+        return {
+          y0: Math.random() * height,
+          vx: Math.cos(angle) * speed,
+          vz: Math.sin(angle) * speed,
+          vy: 1 + Math.random() * 3.2,
+          spin: (Math.random() - 0.5) * 16,
+          size: 0.07 + Math.random() * 0.1,
+        };
+      }),
+    [height]
+  );
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  useFrame(() => {
+    if (!mesh.current) return;
+    const t = now() - start;
+    const alive = t >= 0 && t < 0.9;
+    seeds.forEach((s, i) => {
+      dummy.position.set(at[0] + s.vx * t, Math.max(s.y0 + s.vy * t - 6.5 * t * t, 0.03), at[1] + s.vz * t);
+      dummy.rotation.set(s.spin * t, s.spin * t * 0.7, 0);
+      dummy.scale.setScalar(alive ? s.size * (1 - t / 0.9) : 0);
+      dummy.updateMatrix();
+      mesh.current!.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.current.instanceMatrix.needsUpdate = true;
+  });
+
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, COUNT]} frustumCulled={false} castShadow>
+      <tetrahedronGeometry args={[1, 0]} />
+      <meshStandardMaterial color={BODY_COLOR[color]} metalness={0.4} roughness={0.4} />
+    </instancedMesh>
   );
 }
 
@@ -241,8 +268,8 @@ function Board({
                   ? "#4d8f69"
                   : "#9fd9b4"
                 : dark
-                  ? "#22352c"
-                  : "#aebfae";
+                  ? "#1c2b25"
+                  : "#8fa596";
         return (
           <mesh
             key={square}
@@ -262,7 +289,7 @@ function Board({
             }}
           >
             <boxGeometry args={[1, 0.1, 1]} />
-            <meshStandardMaterial color={color} roughness={0.75} metalness={0.05} />
+            <meshStandardMaterial color={color} roughness={0.55} metalness={0.1} envMapIntensity={0.5} />
           </mesh>
         );
       })}
@@ -470,7 +497,7 @@ function Floor() {
     <group>
       <mesh rotation-x={-Math.PI / 2} position-y={-0.27} receiveShadow>
         <circleGeometry args={[40, 64]} />
-        <meshStandardMaterial color="#0a0f0c" roughness={0.9} metalness={0.1} />
+        <meshStandardMaterial color="#0a0f0c" roughness={1} metalness={0} envMapIntensity={0.15} />
       </mesh>
       {[6.6, 8.4, 10.2].map((r) => (
         <mesh key={r} rotation-x={-Math.PI / 2} position-y={-0.262}>
@@ -517,8 +544,8 @@ function CameraRig({
       const vHalf = THREE.MathUtils.degToRad(FOV / 2);
       const hHalf = Math.atan(Math.tan(vHalf) * aspect);
       const near = 4.25 * Math.cos(elevation); // the closest rank is this much nearer than the centre
-      // While circling, the board's diagonal has to fit, not just its width.
-      const fitWidth = (attract ? 6.3 : 4.7) / Math.tan(hHalf) + near;
+      // While circling, the board's diagonal has to fit, not just its width (phones let the corners clip to keep it big).
+      const fitWidth = (attract ? (portrait ? 4.6 : 6.3) : 4.7) / Math.tan(hHalf) + near;
       // HUD overlays eat into the canvas; fit the board into what's left and centre it there.
       const top = insets?.top ?? 0;
       const bottom = insets?.bottom ?? 0;
@@ -531,7 +558,7 @@ function CameraRig({
       controls.minDistance = distance * 0.5;
       controls.maxDistance = distance * 1.5;
       // As a backdrop, slide the whole picture up so the board sits above the headline.
-      const shiftUp = attract ? size.height * 0.2 : (bottom - top) / 2;
+      const shiftUp = attract ? size.height * (portrait ? 0.22 : 0.27) : (bottom - top) / 2;
       if (shiftUp !== 0) cam.setViewOffset(size.width, size.height, 0, shiftUp, size.width, size.height);
       else cam.clearViewOffset();
     }
@@ -583,6 +610,8 @@ export interface ArenaProps {
   captureLabel?: (kind: PieceSymbol) => string;
   /** Fill the parent element instead of rendering a square. */
   immersive?: boolean;
+  /** Fill a sized parent (used for the side-by-side view). */
+  fill?: boolean;
   /** Backdrop mode: slowly circle the board, no interaction, no sound. */
   attract?: boolean;
   /** Pixels covered by overlays at the top and bottom, so the board is framed in the space between. */
@@ -614,10 +643,11 @@ function Scene({
   useEffect(() => {
     if (!event || attract) return;
     const tl = timeline(event);
-    sfx.steps(tl.walk1);
     if (event.victimId) {
       sfx.hit(tl.dieAt);
-      sfx.coins(tl.dieAt + 0.3);
+      sfx.coins(tl.dieAt + 0.25);
+    } else {
+      sfx.land(tl.hop);
     }
   }, [event, attract]);
 
@@ -643,16 +673,28 @@ function Scene({
   const victim = event?.victimId ? pieces.find((p) => p.id === event.victimId) : null;
   const capturer: Color | null = victim ? (victim.color === "w" ? "b" : "w") : null;
   const hitAt = event ? start + timeline(event).dieAt : 0;
+  // The last move's notation says whether the side now to move is in check ("+") or mated ("#").
+  const sideToMove: Color = history.length % 2 === 0 ? "w" : "b";
+  const checked = lastMove?.san.includes("+") ? sideToMove : null;
+  const mated = lastMove?.san.includes("#") ? sideToMove : null;
 
   return (
     <>
       <CameraRig orientation={orientation} attract={attract} animation={animation.current} insets={insets} />
       <color attach="background" args={["#060908"]} />
       <fog attach="fog" args={["#060908", 26, 70]} />
-      <hemisphereLight args={["#cfe8ff", "#0a1a10", 0.9]} />
+      <hemisphereLight args={["#cfe8ff", "#0a1a10", 0.3]} />
+      {/* A small studio built from light panels: gives the polished pieces something to reflect. */}
+      <Environment resolution={256} environmentIntensity={0.42}>
+        <Lightformer form="rect" intensity={3} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
+        <Lightformer form="rect" intensity={2.2} color="#00ff88" position={[0, 2, 9]} scale={[14, 4, 1]} />
+        <Lightformer form="rect" intensity={2.2} color="#ff4466" position={[0, 2, -9]} rotation-y={Math.PI} scale={[14, 4, 1]} />
+        <Lightformer form="rect" intensity={1.4} position={[9, 3, 0]} rotation-y={-Math.PI / 2} scale={[10, 4, 1]} />
+        <Lightformer form="rect" intensity={1.4} position={[-9, 3, 0]} rotation-y={Math.PI / 2} scale={[10, 4, 1]} />
+      </Environment>
       <directionalLight
         position={[5, 12, 6]}
-        intensity={2.4}
+        intensity={1.7}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-bias={-0.0004}
@@ -679,17 +721,27 @@ function Scene({
           piece={piece}
           animation={animation.current}
           selectable={movable === piece.color}
+          selected={selected === piece.square && piece.alive}
+          inCheck={piece.kind === "k" && (checked === piece.color || mated === piece.color)}
+          toppled={piece.kind === "k" && mated === piece.color}
           onPick={pick}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (
         <>
           <Sparks key={`s${event.ply}`} at={xz(event.victimSquare)} start={hitAt} />
+          <Shatter
+            key={`x${event.ply}`}
+            at={xz(event.victimSquare)}
+            start={hitAt}
+            color={victim.color}
+            height={PIECE_HEIGHT[event.victimKind ?? "p"]}
+          />
           <CoinBurst
             key={`c${event.ply}`}
             from={xz(event.victimSquare)}
             to={BANK[capturer]}
-            start={hitAt + 0.25}
+            start={hitAt + 0.1}
             label={event.victimKind && captureLabel ? captureLabel(event.victimKind) : undefined}
           />
         </>
@@ -711,6 +763,8 @@ export default function Arena3D(props: ArenaProps) {
       className={
         props.immersive
           ? "absolute inset-0"
+          : props.fill
+            ? "relative h-full w-full overflow-hidden rounded-xl border border-white/10"
           : "relative w-full aspect-square overflow-hidden rounded-xl border border-retroGreen/40"
       }
     >
@@ -724,7 +778,7 @@ export default function Arena3D(props: ArenaProps) {
         <Suspense
           fallback={
             <Html center>
-              <div className="arena-loading">Mustering the armies...</div>
+              <div className="arena-loading">Setting the board...</div>
             </Html>
           }
         >
@@ -764,8 +818,4 @@ export default function Arena3D(props: ArenaProps) {
       )}
     </div>
   );
-}
-
-for (const color of ["w", "b"] as const) {
-  for (const kind of Object.keys(KIND) as PieceSymbol[]) useGLTF.preload(modelUrl(color, kind));
 }

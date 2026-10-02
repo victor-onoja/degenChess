@@ -8,14 +8,15 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 | --- | --- | --- |
 | Game contract | `contracts/DegenChess.sol` (Solidity 0.8.24, OpenZeppelin 5) | The only contract that holds funds |
 | Referee | `contracts/ChessReferee.sol`, `cre/referee/` | Receives verdicts from a Chainlink CRE workflow and calls `arbitrate` |
+| Usernames | `contracts/PlayerNames.sol` | Holds no funds |
 | Key handling in the browser | `src/lib/mera.ts`, `src/lib/account.tsx` | Passkey-derived keys, signing sessions |
 | Faucet | `src/pages/api/drip.ts` | Testnet only |
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): DegenChess `0x7ae0bbe6747b4571990088d2522bf7da62297c48`, ChessReferee `0xa44cb8a45c17094782c8b04ca252639525b61a20`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): DegenChess `0x75e210a916fd5acd3bde6e065039cfac19fab2ac`, ChessReferee `0x7704a19a16ff7e916c2572f0e14c475d09db5062`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
-Run the tests with `npm install && npm test` (22 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Run the tests with `npm install && npm test` (27 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 
@@ -59,6 +60,7 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 - `_setKey`: the raw `call` that forwards MON to an arbitrary address. Every function that reaches it is `nonReentrant`, but `makeMove` and `offerDraw` are not. Is there a useful re-entry through them?
 - `_playerFor`: can a player register a key that lets them act as their opponent? `_setKey` clears a key equal to either player's address, but what about a key equal to the opponent's game key, or a key set before the opponent joins?
 - `_finish`: rounding, and the new `_forfeit` path. The fee is recomputed as `total - whitePayout - blackPayout` so dust goes to the fee. Can either payout exceed what the contract holds for that game?
+- The chess clock in `makeMove` and `claimTimeout`: time is charged from `block.timestamp - lastMoveAt` into `uint32` fields, with an increment added after each move. Can a player gain time, move after their flag fell, or be flagged early? `createGame` caps the clock at 3 hours and the increment at 5 minutes so the `uint32` arithmetic can't overflow (an uncapped increment could make every move revert and lock both stakes); is that bound sufficient over a long game?
 - `claimTimeout`: `lastMoveAt` is set when the second player joins. Any way to claim early, or to reset the clock without moving?
 - `withdraw`, `cancelGame` and `withdrawFees`: double-withdraw or withdraw-after-cancel paths.
 - `ChessReferee.onReport`: the metadata slice used for `expectedWorkflowOwner` (`metadata[42:62]`), and whether a report for one game can be replayed against another.

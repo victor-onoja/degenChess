@@ -464,6 +464,15 @@ describe("DegenChess", () => {
       expect((await gameInfo(f.chess)).result).to.equal(1); // WhiteWins
     });
 
+    it("rejects clock settings that could overflow or make no sense", async () => {
+      const f = await loadFixture(deployFixture);
+      const create = (clock, inc) => f.chess.write.createGame([STAKE, zeroAddress, clock, inc], f.as(f.white));
+      await expect(create(100, 4294967200)).to.be.rejectedWith("InvalidClock");
+      await expect(create(4294967295, 0)).to.be.rejectedWith("InvalidClock");
+      await expect(create(0, 5)).to.be.rejectedWith("InvalidClock");
+      await create(3 * 3600, 300); // the maximums are allowed
+    });
+
     it("games without a clock keep the per-move timeout", async () => {
       const f = await loadFixture(activeGameFixture);
       expect((await f.chess.read.getClock([0n]))[0]).to.equal(0);

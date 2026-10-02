@@ -6,7 +6,7 @@ const ctx = await browser.newContext(mobile ? { ...devices["iPhone 14"] } : { vi
 const page = await ctx.newPage();
 page.on("pageerror", (e) => console.log("pageerror:", e.message.slice(0, 300)));
 await page.goto("http://localhost:3000/arena");
-await page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Mustering"), null, { timeout: 90000 });
+await page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Setting the board"), null, { timeout: 90000 });
 await page.waitForTimeout(2500);
 const box = await page.locator("canvas").boundingBox();
 console.log("canvas", JSON.stringify(box));

@@ -25,6 +25,11 @@ export const degenChessAbi = [
   },
   {
     "inputs": [],
+    "name": "InvalidClock",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidMove",
     "type": "error"
   },
@@ -354,6 +359,32 @@ export const degenChessAbi = [
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_CLOCK",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_INCREMENT",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",

@@ -76,6 +76,8 @@ contract DegenChess is ReentrancyGuard {
     uint256 public constant TOTAL_WEIGHT = 39;
     uint256 public constant FEE_PERCENTAGE = 25; // 2.5%
     uint256 public constant FEE_DENOMINATOR = 1000;
+    uint32 public constant MAX_CLOCK = 3 hours;
+    uint32 public constant MAX_INCREMENT = 5 minutes;
 
     IERC20 public immutable paymentToken;
     address public immutable owner;
@@ -108,6 +110,7 @@ contract DegenChess is ReentrancyGuard {
     error InvalidMove();
     error TimeoutNotReached();
     error TimeExpired();
+    error InvalidClock();
     error NoDrawOffer();
     error NothingToWithdraw();
     error GasForwardFailed();
@@ -133,6 +136,9 @@ contract DegenChess is ReentrancyGuard {
     {
         // Keeps capture values non-zero and exact-ish; LINK has 18 decimals so this is tiny.
         if (_stake < TOTAL_WEIGHT) revert InvalidStake();
+        // Bounded so the uint32 clock arithmetic in makeMove can never overflow and lock a game.
+        if (_clockSeconds > MAX_CLOCK || _incrementSeconds > MAX_INCREMENT) revert InvalidClock();
+        if (_clockSeconds == 0 && _incrementSeconds != 0) revert InvalidClock();
         paymentToken.safeTransferFrom(msg.sender, address(this), _stake);
 
         gameId = gameCount++;

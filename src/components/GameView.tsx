@@ -21,6 +21,7 @@ import { withApproval } from "./Lobby";
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
 const VIEW_PREF = "degenchess.view";
+type ViewMode = "3d" | "2d" | "split";
 
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
 const PIECE_SYMBOL: Record<string, string> = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
@@ -93,14 +94,17 @@ export function GameView({
   const pendingMove = optimistic && optimistic.ply === history.length ? optimistic : null;
   const arenaHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
 
-  const [view, setView] = useState<"3d" | "2d">("3d");
+  // 3D arena, flat 2D board, or both side by side (2D to play precisely, 3D for the show).
+  const [view, setView] = useState<ViewMode>("3d");
   useEffect(() => {
+    let saved: string | null = null;
     try {
-      const saved = localStorage.getItem(VIEW_PREF);
-      if (saved === "2d" || saved === "3d") setView(saved);
+      saved = localStorage.getItem(VIEW_PREF);
     } catch {}
+    if (saved === "2d" || saved === "3d" || saved === "split") setView(saved);
+    else if (window.innerWidth >= 1024 && window.innerWidth > window.innerHeight) setView("split");
   }, []);
-  const chooseView = (next: "3d" | "2d") => {
+  const chooseView = (next: ViewMode) => {
     setView(next);
     try {
       localStorage.setItem(VIEW_PREF, next);
@@ -298,6 +302,10 @@ export function GameView({
   // Round so small layout shifts (a status line wrapping) don't re-frame the camera.
   const insets = { top: Math.ceil(topSize.height / 24) * 24, bottom: Math.ceil(bottomSize.height / 24) * 24 };
   const boardWidth = Math.max(Math.floor(Math.min(midSize.width, midSize.height)) - 16, 0);
+  // Side by side needs a wide space: two squares and a gap. Otherwise fall back to 3D (phones in portrait).
+  const splitWidth = Math.max(Math.floor(Math.min((midSize.width - 36) / 2, midSize.height - 8)), 0);
+  const splitFits = midSize.width === 0 || splitWidth >= 260;
+  const mode: ViewMode = myColor === null ? "3d" : view === "split" && !splitFits ? "3d" : view;
   // The one-line dock is only used mid-game when nothing needs the player's attention.
   const needsAttention =
     !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || (!myTurn && timeLeft <= 0);
@@ -305,7 +313,7 @@ export function GameView({
 
   return (
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[#060908]">
-      {view === "3d" && (
+      {mode === "3d" && (
         <Arena3D
           immersive
           insets={insets}
@@ -333,9 +341,18 @@ export function GameView({
             >
               {compact ? "▾" : "▴"}
             </button>
-            <button className="btn-ghost" onClick={() => chooseView(view === "3d" ? "2d" : "3d")} title="Switch board view">
-              {view === "3d" ? "2D" : "3D"}
-            </button>
+            {/* Spectators always watch in 3D. */}
+            {myColor !== null &&
+              (["3d", "2d", "split"] as const).map((v) => (
+                <button
+                  key={v}
+                  className={`btn-ghost ${mode === v ? "!border-[#00ff66] text-[#3dff8b]" : ""} ${v === "split" ? "hidden sm:inline-flex" : ""}`}
+                  title={v === "split" ? "2D and 3D side by side" : `${v.toUpperCase()} board`}
+                  onClick={() => chooseView(v)}
+                >
+                  {v === "split" ? "Split" : v.toUpperCase()}
+                </button>
+              ))}
             <button
               className="btn-ghost"
               aria-label={muted ? "Unmute" : "Mute"}
@@ -409,30 +426,66 @@ export function GameView({
       </div>
 
       {/* The board's space. In 3D it is empty (the arena shows through); in 2D it holds the flat board. */}
-      <div ref={setMidEl} className={`relative z-10 min-h-0 flex-1 ${view === "3d" ? "pointer-events-none" : ""}`}>
-        {view === "2d" && boardWidth > 0 && (
+      <div ref={setMidEl} className={`relative z-10 min-h-0 flex-1 ${mode === "3d" ? "pointer-events-none" : ""}`}>
+        {mode === "2d" && boardWidth > 0 && (
           <div className="flex h-full items-center justify-center">
             {/* The board measures its container; passing boardWidth directly breaks its drag-and-drop setup. */}
             <div style={{ width: boardWidth }}>
-            <Chessboard
-              id={`game-${gameId}`}
-              position={pendingMove?.fen ?? game.fen()}
-              boardOrientation={myColor === "b" ? "black" : "white"}
-              arePiecesDraggable={canMove}
-              isDraggablePiece={({ piece }) => piece[0] === myColor}
-              onPieceDrop={(from, to) => {
-                void submitMove(from, to);
-                return true;
-              }}
-              onPromotionPieceSelect={(piece, from, to) => {
-                if (!piece || !from || !to) return false;
-                void submitMove(from, to, piece[1].toLowerCase());
-                return true;
-              }}
-              customSquareStyles={squareStyles}
-              customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
-              customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
-            />
+              <Chessboard
+                id={`game-${gameId}`}
+                position={pendingMove?.fen ?? game.fen()}
+                boardOrientation={myColor === "b" ? "black" : "white"}
+                arePiecesDraggable={canMove}
+                isDraggablePiece={({ piece }) => piece[0] === myColor}
+                onPieceDrop={(from, to) => {
+                  void submitMove(from, to);
+                  return true;
+                }}
+                onPromotionPieceSelect={(piece, from, to) => {
+                  if (!piece || !from || !to) return false;
+                  void submitMove(from, to, piece[1].toLowerCase());
+                  return true;
+                }}
+                customSquareStyles={squareStyles}
+                customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
+                customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+              />
+            </div>
+          </div>
+        )}
+        {mode === "split" && splitWidth > 0 && (
+          <div className="flex h-full items-center justify-center gap-3 px-3">
+            <div className="shrink-0" style={{ width: splitWidth }}>
+              <Chessboard
+                id={`game-${gameId}`}
+                position={pendingMove?.fen ?? game.fen()}
+                boardOrientation={myColor === "b" ? "black" : "white"}
+                arePiecesDraggable={canMove}
+                isDraggablePiece={({ piece }) => piece[0] === myColor}
+                onPieceDrop={(from, to) => {
+                  void submitMove(from, to);
+                  return true;
+                }}
+                onPromotionPieceSelect={(piece, from, to) => {
+                  if (!piece || !from || !to) return false;
+                  void submitMove(from, to, piece[1].toLowerCase());
+                  return true;
+                }}
+                customSquareStyles={squareStyles}
+                customDarkSquareStyle={{ backgroundColor: "#1f6b3a" }}
+                customLightSquareStyle={{ backgroundColor: "#b8d8b0" }}
+              />
+            </div>
+            <div className="shrink-0" style={{ width: splitWidth, height: splitWidth }}>
+              <Arena3D
+                fill
+                history={arenaHistory}
+                orientation={myColor ?? "w"}
+                movable={canMove && !pendingMove ? myColor : null}
+                legalTargets={legalTargets}
+                onMove={(from, to, promotion) => void submitMove(from, to, promotion)}
+                captureLabel={(kind: PieceSymbol) => `+${formatToken(pieceValue(kind))} ${TOKEN_SYMBOL}`}
+              />
             </div>
           </div>
         )}

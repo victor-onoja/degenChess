@@ -30,8 +30,8 @@ applied twice.
 
 | Contract | Address |
 | --- | --- |
-| DegenChess | `0x7ae0bbe6747b4571990088d2522bf7da62297c48` |
-| ChessReferee | `0xa44cb8a45c17094782c8b04ca252639525b61a20` |
+| DegenChess | `0x75e210a916fd5acd3bde6e065039cfac19fab2ac` |
+| ChessReferee | `0x7704a19a16ff7e916c2572f0e14c475d09db5062` |
 | Forwarder (simulation `MockKeystoneForwarder`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
 
 ## Run it
@@ -58,6 +58,22 @@ npm run referee
 
 `--broadcast` sends the verdict as a real transaction on Monad testnet. Without it the workflow runs
 as a dry run.
+
+## Keeping it running on a server
+
+Until the workflow is deployed to a DON, something has to run `npm run referee`. On a VPS:
+
+```bash
+git clone https://github.com/victor-onoja/degenChess && cd degenChess && npm install
+curl -sSL https://app.chain.link/cre/install.sh | bash && curl -fsSL https://bun.sh/install | bash
+(cd cre/referee && bun install)
+echo "CRE_ETH_PRIVATE_KEY=<key with testnet MON>" > cre/.env
+export CRE_API_KEY=<API key for your CRE account>  # a server has no browser for `cre login`
+npx pm2 start "npm run referee" --name referee    # restarts it if it crashes
+npx pm2 logs referee
+```
+
+The key in `cre/.env` pays the gas for each verdict, so keep it funded. The watcher only starts from the current block, so a game that finished while it was down needs a manual run of the simulate command above, or a restart with `FROM_BLOCK=<block>`.
 
 ## Going to production
 

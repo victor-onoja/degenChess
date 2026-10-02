@@ -120,6 +120,13 @@ assertEqual(await p1.prompts(), before[0], "P1 prompts during moves (unchanged)"
 assertEqual(await p2.prompts(), before[1], "P2 prompts during moves (unchanged)");
 
 if (SHOTS) {
+  step("Side-by-side view on desktop (screenshot only)");
+  await click(p1, "Split");
+  await p1.page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Setting the board"), null, { timeout: 90000 });
+  await p1.page.waitForTimeout(2500);
+  await shot(p1, "desktop-split");
+  await click(p1, "2D");
+
   step("Phone-sized window: minimized HUD in 2D and 3D (screenshots only)");
   await p2.page.setViewportSize({ width: 390, height: 844 });
   await p2.page.waitForTimeout(600);
@@ -128,7 +135,7 @@ if (SHOTS) {
   await p2.page.waitForTimeout(600);
   await shot(p2, "phone-2d-min");
   await click(p2, "3D");
-  await p2.page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Mustering"), null, { timeout: 90000 });
+  await p2.page.waitForFunction(() => document.querySelector("canvas") && !document.body.innerText.includes("Setting the board"), null, { timeout: 90000 });
   await p2.page.waitForTimeout(3000);
   await shot(p2, "phone-3d-min");
   await p2.page.getByRole("button", { name: "Expand HUD" }).first().click();

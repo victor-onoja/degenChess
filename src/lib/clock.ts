@@ -3,7 +3,7 @@ export const TIME_CONTROLS = [
   { label: "3 + 2", hint: "Blitz", base: 180, increment: 2 },
   { label: "5 + 3", hint: "Blitz", base: 300, increment: 3 },
   { label: "10 + 5", hint: "Rapid", base: 600, increment: 5 },
-  { label: "No clock", hint: "24h per move", base: 0, increment: 0 },
+  { label: "None", hint: "24h a move", base: 0, increment: 0 },
 ] as const;
 
 export function describeClock(base: number, increment: number) {

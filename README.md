@@ -25,7 +25,17 @@ A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39
 
 ### The arena
 
-Games are played in a full-screen three.js arena (react-three-fiber): rigged Bulls and Bears walk to their squares, strike and fall on captures, and coins fly from the captured piece to the capturer's vault. A HUD floats over it with a live "tug-of-war" bar showing how the pot is currently split. There is a 2D board one tap away, sound is synthesized in the browser, and phones automatically get a lighter render. `/arena` is a chain-free sandbox with a scripted demo game.
+Games are played in a three.js arena (react-three-fiber). The pieces are built in code, not loaded from model files: classic chess silhouettes turned on a lathe, ivory and gold for the Bulls, gunmetal and crimson for the Bears, with a bull's head and a bear's head for the knights. That keeps the set readable at a glance, a few thousand triangles in total, and smooth on phones.
+
+Motion is designed for the game: a piece hops to its square with squash and stretch, a capture lands on the victim, which shatters while coins fly to the capturer's vault, a king in check flashes, and a mated king falls over. A HUD floats over the board with both clocks and a live tug-of-war bar showing how the pot is split.
+
+Players can switch between 3D, a flat 2D board, and both side by side (on wide screens). Spectators always watch in 3D. Sound is synthesized in the browser. `/arena` is a chain-free sandbox with a scripted demo game.
+
+### Clocks, names and rematch
+
+- **Clocks:** a game can have a chess clock (3+2, 5+3, 10+5) enforced by the contract. The mover is charged for their thinking time, a player out of time can't move, and the opponent claims the win. Games without a clock have 24 hours per move.
+- **Usernames:** `PlayerNames` holds unique lowercase names. One can be claimed during sign-up, in the same passkey prompt.
+- **Rematch:** recreates the game at the same stake and clock; the opponent is shown the offer.
 
 ### Accounts: one passkey, two keys
 
@@ -54,13 +64,18 @@ contracts/test/MockUSD.sol   mintable test dollar (tUSD) for testnet, local dev 
 test/DegenChess.test.js      contract tests, including random legal games cross-checked against chess.js
 scripts/deploy.js            deploy (also deploys MockUSD unless PAYMENT_TOKEN is set)
 scripts/export-abi.js        writes src/contracts/abi.ts from the compiled artifact
+contracts/PlayerNames.sol    usernames
+src/deployments.ts           live contract addresses
 src/components/              AccountBar, Lobby and GameView
+src/components/arena/        the 3D arena and the coded piece set
 src/lib/mera.ts              passkey ceremonies and key derivation
 src/lib/account.tsx          account provider: sessions, prompt-free vs re-prompt signing
 src/pages/api/drip.ts        testnet faucet
 src/lib/                     move encoding/replay, contract hooks
 tools/e2e/passkey-game.mjs   two-player browser test with simulated passkeys
-tools/blender/, art/         3D character pipeline (art/ is not committed); output in public/models/
+tools/referee-watch.mjs      runs the referee workflow for live games (npm run referee)
+tools/brand/                 brand graphics (title card, poster)
+tools/blender/, art/         character-model pipeline from an earlier iteration (not used by the arena)
 ```
 
 ## Run locally
@@ -77,9 +92,10 @@ Copy the printed values into `.env.local`:
 NEXT_PUBLIC_CHAIN=localhost
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_TOKEN_ADDRESS=0x...
+NEXT_PUBLIC_NAMES_ADDRESS=0x...
 ```
 
-Then run `npm run dev` and open <http://localhost:3000>.
+Then run `npm run build && npm start` and open <http://localhost:3000>. (`npm run dev` works too, but its hot reload can lose routes on recent Node versions.)
 
 Press **Play now** and create a passkey (passkeys work on `localhost`). For a second player, use another browser profile or a private window with a different passkey.
 
@@ -87,6 +103,7 @@ Press **Play now** and create a passkey (passkeys work on `localhost`). For a se
 
 ```bash
 npm test          # contract tests
+(cd cre/referee && node --test judge.test.ts)   # the referee's judging logic
 node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL, default localhost:3000)
 npm run lint
 npm run build
@@ -97,11 +114,11 @@ After changing the contract, run `npm run compile` to regenerate `src/contracts/
 ## Deploy to Monad testnet
 
 ```bash
-DEPLOYER_PRIVATE_KEY=0x... npm run deploy:monad-testnet
+PAYMENT_TOKEN=0x... npm run deploy:monad-testnet   # key from DEPLOYER_PRIVATE_KEY in .env.local
 ```
 
-The deployer needs testnet MON (faucet.monad.xyz). The deploy creates a MockUSD stake token (or uses `PAYMENT_TOKEN`) and sets a 24h move timeout; override it with `MOVE_TIMEOUT_SECONDS`.
+The deployer needs testnet MON (faucet.monad.xyz). The deploy creates the game contract, the `ChessReferee` wired to Chainlink's forwarder, and (unless `NAMES_ADDRESS` is set) `PlayerNames`. It reuses the stake token given in `PAYMENT_TOKEN`, or deploys a MockUSD. The move timeout is 24h; override it with `MOVE_TIMEOUT_SECONDS`.
 
-Set `NEXT_PUBLIC_CHAIN=monadTestnet` and the printed `NEXT_PUBLIC_CONTRACT_ADDRESS` in your hosting environment. See `.env.example`.
+Copy the printed addresses into `src/deployments.ts` and `cre/referee/config.staging.json`, then restart the referee (`npm run referee`, see [cre/README.md](cre/README.md)).
 
 > The earlier Arbitrum Sepolia deployments (`0x3085…7C7a`, `0xB7f4…E7E`) are from the old contract. It had no access control, and its piece values added up to 2.25× the stake, so `endGame` underflows. Don't use them.

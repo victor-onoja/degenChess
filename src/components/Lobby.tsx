@@ -103,7 +103,7 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <section className="retro-panel">
+      <section className="retro-panel h-full">
         <h2 className="panel-title">Create Game</h2>
         <p className="mb-3 text-sm opacity-80">
           You play the Bulls and move first. Your opponent matches your stake. Every capture moves that piece&apos;s share
@@ -111,11 +111,12 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         </p>
 
         <label className="mb-1 block text-sm font-bold">Stake ({TOKEN_SYMBOL})</label>
-        <div className="mb-3 flex gap-2">
+        {/* Four equal cells: three presets and a custom amount. */}
+        <div className="mb-3 grid grid-cols-4 gap-2">
           {STAKE_PRESETS.map((preset) => (
             <button
               key={preset}
-              className={`btn-ghost ${stakeInput === preset ? "!border-[#00ff66]" : ""}`}
+              className={`btn-ghost !h-12 !min-w-0 ${stakeInput === preset ? "!border-[#00ff66] text-[#3dff8b]" : ""}`}
               onClick={() => setStakeInput(preset)}
             >
               {preset}
@@ -124,18 +125,18 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
           <input
             value={stakeInput}
             onChange={(e) => setStakeInput(e.target.value)}
-            className="min-w-0 flex-1"
+            className="h-12 w-full min-w-0 !px-2 text-center"
             inputMode="decimal"
             aria-label="Stake amount"
           />
         </div>
 
         <label className="mb-1 block text-sm font-bold">Time control</label>
-        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mb-3 grid grid-cols-4 gap-2">
           {TIME_CONTROLS.map((c) => (
             <button
               key={c.label}
-              className={`btn-ghost !h-auto flex-col !gap-0 py-2 ${control.label === c.label ? "!border-[#00ff66]" : ""}`}
+              className={`btn-ghost !h-14 !min-w-0 flex-col !gap-0 ${control.label === c.label ? "!border-[#00ff66] text-[#3dff8b]" : ""}`}
               onClick={() => setControl(c)}
             >
               <span>{c.label}</span>
@@ -173,7 +174,7 @@ export function Lobby({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         )}
       </section>
 
-      <section className="retro-panel">
+      <section className="retro-panel h-full">
         <h2 className="panel-title">Open Games</h2>
         {openGames.length === 0 ? (
           <p className="opacity-80">No open games. Create one!</p>
