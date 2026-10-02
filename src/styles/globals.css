@@ -5,17 +5,17 @@
 
 /*
   DegenChess: the living board.
-  An indigo field. Bone and obsidian are the two sides and the only solid surfaces.
+  A near-black field; the colour lives in the board, in Monad's violet. Bone and obsidian are the two sides.
   Gold is light, and light means money: a core, an amount, or the action that stakes. Nothing else is gold.
   Everything sits on the board's square module: controls are squares of a rank.
 */
 :root {
-  --field: #161b52;
-  --field-deep: #0c0f33;
-  --sq-light: #3a45b8;
-  --sq-dark: #222a85;
+  --field: #0d0b14;
+  --field-deep: #08070d;
+  --sq-light: #6957d6;
+  --sq-dark: #3b2e8c;
   --bone: #f1e9d6;
-  --bone-soft: #b9bde6; /* secondary text: bone pulled towards the field, never grey */
+  --bone-soft: #b5aecd; /* secondary text: bone pulled towards the field, never grey */
   --obsidian: #0a0a14;
   --gold: #ffc233;
   --gold-hot: #ffe08a;
@@ -196,7 +196,7 @@ input::placeholder {
     background: var(--sq-light);
   }
   .rank__square:hover:not(:disabled):not([aria-pressed="true"]) {
-    background: #4d58d6;
+    background: #8573ee;
   }
   .rank__square[aria-pressed="true"] {
     background: var(--bone);
@@ -328,8 +328,8 @@ input::placeholder {
     background: var(--obsidian);
     box-shadow: inset 0 0 0 1px var(--line);
   }
-  .split > div,
-  .stake-bar > div {
+  .split > *,
+  .stake-bar > * {
     width: 100%;
     height: 100%;
     background: var(--bone);
@@ -366,7 +366,7 @@ input::placeholder {
   font-family: var(--display);
   font-size: 14px;
   white-space: nowrap;
-  box-shadow: 0 10px 24px rgba(4, 5, 20, 0.5);
+  box-shadow: 0 10px 24px rgba(3, 2, 8, 0.5);
   animation: tag-in 0.35s var(--ease-out);
 }
 /* the tether: the tag belongs to the piece under it */
@@ -403,7 +403,7 @@ input::placeholder {
   font-size: 26px;
   color: var(--gold);
   white-space: nowrap;
-  text-shadow: 0 2px 0 var(--obsidian), 0 8px 22px rgba(4, 5, 20, 0.7);
+  text-shadow: 0 2px 0 var(--obsidian), 0 8px 22px rgba(3, 2, 8, 0.7);
   animation: amount-rise 1.9s var(--ease-out) forwards;
 }
 @keyframes amount-rise {
@@ -443,10 +443,10 @@ input::placeholder {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(0deg, var(--field) 0%, var(--field) 20%, rgba(22, 27, 82, 0.82) 38%, rgba(22, 27, 82, 0) 62%);
+  background: linear-gradient(0deg, var(--field) 0%, var(--field) 20%, rgba(13, 11, 20, 0.82) 38%, rgba(13, 11, 20, 0) 62%);
 }
 .stage--short .stage__ground {
-  background: linear-gradient(0deg, var(--field) 0%, rgba(22, 27, 82, 0.7) 30%, rgba(22, 27, 82, 0) 70%);
+  background: linear-gradient(0deg, var(--field) 0%, rgba(13, 11, 20, 0.7) 30%, rgba(13, 11, 20, 0) 70%);
 }
 
 /* Username and Play as two squares of one rank. */
@@ -478,17 +478,25 @@ input::placeholder {
 
 .yard {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 232px), 1fr));
-  gap: 36px 28px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 64px;
   align-items: start;
 }
-@media (max-width: 560px) {
+.yard__boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+@media (max-width: 900px) {
   .yard {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 44px;
   }
-  .yard > .yard__start {
-    grid-column: 1 / -1;
+}
+@media (max-width: 560px) {
+  .yard__boards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 }
 
@@ -510,9 +518,9 @@ input::placeholder {
 }
 .board__sq svg {
   position: absolute;
-  inset: 4% 4% 2%;
-  width: 92%;
-  height: 94%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* A game in the yard: the board is the button. */
@@ -527,7 +535,7 @@ input::placeholder {
 .table:hover .board,
 .table:focus-visible .board {
   transform: translateY(-4px);
-  box-shadow: 0 16px 0 -8px var(--field-deep), 0 22px 30px rgba(4, 5, 20, 0.45);
+  box-shadow: 0 16px 0 -8px var(--field-deep), 0 22px 30px rgba(3, 2, 8, 0.45);
 }
 
 /* A king waiting alone breathes; its core beats. */
@@ -571,44 +579,6 @@ input::placeholder {
   border-radius: 50%;
   background: var(--alert);
   animation: beat 1.15s ease-in-out infinite;
-}
-
-/* ---------------------------------------------------------------- what each one is worth */
-
-.worth {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  border-radius: 3px;
-  overflow: hidden;
-}
-.worth__sq {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 18px 6px 14px;
-  background: var(--sq-dark);
-  text-align: center;
-}
-.worth__sq:nth-child(odd) {
-  background: var(--sq-light);
-}
-.worth__sq svg {
-  width: min(100%, 92px);
-  height: auto;
-}
-@media (max-width: 640px) {
-  .worth {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  /* keep the chequer pattern across two rows of three */
-  .worth__sq:nth-child(n) {
-    background: var(--sq-dark);
-  }
-  .worth__sq:nth-child(1),
-  .worth__sq:nth-child(3),
-  .worth__sq:nth-child(5) {
-    background: var(--sq-light);
-  }
 }
 
 /* ---------------------------------------------------------------- how it runs */

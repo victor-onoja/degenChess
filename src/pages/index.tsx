@@ -5,29 +5,16 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import type { PieceSymbol } from "chess.js";
-import { CONTRACT_ADDRESS, TOKEN_SYMBOL } from "../config";
+import { CONTRACT_ADDRESS } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { cleanName, NAME_RULE } from "../lib/names";
-import { PIECE_WEIGHT } from "../lib/pieceShapes";
 import { AccountBar } from "../components/AccountBar";
 import { GameView } from "../components/GameView";
-import { PieceIcon } from "../components/PieceIcon";
 import { Seo } from "../components/Seo";
 import { Wordmark } from "../components/Wordmark";
 import { Yard } from "../components/Yard";
 
 const AttractArena = dynamic(() => import("../components/arena/AttractArena"), { ssr: false });
-
-const PIECES: { kind: PieceSymbol; name: string }[] = [
-  { kind: "p", name: "Pawn" },
-  { kind: "n", name: "Knight" },
-  { kind: "b", name: "Bishop" },
-  { kind: "r", name: "Rook" },
-  { kind: "q", name: "Queen" },
-  { kind: "k", name: "King" },
-];
-const EXAMPLE_STAKES = [1, 10, 50, 100];
 
 const FACTS = [
   {
@@ -53,7 +40,6 @@ const Home: NextPage = () => {
   const { address, returning, busy, onboarding, signUp, unlock } = useDegenAccount();
   const hasAccount = address !== null || returning;
   const [name, setName] = useState("");
-  const [exampleStake, setExampleStake] = useState(10);
 
   // The game being viewed lives in the URL (?game=3) so it can be shared with an opponent.
   const gameParam = typeof router.query.game === "string" ? router.query.game : null;
@@ -148,36 +134,6 @@ const Home: NextPage = () => {
             ) : (
               <p>No contract configured. Set NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local (see README).</p>
             )}
-          </div>
-        </section>
-
-        <section className="pt-24">
-          <h2 className="heading">What each one is worth</h2>
-          <p className="lead mt-3">
-            Your stake is shared out among your pieces before the first move. When one is taken, its share goes with it.
-          </p>
-          <p id="example-stake" className="soft mb-1 mt-7 text-sm">
-            At a stake of ({TOKEN_SYMBOL})
-          </p>
-          <div className="rank max-w-sm" role="group" aria-labelledby="example-stake">
-            {EXAMPLE_STAKES.map((s) => (
-              <button key={s} className="rank__square" aria-pressed={exampleStake === s} onClick={() => setExampleStake(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="worth mt-5">
-            {PIECES.map((p) => (
-              <div key={p.kind} className="worth__sq">
-                <PieceIcon kind={p.kind} color="w" core={p.kind !== "k"} />
-                <span className="mt-2 font-bold">{p.name}</span>
-                {p.kind === "k" ? (
-                  <span className="soft text-sm">can&apos;t be taken</span>
-                ) : (
-                  <span className="amount text-lg">{((exampleStake * PIECE_WEIGHT[p.kind]) / 39).toFixed(2)}</span>
-                )}
-              </div>
-            ))}
           </div>
         </section>
 

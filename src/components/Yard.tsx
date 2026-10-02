@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { parseEventLogs, parseUnits } from "viem";
 import { degenChessAbi } from "../contracts/abi";
 import { TOKEN_DECIMALS, TOKEN_MINTABLE, TOKEN_SYMBOL } from "../config";
@@ -10,11 +10,11 @@ import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
 import { withApproval } from "../lib/stake";
 import { Icon } from "./Icon";
-import { MiniBoard, waitingBoard } from "./MiniBoard";
+import { type Cell, MiniBoard, waitingBoard } from "./MiniBoard";
 
 const STAKE_PRESETS = ["1", "5", "10"];
 const WAITING = waitingBoard();
-const START = waitingBoard().map((row) => row.map(() => null));
+const START: Cell[][] = waitingBoard().map((row) => row.map(() => null));
 
 function parseStake(value: string): bigint | null {
   try {
@@ -115,24 +115,54 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   );
 }
 
+type Tab = "open" | "live" | "done";
+const TABS: { id: Tab; name: string; empty: string }[] = [
+  { id: "open", name: "Waiting", empty: "Nobody is waiting for an opponent. Start a board and send the link to someone." },
+  { id: "live", name: "Live", empty: "No games are being played right now." },
+  { id: "done", name: "Finished", empty: "No finished games yet." },
+];
+
+/** True on phone-width screens, where the yard shows two boards at a time instead of three. */
+function useNarrow() {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 560px)");
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
+
 /**
- * The yard: every game is a small living board. Open ones have a king waiting with its stake
- * beating in its chest; live ones show the real position, move by move.
+ * The yard: start a board on the left; on the right, the games out there, a few at a time.
+ * Each game is a small board at its real position, and the board is the button.
  */
 export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const { address } = useDegenAccount();
   const { games } = useRecentGames();
-  const positions = usePositions(games);
   const { label } = useNames(games.flatMap((g) => [g.white, g.black]));
+  const narrow = useNarrow();
+  const [picked, setPicked] = useState<Tab | null>(null);
+  const [page, setPage] = useState(0);
   const [idInput, setIdInput] = useState("");
 
   const me = address ?? undefined;
   const mine = (g: ListedGame) => sameAddress(g.white, me) || sameAddress(g.black, me);
-  const open = games.filter((g) => g.status === Status.Open);
   const live = games.filter((g) => g.status === Status.Active);
-  const finished = games.filter((g) => g.status === Status.Finished).slice(0, 4);
-  // Your own boards first, then boards waiting for someone, then games to watch.
-  const tables = [...live.filter(mine), ...open, ...live.filter((g) => !mine(g)), ...finished];
+  const lists: Record<Tab, ListedGame[]> = {
+    open: games.filter((g) => g.status === Status.Open),
+    live: [...live.filter(mine), ...live.filter((g) => !mine(g))],
+    done: games.filter((g) => g.status === Status.Finished),
+  };
+  // Until a tab is chosen, show the first that has anything in it.
+  const tab = picked ?? TABS.find((t) => lists[t.id].length > 0)?.id ?? "open";
+  const perPage = narrow ? 2 : 3;
+  const pages = Math.max(Math.ceil(lists[tab].length / perPage), 1);
+  const current = Math.min(page, pages - 1);
+  const visible = lists[tab].slice(current * perPage, (current + 1) * perPage);
+  const positions = usePositions(visible);
 
   const table = (g: ListedGame) => {
     const isOpen = g.status === Status.Open;
@@ -140,71 +170,87 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const total = g.whiteBalance + g.blackBalance;
     const share = total > 0n ? Number((g.whiteBalance * 1000n) / total) / 10 : 50;
     const action = isOpen ? (sameAddress(g.white, me) ? "View" : "Join") : isLive ? (mine(g) ? "Resume" : "Watch") : "Review";
-    const result = g.result === Result.Draw ? "Drawn" : g.result === Result.WhiteWins ? "White won" : "Black won";
+    const result = g.result === Result.Draw ? "drawn" : g.result === Result.WhiteWins ? "White won" : "Black won";
     const who = isOpen ? `${label(g.white)} is waiting` : `${label(g.white)} v ${label(g.black)}`;
     return (
-      <div key={g.id.toString()}>
-        <button className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>
-          <MiniBoard rows={isOpen ? WAITING : (positions.get(g.id.toString()) ?? START)} waiting={isOpen} />
-        </button>
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <span className="font-bold">
+      <button key={g.id.toString()} className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>
+        <MiniBoard rows={isOpen ? WAITING : (positions.get(g.id.toString()) ?? START)} waiting={isOpen} />
+        <span className="mt-3 flex items-baseline justify-between gap-2">
+          <span className="min-w-0 truncate font-bold">
             <span className="amount">
               {formatToken(g.stake)} {TOKEN_SYMBOL}
             </span>{" "}
             <span className="soft font-medium">{g.clock === "No clock" ? "no clock" : g.clock}</span>
           </span>
-          {isLive && (
-            <span className="soft flex items-center gap-1.5 text-sm">
-              <span className="live-mark" /> live
-            </span>
-          )}
-          {g.status === Status.Finished && <span className="soft text-sm">{result}</span>}
-        </div>
-        <p className="truncate text-sm">{who}</p>
-        {!isOpen && (
-          <div className="split mt-2" title="How the pot is split right now">
-            <div style={{ transform: `scaleX(${share / 100})` }} />
-          </div>
+          <span className="link shrink-0 text-sm">{action}</span>
+        </span>
+        <span className="soft block truncate text-sm">{g.status === Status.Finished ? `${who}, ${result}` : who}</span>
+        {isLive && (
+          <span className="split mt-2 block" title="How the pot is split right now">
+            <span className="block" style={{ transform: `scaleX(${share / 100})` }} />
+          </span>
         )}
-        <button className={`act act--sm mt-3 ${isOpen && !sameAddress(g.white, me) ? "" : "act--bone"}`} onClick={() => onOpenGame(g.id)}>
-          {action === "Watch" && <Icon name="eye" size={18} />}
-          {action}
-        </button>
-      </div>
+      </button>
     );
   };
 
   return (
-    <>
-      <div className="yard">
-        <StartBoard onOpenGame={onOpenGame} />
-        {tables.map(table)}
+    <div className="yard">
+      <StartBoard onOpenGame={onOpenGame} />
+      <div>
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              className="ghost"
+              aria-pressed={tab === t.id}
+              onClick={() => {
+                setPicked(t.id);
+                setPage(0);
+              }}
+            >
+              {t.name} <span className={tab === t.id ? "" : "soft"}>{lists[t.id].length}</span>
+            </button>
+          ))}
+          <form
+            className="ml-auto flex items-stretch"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (/^\d+$/.test(idInput.trim())) onOpenGame(BigInt(idInput.trim()));
+            }}
+          >
+            <input
+              value={idInput}
+              onChange={(e) => setIdInput(e.target.value)}
+              placeholder="Board no."
+              aria-label="Board number"
+              inputMode="numeric"
+              className="min-h-[44px] w-28 px-3"
+            />
+            <button type="submit" className="ghost" style={{ borderRadius: 0 }}>
+              Open
+            </button>
+          </form>
+        </div>
+
+        {visible.length > 0 ? <div className="yard__boards">{visible.map(table)}</div> : <p className="soft max-w-md">{TABS.find((t) => t.id === tab)?.empty}</p>}
+
+        {pages > 1 && (
+          <div className="mt-6 flex items-center gap-3">
+            <button className="ghost" aria-label="Previous boards" disabled={current === 0} onClick={() => setPage(current - 1)}>
+              <Icon name="back" />
+            </button>
+            <span className="soft text-sm">
+              {current + 1} of {pages}
+            </span>
+            <button className="ghost" aria-label="More boards" disabled={current === pages - 1} onClick={() => setPage(current + 1)}>
+              <span style={{ display: "inline-flex", transform: "scaleX(-1)" }}>
+                <Icon name="back" />
+              </span>
+            </button>
+          </div>
+        )}
       </div>
-      {tables.length === 0 && (
-        <p className="soft mt-8 max-w-md">
-          The yard is empty right now. Start a board and send the link to someone, or open a second window and play yourself.
-        </p>
-      )}
-      <form
-        className="mt-10 flex max-w-xs items-stretch"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (/^\d+$/.test(idInput.trim())) onOpenGame(BigInt(idInput.trim()));
-        }}
-      >
-        <input
-          value={idInput}
-          onChange={(e) => setIdInput(e.target.value)}
-          placeholder="Board number"
-          aria-label="Board number"
-          inputMode="numeric"
-          className="min-h-[44px] flex-1 px-3"
-        />
-        <button type="submit" className="ghost" style={{ borderRadius: 0 }}>
-          Open
-        </button>
-      </form>
-    </>
+    </div>
   );
 }

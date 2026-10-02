@@ -275,7 +275,7 @@ export function GameView({
     const onMove = active && turn === color;
     return (
       <div className={`flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 ${bull ? "" : "flex-row-reverse text-right"} ${onMove ? "on-move" : ""}`}>
-        <PieceIcon kind="k" color={color} className="h-10 w-7 shrink-0" />
+        <PieceIcon kind="k" color={color} className="h-9 w-9 shrink-0" />
         <div className="min-w-0">
           <div className="soft truncate text-xs">
             {bull ? "White" : "Black"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
@@ -393,7 +393,7 @@ export function GameView({
           {compact ? (
             <div className="flex items-center gap-2 text-sm font-bold">
               <span className={`flex items-center gap-1.5 ${active && turn === "w" ? "on-move" : ""}`}>
-                <PieceIcon kind="k" color="w" className="h-6 w-4" />
+                <PieceIcon kind="k" color="w" className="h-6 w-6" />
                 <span className="amount">{formatToken(info.whiteBalance)}</span>
                 {myColor === "w" ? " (you)" : ""}
                 {clockOn && active ? ` ${formatClock(clockLeft.w)}` : ""}
@@ -405,7 +405,7 @@ export function GameView({
                 {clockOn && active ? `${formatClock(clockLeft.b)} ` : ""}
                 {myColor === "b" ? "(you) " : ""}
                 <span className="amount">{formatToken(info.blackBalance)}</span>
-                <PieceIcon kind="k" color="b" className="h-6 w-4" />
+                <PieceIcon kind="k" color="b" className="h-6 w-6" />
               </span>
             </div>
           ) : (
@@ -463,8 +463,8 @@ export function GameView({
                 }}
                 customSquareStyles={squareStyles}
                 customPieces={BOARD_PIECES}
-                customDarkSquareStyle={{ backgroundColor: "#222a85" }}
-                customLightSquareStyle={{ backgroundColor: "#3a45b8" }}
+                customDarkSquareStyle={{ backgroundColor: "#44359a" }}
+                customLightSquareStyle={{ backgroundColor: "#7a68ee" }}
               />
             </div>
           </div>
@@ -489,8 +489,8 @@ export function GameView({
                 }}
                 customSquareStyles={squareStyles}
                 customPieces={BOARD_PIECES}
-                customDarkSquareStyle={{ backgroundColor: "#222a85" }}
-                customLightSquareStyle={{ backgroundColor: "#3a45b8" }}
+                customDarkSquareStyle={{ backgroundColor: "#44359a" }}
+                customLightSquareStyle={{ backgroundColor: "#7a68ee" }}
               />
             </div>
             <div className="shrink-0" style={{ width: splitWidth, height: splitWidth }}>
@@ -531,7 +531,7 @@ export function GameView({
                 {captures[c].length > 0 && (
                   <span className="flex min-w-0 flex-wrap">
                     {captures[c].map((p, i) => (
-                      <PieceIcon key={i} kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-5 w-3.5" />
+                      <PieceIcon key={i} kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-5 w-5" />
                     ))}
                   </span>
                 )}

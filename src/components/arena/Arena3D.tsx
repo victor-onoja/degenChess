@@ -17,8 +17,8 @@ import { ANATOMY } from "../../lib/pieceShapes";
 
 // ------------------------------------------------------------------ constants
 
-const FIELD = "#0c0f33";
-const SQUARES = { light: "#3a45b8", dark: "#222a85", lastLight: "#5560cf", lastDark: "#323ca3" };
+const FIELD = "#08070d";
+const SQUARES = { light: "#5f4fd0", dark: "#35297f", lastLight: "#8a7bf0", lastDark: "#4c3db0" };
 const GOLD = "#ffc233";
 const GOLD_GLOW = new THREE.Color(GOLD).multiplyScalar(2.2);
 const ALERT_GLOW = new THREE.Color("#ff5a45").multiplyScalar(1.6);
@@ -69,7 +69,6 @@ function Piece({
   toppled,
   tag,
   onPick,
-  onHover,
 }: {
   piece: TrackedPiece;
   animation: Animation;
@@ -86,7 +85,6 @@ function Piece({
   /** Worth shown on a tag above the piece. */
   tag?: string;
   onPick: (square: Square) => void;
-  onHover: (id: string | null) => void;
 }) {
   const outer = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
@@ -228,11 +226,9 @@ function Piece({
       }}
       onPointerOver={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
-        onHover(piece.id);
         if (selectable) document.body.style.cursor = "pointer";
       }}
       onPointerOut={() => {
-        onHover(null);
         document.body.style.cursor = "";
       }}
     >
@@ -388,7 +384,7 @@ function Board({
     <group>
       <mesh position={[0, -0.2, 0]} receiveShadow>
         <boxGeometry args={[8.6, 0.28, 8.6]} />
-        <meshStandardMaterial color="#0a0d2c" roughness={0.5} metalness={0.4} />
+        <meshStandardMaterial color="#15121f" roughness={0.5} metalness={0.4} />
       </mesh>
       {squares.map(({ square, x, z, dark }) => {
         const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
@@ -481,7 +477,7 @@ function Motes() {
   return (
     <instancedMesh ref={mesh} args={[undefined, undefined, COUNT]} frustumCulled={false}>
       <planeGeometry args={[1, 1]} />
-      <meshBasicMaterial color="#4d58d6" transparent opacity={0.55} side={THREE.DoubleSide} />
+      <meshBasicMaterial color="#8573ee" transparent opacity={0.55} side={THREE.DoubleSide} />
     </instancedMesh>
   );
 }
@@ -679,7 +675,6 @@ function Scene({
   }, [history, pieces]);
 
   const [selected, setSelected] = useState<Square | null>(null);
-  const [hovered, setHovered] = useState<string | null>(null);
   useEffect(() => setSelected(null), [history.length, movable]);
   const targets = useMemo(() => (selected ? legalTargets(selected) : []), [selected, legalTargets]);
 
@@ -710,19 +705,16 @@ function Scene({
   const checked = lastMove?.san.includes("+") ? sideToMove : null;
   const mated = lastMove?.san.includes("#") ? sideToMove : null;
 
-  // Which piece wears a worth tag: the one under the pointer, the selected one, or (as a backdrop)
-  // the most valuable piece still standing, so the first thing anyone reads is a price on a piece.
+  // In play the board stays clean: money shows when it moves. Only as a backdrop does one piece
+  // wear a worth tag (the most valuable still standing), so a visitor reads a price on a piece first.
   const tagged = useMemo(() => {
-    if (!captureLabel) return null;
-    if (hovered) return hovered;
-    if (selected) return pieces.find((p) => p.alive && p.square === selected)?.id ?? null;
-    if (!attract) return null;
+    if (!captureLabel || !attract) return null;
     for (const kind of ["q", "r", "b", "n", "p"] as PieceSymbol[]) {
       const found = pieces.find((p) => p.alive && p.color === "w" && p.kind === kind);
       if (found) return found.id;
     }
     return null;
-  }, [hovered, selected, attract, pieces, captureLabel]);
+  }, [attract, pieces, captureLabel]);
 
   return (
     <>
@@ -730,7 +722,7 @@ function Scene({
       {attract && <PointerGaze gaze={gaze} />}
       <color attach="background" args={[FIELD]} />
       <fog attach="fog" args={[FIELD, 14, 36]} />
-      <hemisphereLight args={["#c9d2ff", "#0c0f33", 0.45]} />
+      <hemisphereLight args={["#ece6ff", "#2a2440", 0.8]} />
       <directionalLight
         position={[5, 12, 6]}
         intensity={1.6}
@@ -745,11 +737,11 @@ function Scene({
         shadow-camera-near={1}
         shadow-camera-far={30}
       />
-      <directionalLight position={[-6, 4, -8]} intensity={1.2} color="#8f9cff" />
+      <directionalLight position={[-6, 4, -8]} intensity={1.2} color="#a493ff" />
       <Environment resolution={256} environmentIntensity={0.5}>
         <Lightformer form="rect" intensity={3} position={[0, 6, 0]} rotation-x={Math.PI / 2} scale={[12, 12, 1]} />
-        <Lightformer form="rect" intensity={1.6} color="#9aa6ff" position={[0, 2, 9]} scale={[14, 4, 1]} />
-        <Lightformer form="rect" intensity={1.6} color="#9aa6ff" position={[0, 2, -9]} rotation-y={Math.PI} scale={[14, 4, 1]} />
+        <Lightformer form="rect" intensity={1.6} color="#b0a4ff" position={[0, 2, 9]} scale={[14, 4, 1]} />
+        <Lightformer form="rect" intensity={1.6} color="#b0a4ff" position={[0, 2, -9]} rotation-y={Math.PI} scale={[14, 4, 1]} />
         <Lightformer form="rect" intensity={1.2} color="#ffe6c4" position={[9, 3, 0]} rotation-y={-Math.PI / 2} scale={[10, 4, 1]} />
       </Environment>
 
@@ -769,7 +761,6 @@ function Scene({
           toppled={piece.kind === "k" && mated === piece.color}
           tag={tagged === piece.id && piece.kind !== "k" && captureLabel ? captureLabel(piece.kind) : undefined}
           onPick={pick}
-          onHover={setHovered}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (

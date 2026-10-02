@@ -13,11 +13,11 @@ The living board. DegenChess is chess in a dimension where the pieces are alive 
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--field` | `#161b52` | Page ground |
-| `--field-deep` | `#0c0f33` | Game screen ground, deep panels |
-| `--sq-light` / `--sq-dark` | `#3a45b8` / `#222a85` | Board squares, and controls built from squares |
+| `--field` | `#0d0b14` | Page ground: near-black, so the colour lives in the board |
+| `--field-deep` | `#08070d` | Game screen ground, deep panels |
+| `--sq-light` / `--sq-dark` | `#6957d6` / `#3b2e8c` | Board squares in Monad's violet, and controls built from squares |
 | `--bone` | `#f1e9d6` | White pieces, text, the selected square |
-| `--bone-soft` | `#b9bde6` | Secondary text |
+| `--bone-soft` | `#b5aecd` | Secondary text |
 | `--obsidian` | `#0a0a14` | Black pieces, text on bone or gold |
 | `--gold` | `#ffc233` | Money: cores, amounts, the primary action |
 | `--alert` | `#ff5a45` | Resign and other destructive actions |
@@ -36,13 +36,14 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 - `.slab`: the HUD surface over the board. Opaque, one-pixel line, no blur.
 - `.split`: how the pot is divided, bone from the left with a gold centre mark.
 - `.on-move`: a gold underline beneath the side whose turn it is.
-- `MiniBoard`: a game as a small board. A waiting game shows a lone king with a beating core.
-- `PieceIcon`: the flat form of a piece, drawn from the same profiles as the 3D set (`src/lib/pieceShapes.ts`).
+- `MiniBoard`: a game as a small board. A waiting game shows White set up with the other side empty.
+- `PieceIcon`: flat pieces use the standard tournament set (`src/lib/standardPieces.ts`), in bone and obsidian.
+- The Yard shows three boards at a time (two on phones) under Waiting / Live / Finished, with a pager.
 - `Wordmark`: a pair of eyes that follow the pointer, then the name.
 
 ## The 3D board
 
-Pieces are lathe-turned in code (`src/components/arena/pieces3d.tsx`). Each has eyes and a gold core sized to its value; the king's core is pale because the king has no price. In `Arena3D.tsx` they breathe, blink, look at the last move and at the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
+Pieces are lathe-turned in code (`src/components/arena/pieces3d.tsx`). Each is a small robed figure with the head of its piece, a pair of plain oval eyes and a gold core sized to its value; the king's core is pale because the king has no price. In `Arena3D.tsx` they breathe, blink, look at the last move and at the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
 
 ## Motion
 

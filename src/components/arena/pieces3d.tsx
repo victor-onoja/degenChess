@@ -37,8 +37,11 @@ const MATERIALS = {
     body: new THREE.MeshStandardMaterial({ color: "#1a1a26", metalness: 0.35, roughness: 0.32 }),
     trim: new THREE.MeshStandardMaterial({ color: "#2a2a3a", metalness: 0.4, roughness: 0.35 }),
   },
-  eye: new THREE.MeshStandardMaterial({ color: "#fbf7ee", emissive: "#fbf7ee", emissiveIntensity: 0.55, roughness: 0.25 }),
-  pupil: new THREE.MeshBasicMaterial({ color: "#07070c" }),
+  // Eyes are a pair of small ovals: dark on the bone side, softly lit on the obsidian side.
+  eye: {
+    w: new THREE.MeshBasicMaterial({ color: "#0b0a12" }),
+    b: new THREE.MeshBasicMaterial({ color: new THREE.Color("#fff3d6").multiplyScalar(1.25), toneMapped: false }),
+  },
   // Values above 1 are what the bloom pass turns into glow.
   core: new THREE.MeshBasicMaterial({ color: GOLD.clone().multiplyScalar(2.4), toneMapped: false }),
   kingCore: new THREE.MeshBasicMaterial({ color: new THREE.Color("#dfe4ff").multiplyScalar(1.6), toneMapped: false }),
@@ -52,13 +55,8 @@ export interface PieceParts {
   coreRadius: number;
 }
 
-function Eye({ x }: { x: number }) {
-  return (
-    <group position-x={x}>
-      <mesh geometry={GEOMETRY.sphere} material={MATERIALS.eye} scale={0.042} />
-      <mesh geometry={GEOMETRY.sphere} material={MATERIALS.pupil} position-z={0.03} scale={[0.022, 0.026, 0.016]} />
-    </group>
-  );
+function Eye({ x, color }: { x: number; color: Color }) {
+  return <mesh geometry={GEOMETRY.sphere} material={MATERIALS.eye[color]} position={[x, 0, 0.012]} scale={[0.021, 0.032, 0.012]} />;
 }
 
 /** The knight's head: a horse, built from a few shapes, looking forward along +z. */
@@ -151,8 +149,8 @@ export const ChessPiece = forwardRef<PieceParts, { kind: PieceSymbol; color: Col
       )}
 
       <group ref={eyes} position={[0, anatomy.eyeY, anatomy.eyeZ]}>
-        <Eye x={-anatomy.eyeX} />
-        <Eye x={anatomy.eyeX} />
+        <Eye x={-anatomy.eyeX} color={color} />
+        <Eye x={anatomy.eyeX} color={color} />
       </group>
     </group>
   );
