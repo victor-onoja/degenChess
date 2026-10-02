@@ -16,7 +16,9 @@ Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3
 
 Deployed on Monad testnet (chain 10143): DegenChess `0x75e210a916fd5acd3bde6e065039cfac19fab2ac`, ChessReferee `0xb770549f787d18519fe2e2faf8d0fb8e1158310e`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
-Run the tests with `npm install && npm test` (27 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
+
+Run the tests with `npm install && npm test` (28 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 
@@ -43,8 +45,8 @@ A game ends by `resign`, `acceptDraw`, `claimTimeout` (the player not on move, a
 These are deliberate trade-offs or open problems. We'd value your view on how bad each is and what the cheapest sound fix would be.
 
 1. **Moves are not checked for legality on-chain; the referee is what punishes them.** The contract checks turn order, that you move your own piece, that you don't capture your own piece or a king, and promotion rules. A modified client can still submit an illegal capture and be credited its value. The referee then forfeits that player. So the guarantee is only as strong as the referee:
-   - **Liveness.** If the workflow is not running, nothing settles automatically. The honest client stops accepting moves after an illegal one, which puts the honest player on the clock; after `moveTimeout` the cheater could call `claimTimeout`. The owner can still `arbitrate` by hand. Today the workflow runs through `cre workflow simulate --broadcast` driven by `tools/referee-watch.mjs`, not yet on a Chainlink DON.
-   - **Authenticity.** `ChessReferee.onReport` accepts anything from its `forwarder`. It currently points at Chainlink's `MockKeystoneForwarder` (simulation), which does not verify DON signatures, and `expectedWorkflowOwner` is unset. Anyone who can get a report through that mock forwarder can settle any active game either way. This must move to the production `KeystoneForwarder` with `setExpectedWorkflowOwner` before real value is at stake.
+   - **Liveness.** If the referee is not running, nothing settles automatically. The honest client stops accepting moves after an illegal one, which puts the honest player on the clock; after `moveTimeout` the cheater could call `claimTimeout`. The owner can still `arbitrate` by hand. Today the referee is `tools/referee-watch.mjs` in a Docker container on a server: it runs the workflow with `cre workflow simulate --broadcast` and, when the CRE CLI cannot run, delivers the workflow's own verdict (`judge.ts`) through the same forwarder. It is not yet on a Chainlink DON.
+   - **Authenticity (found and fixed on 3 October 2026).** `ChessReferee` points at Chainlink's `MockKeystoneForwarder` (simulation), which verifies no signatures and lets anyone call it. Until then `onReport` only checked `msg.sender == forwarder`, so anyone could relay a report and settle any active game for either side. We confirmed it with a simulated call from an unrelated address that reached `arbitrate`. The fix: while `expectedWorkflowOwner` is unset, `onReport` also requires `tx.origin` to be an allowed reporter (`setReporter`, owner only). The fixed referee is deployed and set as arbiter; the old one can no longer arbitrate. `tx.origin` is deliberate, because the mock forwarder is `msg.sender` and passes nothing else about the caller. The residual risk: a leaked reporter key can settle any active game, the same power as the owner. Moving to the production `KeystoneForwarder` with `setExpectedWorkflowOwner` removes the reporter path.
    - **Correctness.** The verdict logic is `cre/referee/judge.ts`. A bug there (a legal move judged illegal) forfeits an honest player.
 2. **The owner is trusted.** `arbitrate` can settle any active game for either side, with or without forfeit, and `setArbiter` can install any arbiter. There is no timelock, multisig or appeal. The owner address is immutable.
 3. **Draw claims.** Rule draws are settled by the referee. Without it, a draw needs the opponent's agreement.
@@ -63,7 +65,7 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 - The chess clock in `makeMove` and `claimTimeout`: time is charged from `block.timestamp - lastMoveAt` into `uint32` fields, with an increment added after each move. Can a player gain time, move after their flag fell, or be flagged early? `createGame` caps the clock at 3 hours and the increment at 5 minutes so the `uint32` arithmetic can't overflow (an uncapped increment could make every move revert and lock both stakes); is that bound sufficient over a long game?
 - `claimTimeout`: `lastMoveAt` is set when the second player joins. Any way to claim early, or to reset the clock without moving?
 - `withdraw`, `cancelGame` and `withdrawFees`: double-withdraw or withdraw-after-cancel paths.
-- `ChessReferee.onReport`: the metadata slice used for `expectedWorkflowOwner` (`metadata[42:62]`), and whether a report for one game can be replayed against another.
+- `ChessReferee.onReport`: the metadata slice used for `expectedWorkflowOwner` (`metadata[42:62]`), whether a report for one game can be replayed against another, and whether the `tx.origin` reporter check can be satisfied by anyone other than a reporter (for example a reporter's transaction calling into a contract that then calls the forwarder).
 
 ## Monad specifics that shaped the code
 

@@ -23,8 +23,9 @@ Verdicts:
 - **Stalemate, insufficient material, threefold repetition, fifty-move rule**: settled as a draw.
 
 `ChessReferee` only accepts reports from the Chainlink forwarder, and can additionally require a
-specific workflow owner. `DegenChess.arbitrate` only works on an active game, so a verdict cannot be
-applied twice.
+specific workflow owner. While no workflow owner is set (simulation, where the mock forwarder checks
+nothing), it also requires the transaction to come from an allowed reporter key (`setReporter`).
+`DegenChess.arbitrate` only works on an active game, so a verdict cannot be applied twice.
 
 ## Deployed on Monad testnet
 
@@ -61,19 +62,19 @@ as a dry run.
 
 ## Keeping it running on a server
 
-Until the workflow is deployed to a DON, something has to run `npm run referee`. On a VPS:
+Until the workflow is deployed to a DON, something has to run `npm run referee`. It runs as a Docker
+service: see [deploy/referee](../deploy/referee/README.md). The watcher remembers the last block it
+handled, so moves made while it was down are judged when it comes back.
 
-```bash
-git clone https://github.com/victor-onoja/degenChess && cd degenChess && npm install
-curl -sSL https://app.chain.link/cre/install.sh | bash && curl -fsSL https://bun.sh/install | bash
-(cd cre/referee && bun install)
-echo "CRE_ETH_PRIVATE_KEY=<key with testnet MON>" > cre/.env
-export CRE_API_KEY=<API key for your CRE account>  # a server has no browser for `cre login`
-npx pm2 start "npm run referee" --name referee    # restarts it if it crashes
-npx pm2 logs referee
-```
+The key in `CRE_ETH_PRIVATE_KEY` pays the gas for each verdict, so keep it funded, and it must be an
+allowed reporter on `ChessReferee` (`setReporter`), or its verdicts are rejected.
 
-The key in `cre/.env` pays the gas for each verdict, so keep it funded. The watcher only starts from the current block, so a game that finished while it was down needs a manual run of the simulate command above, or a restart with `FROM_BLOCK=<block>`.
+**Fallback.** A server needs `CRE_API_KEY` to run the CRE CLI (it has no browser for `cre login`).
+Without one, or if the CLI fails, the watcher delivers the verdict itself: the same `judge.ts`
+decision, encoded the way the workflow encodes it, sent through the same mock forwarder to the same
+`ChessReferee`. `REFEREE_MODE=direct` skips the workflow, `REFEREE_MODE=cre` disables the fallback,
+and the default (`auto`) tries the workflow first. On 3 October 2026 the server settled a live
+checkmate this way while the CRE API key was pending.
 
 ## Going to production
 

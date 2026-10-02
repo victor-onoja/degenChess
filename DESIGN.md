@@ -1,12 +1,13 @@
 # Design
 
-The living board. DegenChess is chess in a dimension where the pieces are alive and each one carries money. The interface is built out of the board itself: its squares, its two sides, and the gold the pieces hold.
+The living board. DegenChess is chess in another dimension, a multiverse of boards, where the pieces are alive and each one carries money. The interface is built out of the board itself: its squares, its two sides, and the gold the pieces hold.
 
 ## Principles
 
 1. The pieces are the characters. They stay recognisable chess pieces, with breath and reactions; there are no faces. Nothing else on a screen competes with them.
 2. Gold means money and only money: piece cores, amounts, the action that stakes. It is never decoration.
-3. Everything sits on the board's grid. Controls are squares and ranks of squares, flat and square-cornered. No cards, no glass, no gradients on text.
+3. Everything sits on the board's grid. Controls are flat, outlined squares of one look; the chosen one turns bone. No cards, no glass, no gradients on text.
+5. The 2D board and the game itself come first. 3D is the show: it never blocks playing.
 4. Real data only. Every small board in the Yard is a real game at its real position.
 
 ## Colour
@@ -32,18 +33,22 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 
 - `.act`: the primary action, a gold square-cornered block. `.act--bone` for secondary, `.act--sm` for compact, `.danger` for resign.
 - `.ghost`: outlined control for navigation and view toggles; `aria-pressed` fills it bone.
-- `.rank` / `.rank__square`: a row of board squares used as a segmented choice (stake, clock).
+- `.rank` / `.rank__square`: a row of equal outlined squares used as a segmented choice (stake, clock), each with a plain `.field-label` above it.
 - `.slab`: the HUD surface over the board. Opaque, one-pixel line, no blur.
 - `.split`: how the pot is divided, bone from the left with a gold centre mark.
 - `.on-move`: a gold underline beneath the side whose turn it is.
 - `MiniBoard`: a game as a small board. A waiting game shows White set up with the other side empty.
 - `PieceIcon`: flat pieces use the standard tournament set (`src/lib/standardPieces.ts`), in bone and obsidian.
-- The Yard shows three boards at a time (two on phones) under Waiting / Live / Finished, with a pager.
-- `Wordmark`: a pair of eyes that follow the pointer, then the name.
+- The Yard shows three boards at a time (two on phones) under Waiting / Live / Finished / Yours, with a pager.
+- 2D board: tap a piece, then a square. The picked square gets a gold inset, legal moves a gold dot, captures a gold ring.
+- `Wordmark`: a pair of eyes that follow the pointer, then the name. When signed in on a phone it shows only the mark, so the header stays on one line.
+- Account bar: the name is the rename control. Locked, it shows only Unlock; Switch account sits under the headline.
 
 ## The 3D board
 
-The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, turn towards the last move and the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
+The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, turn towards the last move and the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast. Around the board, a dozen translucent boards drift at their own angles (`Multiverse`): the same game in other dimensions.
+
+Armies (prototype): pieces can be played by animated KayKit characters (CC0), each with its stake as a spinning gold gem over its head. Characters walk to their square (a knight leaps), face where they are going, attack on a capture, and turn back to face the enemy. `?army=heroes` previews the Heroes as White.
 
 ## Motion
 
@@ -51,4 +56,4 @@ Motion reports state: a move, a capture, whose turn it is, money changing sides.
 
 ## Layout
 
-One container (`max-w-[1240px]`, 20px gutters on phones, 40px from `sm`) shared by the hero and every section. The landing page is the board first, then the Yard, then what each piece is worth, then how it runs. The game screen is the board edge to edge with a top HUD and a bottom dock, both collapsible on phones.
+One container (`max-w-[1240px]`, 20px gutters on phones, 40px from `sm`) shared by the hero and every section. The landing page is the board first, then the Yard (no heading of its own), then how it runs. The game screen is the board edge to edge with a top HUD and a bottom dock, both collapsible on phones.

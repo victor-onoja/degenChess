@@ -40,7 +40,7 @@ There is no wallet to install and no seed phrase. You tap "Play now", confirm wi
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-The game is played on a full-screen 3D board where the pieces are alive. They are a classic Staunton set, bone white against obsidian black, but each turns towards the play, breathes, and carries a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
+You play on a clean 2D board (tap a piece, tap a square; the default on phones), in 3D, or both side by side. The 3D board floats in a void among other drifting boards, the same game in other dimensions, and its pieces are alive: a sculpted Staunton set in bone and obsidian where each piece breathes, turns towards the play, trembles when attacked and carries a glowing gold core sized to its share of the stake. A capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. Pieces can also be played by an army of animated characters (prototype). The lobby, the Yard, shows every open, live and finished game as a small board at its real position, and anyone can sit down or watch; spectators always watch in 3D.
 
 Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
 
@@ -65,9 +65,9 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ### Progress update (shareable now, for mentor support)
 
-> **DegenChess, status 2 October.** Live on Monad testnet at degen-chess.vercel.app.
+> **DegenChess, status 3 October.** Live on Monad testnet at degen-chess.vercel.app.
 >
-> **Working end to end:** passkey sign-up with Mera (one prompt, about 5 seconds to the first confirmed transaction), staked games with on-chain moves and capture payouts, chess clocks, usernames, rematch, withdrawals, and a 3D arena you can also play in 2D or side by side. A Chainlink CRE workflow referees every game: on testnet it has settled a checkmate, a stalemate and an illegal move (the cheater forfeited everything). An automated two-player browser test runs the whole flow, including wiping a player's storage mid-game and restoring from the passkey.
+> **Working end to end:** passkey sign-up with Mera (one prompt, about 5 seconds to the first confirmed transaction), staked games with on-chain moves and capture payouts, chess clocks, usernames, rematch, withdrawals, and a 3D arena you can also play in 2D or side by side. A Chainlink CRE workflow referees every game: on testnet it has settled a checkmate, a stalemate and an illegal move (the cheater forfeited everything), and it runs on a server around the clock. Two automated browser suites cover the whole flow: sign-up, staking, prompt-free moves, wiping a player's storage mid-game and restoring from the passkey, resign, withdraw, rematch, cancel, tap-to-move on a phone, promotion, spectating, draws and wins on time. Our own review found that Chainlink's simulation forwarder let anyone deliver a verdict; we fixed it the same day (see `docs/AUDIT.md`).
 >
 > **Built since the hackathon started:** a new contract (the earlier prototype's payout maths locked funds), per-game keys so moves need no prompts, the Mera account layer, the faucet, the referee workflow and its consumer contract, clocks, usernames, the 3D arena and the redesign.
 >
@@ -96,7 +96,7 @@ Record at 1080p. Use the production site; the landing page's backdrop replays a 
 | 1:30 | A capture: the piece shatters, coins fly, the stake bar shifts | "That pawn was worth one thirty-ninth of the stake. It just moved on-chain. The bar is the live split of the pot." |
 | 1:50 | Clear site data mid-game, reload, tap "I have a passkey" | "The stateless test. Nothing secret is stored. One prompt rebuilds my account and my game key, and the game is exactly where I left it." |
 | 2:15 | Lock button; then resign with a passkey prompt; withdraw | "Lock wipes the game key. Anything that settles money needs the passkey again. The loser still withdraws what they captured." |
-| 2:40 | Code: `_playerFor` and the game-key checks in the contract; the test output | "The scoping is enforced by the contract, not the UI. 27 contract tests, plus a two-player browser test that runs against production." |
+| 2:40 | Code: `_playerFor` and the game-key checks in the contract; the test output | "The scoping is enforced by the contract, not the UI. 28 contract tests, plus browser tests for every core flow." |
 | 2:55 | Back to the arena | "Live now at degen-chess.vercel.app." |
 
 ### Pitch (2 minutes)
@@ -130,11 +130,11 @@ No voice-over; music and on-screen text.
 
 In priority order.
 
-1. **Get the referee onto a Chainlink DON.** Deployment access is requested. Until it is granted, keep `npm run referee` running on a server through judging.
+1. **Get the referee onto a Chainlink DON.** Deployment access is requested. Until it is granted, the referee runs on the server (`deploy/referee`); add a `CRE_API_KEY` there as soon as one can be created, so verdicts go through the CRE workflow rather than the direct fallback.
 2. **Security review.** Brief is in `docs/AUDIT.md`. Fix what comes back and say so in the submission.
 3. **Leaderboard and game history.** Gives judges something to browse and supports the growth story.
 4. **Real-phone pass** on the new board and landing page, on at least one iPhone and one Android.
 5. **Faucet hardening and funding.** Keep the faucet wallet at 30+ MON through judging; add a simple per-IP limit.
 6. **Record the three videos** by 12 October, leaving a day for retakes. `public/brand/title-card.png` opens them.
 
-Done since the first draft of this list: the illegal-move gap (Chainlink referee), rematch, clocks, usernames.
+Done since the first draft of this list: the illegal-move gap (Chainlink referee), rematch, clocks, usernames, the referee server, the forwarder fix, tap-to-move, and browser tests for every core flow.
