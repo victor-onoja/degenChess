@@ -358,8 +358,24 @@ describe("DegenChess", () => {
       // `stranger` plays the Chainlink forwarder.
       const referee = await hre.viem.deployContract("ChessReferee", [f.chess.address, f.stranger.account.address]);
       await f.chess.write.setArbiter([referee.address], f.as(f.owner));
+      await referee.write.setReporter([f.stranger.account.address, true], f.as(f.owner));
       return { ...f, referee, forwarder: f.stranger };
     }
+
+    it("behind an open forwarder, only allowed reporters can originate a verdict", async () => {
+      const f = await activeGameFixture();
+      const open = await hre.viem.deployContract("OpenForwarder");
+      const referee = await hre.viem.deployContract("ChessReferee", [f.chess.address, open.address]);
+      await f.chess.write.setArbiter([referee.address], f.as(f.owner));
+      // Black tries to award itself the game through the forwarder that checks nothing.
+      await expect(open.write.relay([referee.address, "0x", report(0n, 2, false, 0n, 2)], f.as(f.black))).to.be.rejectedWith(
+        "NotReporter"
+      );
+      await expect(referee.write.setReporter([f.black.account.address, true], f.as(f.black))).to.be.rejectedWith("NotOwner");
+      await referee.write.setReporter([f.stranger.account.address, true], f.as(f.owner));
+      await open.write.relay([referee.address, "0x", report(0n, 3, false, 0n, 3)], f.as(f.stranger));
+      expect((await gameInfo(f.chess)).result).to.equal(3); // Draw
+    });
 
     it("settles a checkmate from a forwarded report; the loser keeps capture gains", async () => {
       const f = await loadFixture(refereeFixture);

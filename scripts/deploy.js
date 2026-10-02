@@ -35,6 +35,12 @@ async function main() {
     referee = await hre.viem.deployContract("ChessReferee", [chess.address, forwarder]);
     const hash = await chess.write.setArbiter([referee.address]);
     await publicClient.waitForTransactionReceipt({ hash });
+    // While reports come through the mock forwarder (which checks nothing), only these accounts may
+    // originate one: the deployer and REFEREE_REPORTERS (comma-separated), e.g. the referee server's key.
+    const [deployer] = await hre.viem.getWalletClients();
+    for (const r of [deployer.account.address, ...(process.env.REFEREE_REPORTERS || "").split(",").filter(Boolean)]) {
+      await publicClient.waitForTransactionReceipt({ hash: await referee.write.setReporter([r, true]) });
+    }
     console.log(`ChessReferee deployed to ${referee.address} (forwarder ${forwarder}) and set as arbiter`);
   }
 

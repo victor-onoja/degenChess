@@ -35,14 +35,23 @@ contract ChessReferee is IReceiver {
     /// @notice If set, only reports from workflows owned by this address are accepted. Leave unset
     ///         for simulation, where the mock forwarder does not supply workflow metadata.
     address public expectedWorkflowOwner;
+    /// @notice Accounts allowed to originate a report while `expectedWorkflowOwner` is unset.
+    /// @dev Chainlink's mock forwarder (used by `cre workflow simulate --broadcast`) verifies no
+    ///      signatures, so anyone could call it. Until the workflow runs on a DON behind the real
+    ///      KeystoneForwarder, a report is only accepted if the transaction came from one of these
+    ///      accounts. `tx.origin` is deliberate: the mock forwarder is `msg.sender` and passes on
+    ///      nothing else about the caller. Once a workflow owner is set this check no longer applies.
+    mapping(address => bool) public reporters;
 
     event Verdict(uint256 indexed gameId, uint8 result, bool forfeit, uint256 ply, uint8 reason);
     event ForwarderSet(address indexed forwarder);
     event ExpectedWorkflowOwnerSet(address indexed workflowOwner);
+    event ReporterSet(address indexed reporter, bool allowed);
 
     error NotOwner();
     error NotForwarder();
     error WrongWorkflowOwner();
+    error NotReporter();
 
     constructor(address _chess, address _forwarder) {
         chess = IDegenChess(_chess);
@@ -58,6 +67,8 @@ contract ChessReferee is IReceiver {
             if (metadata.length < 62 || address(bytes20(metadata[42:62])) != expectedWorkflowOwner) {
                 revert WrongWorkflowOwner();
             }
+        } else if (!reporters[tx.origin]) {
+            revert NotReporter();
         }
         (uint256 gameId, uint8 result, bool forfeit, uint256 ply, uint8 reason) =
             abi.decode(report, (uint256, uint8, bool, uint256, uint8));
@@ -76,6 +87,12 @@ contract ChessReferee is IReceiver {
         if (msg.sender != owner) revert NotOwner();
         expectedWorkflowOwner = _workflowOwner;
         emit ExpectedWorkflowOwnerSet(_workflowOwner);
+    }
+
+    function setReporter(address _reporter, bool _allowed) external {
+        if (msg.sender != owner) revert NotOwner();
+        reporters[_reporter] = _allowed;
+        emit ReporterSet(_reporter, _allowed);
     }
 
     function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
