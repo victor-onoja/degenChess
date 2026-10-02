@@ -1,9 +1,9 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { Color, PieceSymbol } from "chess.js";
-import { ANATOMY, KNIGHT_BASE, PIECE_HEIGHT, PIECE_WEIGHT, PROFILES, type Profile } from "../../lib/pieceShapes";
+import { ANATOMY, KNIGHT_BASE, PIECE_HEIGHT, PIECE_WEIGHT, PROFILES, ROBE, robeRadius, type Profile } from "../../lib/pieceShapes";
 
-// The living chess set. Readable silhouettes (the same profiles as the flat icons), turned in code,
+// The living chess set: small robed figures that keep the heads of their pieces. Readable silhouettes (the same profiles as the flat icons), turned in code,
 // each with a pair of eyes and a core that holds its share of the stake. The arena animates the
 // parts exposed through the ref: where the eyes look, when they blink, how the core beats.
 
@@ -123,6 +123,20 @@ export const ChessPiece = forwardRef<PieceParts, { kind: PieceSymbol; color: Col
           <mesh geometry={GEOMETRY.box} material={body} position-y={1.5} scale={[0.19, 0.07, 0.07]} castShadow />
         </>
       )}
+
+      {/* the robe: sleeves hanging from the shoulders and a sash at the waist */}
+      {[-1, 1].map((side) => (
+        <mesh
+          key={side}
+          geometry={GEOMETRY.sphere}
+          material={body}
+          position={[side * (robeRadius(kind, 0.8) + 0.015), ROBE[kind].h * 0.62, 0.02]}
+          rotation-z={side * 0.2}
+          scale={[0.065, ROBE[kind].h * 0.27, 0.085]}
+          castShadow
+        />
+      ))}
+      <mesh geometry={GEOMETRY.ring} material={trim} position-y={ROBE[kind].h * 0.66} rotation-x={Math.PI / 2} scale={robeRadius(kind, 0.66) + 0.004} />
 
       {/* the core: this piece's share of the stake, set into its chest */}
       <mesh

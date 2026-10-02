@@ -179,6 +179,7 @@ export function GameView({
   const myColor = sameAddress(address, info.white) ? "w" : sameAddress(address, info.black) ? "b" : null;
   const opponent = myColor === "w" ? info.black : info.white;
   const active = info.status === Status.Active;
+  // Out of time on the clock: the game is over in all but name until the win is claimed.
   const turn = game.turn();
   const myTurn = active && myColor === turn;
   // Moves are signed by the in-memory game key, which must be the one registered for this game.
@@ -191,8 +192,9 @@ export function GameView({
   const clockLeft = { w: whiteTime - (turn === "w" ? sinceLastMove : 0), b: blackTime - (turn === "b" ? sinceLastMove : 0) };
   // Seconds until the side to move loses on time.
   const timeLeft = clockOn ? clockLeft[turn] : Number(info.lastMoveAt) + Number(moveTimeout ?? 0n) - now;
+  const flagFell = active && timeLeft <= 0;
   const pieceValue = (t: string) => (info.stake * (WEIGHT[t] ?? 0n)) / 39n;
-  const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver();
+  const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver() && !flagFell;
 
   async function submitMove(from: Square, to: Square, promotion?: string) {
     const next = new Chess(game.fen());
@@ -318,7 +320,7 @@ export function GameView({
   const mode: ViewMode = myColor === null ? "3d" : view === "split" && !splitFits ? "3d" : view;
   // The one-line dock is only used mid-game when nothing needs the player's attention.
   const needsAttention =
-    !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || (!myTurn && timeLeft <= 0);
+    !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || flagFell;
   const slimDock = compact && !needsAttention;
 
   return (
@@ -598,7 +600,15 @@ export function GameView({
                   Accept draw offer
                 </button>
               )}
-              {!myTurn && timeLeft <= 0 && (
+              {flagFell && (
+                <div className="text-center">
+                  <p className="text-lg font-bold">{myTurn ? "You ran out of time" : `${label(opponent)} ran out of time`}</p>
+                  <p className="soft text-sm">
+                    {myTurn ? `${label(opponent)} can now claim the win.` : "Claim the win to settle the board."}
+                  </p>
+                </div>
+              )}
+              {flagFell && !myTurn && (
                 <button
                   className="act"
                   disabled={pending !== null}
@@ -607,6 +617,7 @@ export function GameView({
                   Claim win on timeout
                 </button>
               )}
+              {!flagFell && (
               <div className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 soft truncate text-sm">
                   {pending
@@ -627,6 +638,7 @@ export function GameView({
                   Resign
                 </button>
               </div>
+              )}
             </>
           )}
 
