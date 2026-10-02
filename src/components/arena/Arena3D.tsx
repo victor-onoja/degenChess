@@ -67,7 +67,6 @@ function Piece({
   eager,
   inCheck,
   toppled,
-  tag,
   onPick,
 }: {
   piece: TrackedPiece;
@@ -82,8 +81,6 @@ function Piece({
   inCheck: boolean;
   /** A mated king falls over. */
   toppled: boolean;
-  /** Worth shown on a tag above the piece. */
-  tag?: string;
   onPick: (square: Square) => void;
 }) {
   const outer = useRef<THREE.Group>(null);
@@ -241,14 +238,6 @@ function Piece({
       <group ref={body} rotation-y={home}>
         <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />
       </group>
-      {tag && (
-        <Html position={[0, PIECE_HEIGHT[piece.kind] + 0.35, 0]} center style={{ pointerEvents: "none" }} zIndexRange={[20, 0]}>
-          <div className="value-tag">
-            <span className="value-tag__kind">{KIND[piece.kind]}</span>
-            <span className="value-tag__amount">{tag}</span>
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
@@ -705,16 +694,6 @@ function Scene({
   const checked = lastMove?.san.includes("+") ? sideToMove : null;
   const mated = lastMove?.san.includes("#") ? sideToMove : null;
 
-  // In play the board stays clean: money shows when it moves. Only as a backdrop does one piece
-  // wear a worth tag (the most valuable still standing), so a visitor reads a price on a piece first.
-  const tagged = useMemo(() => {
-    if (!captureLabel || !attract) return null;
-    for (const kind of ["q", "r", "b", "n", "p"] as PieceSymbol[]) {
-      const found = pieces.find((p) => p.alive && p.color === "w" && p.kind === kind);
-      if (found) return found.id;
-    }
-    return null;
-  }, [attract, pieces, captureLabel]);
 
   return (
     <>
@@ -759,7 +738,6 @@ function Scene({
           eager={eager.has(piece.square) && piece.color === sideToMove}
           inCheck={piece.kind === "k" && (checked === piece.color || mated === piece.color)}
           toppled={piece.kind === "k" && mated === piece.color}
-          tag={tagged === piece.id && piece.kind !== "k" && captureLabel ? captureLabel(piece.kind) : undefined}
           onPick={pick}
         />
       ))}

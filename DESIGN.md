@@ -43,7 +43,7 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 
 ## The 3D board
 
-Pieces are lathe-turned in code (`src/components/arena/pieces3d.tsx`). Each is a small robed figure with the head of its piece, a pair of plain oval eyes and a gold core sized to its value; the king's core is pale because the king has no price. In `Arena3D.tsx` they breathe, blink, look at the last move and at the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
+The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a pair of plain oval eyes and a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, blink, look at the last move and at the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast.
 
 ## Motion
 

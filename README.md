@@ -25,7 +25,7 @@ A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39
 
 ### The arena
 
-Games are played in a three.js arena (react-three-fiber). The pieces are built in code, not loaded from model files: classic chess silhouettes turned on a lathe, bone white against obsidian black on an indigo board. Every piece is alive: it has eyes that follow the play, it breathes, it trembles when it is attacked, and it carries a glowing gold core sized to its share of the stake. That keeps the set readable at a glance, a few thousand triangles in total, and smooth on phones.
+Games are played in a three.js arena (react-three-fiber). The pieces are a sculpted Staunton set (Poly Haven's CC0 "Chess Set" by Riley Queen, trimmed to about 450 KB by `tools/build-chess-set.py`) in polished bone and obsidian on a violet board. Every piece is alive: it has eyes that follow the play, it breathes, it trembles when it is attacked, and it carries a glowing gold core sized to its share of the stake.
 
 Motion is designed for the game: a piece hops to its square with squash and stretch, a capture lands on the victim, which shatters while its core flies into the piece that took it, labelled with the amount, a king in check flashes, and a mated king falls over. A HUD floats over the board with both clocks and a live tug-of-war bar showing how the pot is split.
 

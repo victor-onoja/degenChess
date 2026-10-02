@@ -354,49 +354,6 @@ input::placeholder {
 
 /* ---------------------------------------------------------------- inside the arena */
 
-.value-tag {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 5px 11px 6px;
-  border-radius: 3px;
-  background: var(--obsidian);
-  color: var(--bone);
-  font-family: var(--display);
-  font-size: 14px;
-  white-space: nowrap;
-  box-shadow: 0 10px 24px rgba(3, 2, 8, 0.5);
-  animation: tag-in 0.35s var(--ease-out);
-}
-/* the tether: the tag belongs to the piece under it */
-.value-tag::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  width: 1px;
-  height: 16px;
-  background: var(--bone);
-  opacity: 0.6;
-}
-.value-tag__kind {
-  text-transform: capitalize;
-  font-weight: 500;
-  color: var(--bone-soft);
-}
-.value-tag__amount {
-  color: var(--gold);
-  font-weight: 800;
-  font-size: 16px;
-}
-@keyframes tag-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
 .capture-amount {
   font-family: var(--display);
   font-weight: 800;

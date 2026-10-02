@@ -116,6 +116,8 @@ export function GameView({
       saved = localStorage.getItem(VIEW_PREF);
     } catch {}
     if (saved === "2d" || saved === "3d" || saved === "split") setView(saved);
+    // No saved choice: phones get the flat board, which is easier to play on; wide screens get both.
+    else if (window.innerWidth < 768) setView("2d");
     else if (window.innerWidth >= 1024 && window.innerWidth > window.innerHeight) setView("split");
   }, []);
   const chooseView = (next: ViewMode) => {

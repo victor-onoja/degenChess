@@ -40,7 +40,7 @@ There is no wallet to install and no seed phrase. You tap "Play now", confirm wi
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-The game is played on a full-screen 3D board where the pieces are alive. They are recognisable chess pieces, bone white against obsidian black, but each has eyes that follow the play and a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
+The game is played on a full-screen 3D board where the pieces are alive. They are a classic Staunton set, bone white against obsidian black, but each has eyes that follow the play and a glowing gold core sized to its share of the stake. Pieces hop to their squares, an attacked piece trembles, a capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. The lobby, the Yard, shows every open and live game as a small board with its real position, and anyone can sit down or watch. You can play in 3D, in 2D, or with both side by side; spectators always watch in 3D.
 
 Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
 

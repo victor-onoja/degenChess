@@ -146,7 +146,6 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const narrow = useNarrow();
   const [picked, setPicked] = useState<Tab | null>(null);
   const [page, setPage] = useState(0);
-  const [idInput, setIdInput] = useState("");
 
   const me = address ?? undefined;
   const mine = (g: ListedGame) => sameAddress(g.white, me) || sameAddress(g.black, me);
@@ -212,25 +211,6 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
               {t.name} <span className={tab === t.id ? "" : "soft"}>{lists[t.id].length}</span>
             </button>
           ))}
-          <form
-            className="ml-auto flex items-stretch"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (/^\d+$/.test(idInput.trim())) onOpenGame(BigInt(idInput.trim()));
-            }}
-          >
-            <input
-              value={idInput}
-              onChange={(e) => setIdInput(e.target.value)}
-              placeholder="Board no."
-              aria-label="Board number"
-              inputMode="numeric"
-              className="min-h-[44px] w-28 px-3"
-            />
-            <button type="submit" className="ghost" style={{ borderRadius: 0 }}>
-              Open
-            </button>
-          </form>
         </div>
 
         {visible.length > 0 ? <div className="yard__boards">{visible.map(table)}</div> : <p className="soft max-w-md">{TABS.find((t) => t.id === tab)?.empty}</p>}
