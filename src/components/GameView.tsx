@@ -349,6 +349,7 @@ export function GameView({
     info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
 
   const total = info.whiteBalance + info.blackBalance;
+  const potShare = total > 0n ? { w: Number((info.whiteBalance * 1000n) / total) / 1000, b: Number((info.blackBalance * 1000n) / total) / 1000 } : undefined;
   const bullShare = total > 0n ? Number((info.whiteBalance * 1000n) / total) / 10 : 50;
   const statusLine =
     info.status === Status.Finished
@@ -420,6 +421,7 @@ export function GameView({
           insets={insets}
           set={pieceSet}
           onSetChange={setPieceSet}
+          share={potShare}
           history={arenaHistory}
           orientation={myColor ?? "w"}
           movable={canMove && !pendingMove ? myColor : null}
@@ -550,6 +552,7 @@ export function GameView({
               <Arena3D
                 fill
                 set={pieceSet}
+                share={potShare}
                 history={arenaHistory}
                 orientation={myColor ?? "w"}
                 movable={canMove && !pendingMove ? myColor : null}

@@ -19,7 +19,14 @@ function drop(animation) {
   for (const s of animation.listSamplers()) s.dispose();
   animation.dispose();
 }
-const ANIMATIONS = ["Idle", "Walking_A", "1H_Melee_Attack_Chop", "Hit_A", "Death_A", "Cheer"];
+// The animations the board uses. Both packs share the rig, but each army gets its own file so the
+// Undead keep their extras (rising from the ground, taunting).
+const ANIMATIONS = [
+  "Idle", "Walking_A", "Hit_A", "Death_A", "Cheer",
+  "1H_Melee_Attack_Chop", "1H_Melee_Attack_Stab", "1H_Melee_Attack_Slice_Diagonal",
+  "2H_Melee_Attack_Chop", "2H_Melee_Attack_Slice", "2H_Ranged_Shoot", "Spellcast_Shoot", "Spellcast_Summon",
+  "Spawn_Ground_Skeletons", "Taunt",
+];
 
 const body = (who) => [`${who}_ArmLeft`, `${who}_ArmRight`, `${who}_Body`, `${who}_LegLeft`, `${who}_LegRight`];
 /** Which character plays each piece, and which of its parts and props it wears. */
@@ -72,11 +79,13 @@ for (const [army, pieces] of Object.entries(ARMIES)) {
   for (const [kind, [file, keep, props]] of Object.entries(pieces)) await piece(file, keep, props, `public/armies/${army}-${kind}.glb`);
 }
 
-// The shared rig: bones and the few animations the board uses, no meshes.
-const rig = await io.read(`${SRC}/Knight.glb`);
-for (const a of rig.getRoot().listAnimations()) if (!ANIMATIONS.includes(a.getName())) drop(a);
-for (const n of rig.getRoot().listNodes()) if (n.getMesh()) n.dispose();
-for (const s of rig.getRoot().listSkins()) s.dispose();
-await rig.transform(resample({ tolerance: 0.0005 }), prune(), dedup(), quantize());
-await io.write("public/armies/rig.glb", rig);
-console.log("public/armies/rig.glb:", rig.getRoot().listAnimations().map((a) => a.getName()).join(", "));
+// The rigs: bones and the animations the board uses, no meshes.
+for (const [army, file] of [["heroes", "Knight"], ["undead", "Skeleton_Warrior"]]) {
+  const rig = await io.read(`${SRC}/${file}.glb`);
+  for (const a of rig.getRoot().listAnimations()) if (!ANIMATIONS.includes(a.getName())) drop(a);
+  for (const n of rig.getRoot().listNodes()) if (n.getMesh()) n.dispose();
+  for (const s of rig.getRoot().listSkins()) s.dispose();
+  await rig.transform(resample({ tolerance: 0.0005 }), prune(), dedup(), quantize());
+  await io.write(`public/armies/rig-${army}.glb`, rig);
+  console.log(`public/armies/rig-${army}.glb:`, rig.getRoot().listAnimations().map((a) => a.getName()).join(", "));
+}

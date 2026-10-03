@@ -12,9 +12,15 @@ import type { PieceParts } from "./pieces3d";
 // stake as a gold gem over its head, and stands on a disc showing which chess piece it is. All the
 // characters share one rig, so one animation file drives both armies.
 
-export type Action = "Idle" | "Walking_A" | "1H_Melee_Attack_Chop" | "Hit_A" | "Death_A" | "Cheer";
+/** What the board asks a character to do. "Attack" and "Taunt" are resolved per character below. */
+export type Action = "Idle" | "Walking_A" | "Hit_A" | "Death_A" | "Cheer" | "Attack" | "Taunt";
 const ARMY: Record<Color, string> = { w: "heroes", b: "undead" };
-const RIG_URL = "/armies/rig.glb";
+const rigUrl = (color: Color) => `/armies/rig-${ARMY[color]}.glb`;
+/** Each character strikes in its own way: blades chop, mages cast, crossbows shoot. */
+const ATTACK: Record<Color, Record<PieceSymbol, string>> = {
+  w: { p: "1H_Melee_Attack_Stab", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "2H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "2H_Melee_Attack_Slice" },
+  b: { p: "1H_Melee_Attack_Chop", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "1H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "Spellcast_Summon" },
+};
 const url = (color: Color, kind: PieceSymbol) => `/armies/${ARMY[color]}-${kind}.glb`;
 const KINDS: PieceSymbol[] = ["p", "n", "b", "r", "q", "k"];
 
@@ -27,19 +33,21 @@ export const gemY = (kind: PieceSymbol) => HEIGHT[kind] + 0.16;
 const GEM = new THREE.OctahedronGeometry(1, 0);
 const GOLD = new THREE.MeshBasicMaterial({ color: new THREE.Color("#ffc233").multiplyScalar(2.4), toneMapped: false });
 const PALE = new THREE.MeshBasicMaterial({ color: new THREE.Color("#dfe4ff").multiplyScalar(1.6), toneMapped: false });
-const ONCE: Action[] = ["1H_Melee_Attack_Chop", "Hit_A", "Death_A"];
+const LOOPED = ["Idle", "Walking_A", "Cheer"];
 
 export interface FigureParts extends PieceParts {
   /** Switch to an animation; repeated calls with the same name do nothing. */
   act: (action: Action) => void;
 }
 
-export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol }>(function Figure({ color, kind }, ref) {
+export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol; rise?: boolean }>(function Figure({ color, kind, rise = false }, ref) {
   const { scene } = useGLTF(url(color, kind));
-  const { animations } = useGLTF(RIG_URL);
+  const { animations } = useGLTF(rigUrl(color));
+  /** A one-off (rising from the ground) that the board's per-frame requests must not cut short. */
+  const lockedUntil = useRef(0);
   const root = useRef<THREE.Group>(null);
   const gem = useRef<THREE.Mesh>(null);
-  const current = useRef<Action | null>(null);
+  const current = useRef<string | null>(null);
 
   // Every piece needs its own skeleton, so clone the scene with its bones.
   const { model, scale } = useMemo(() => {
@@ -55,24 +63,39 @@ export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol 
   }, [scene, kind]);
 
   const { actions } = useAnimations(animations, root);
-  const act = (action: Action) => {
-    if (current.current === action) return;
-    const next = actions[action];
+  const play = (clip: string) => {
+    if (current.current === clip) return;
+    const next = actions[clip];
     if (!next) return;
     const previous = current.current ? actions[current.current] : null;
     next.reset();
-    next.setLoop(ONCE.includes(action) ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    next.setLoop(LOOPED.includes(clip) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     next.clampWhenFinished = true;
     next.fadeIn(0.18).play();
     previous?.fadeOut(0.18);
-    current.current = action;
+    current.current = clip;
+  };
+  const act = (action: Action) => {
+    if (performance.now() < lockedUntil.current && action !== "Death_A") return;
+    if (action === "Attack") return play(ATTACK[color][kind]);
+    if (action === "Taunt") return play(color === "b" ? "Taunt" : "Cheer");
+    play(action);
   };
   useEffect(() => {
+    // A new game: the Undead claw their way up out of the board; everyone else is already standing.
+    const spawn = actions.Spawn_Ground_Skeletons;
+    if (rise && spawn) {
+      play("Spawn_Ground_Skeletons");
+      spawn.time = Math.random() * 0.4;
+      lockedUntil.current = performance.now() + spawn.getClip().duration * 1000 - 150;
+      return;
+    }
     const idle = actions.Idle;
     if (!idle) return;
     idle.play();
     idle.time = Math.random() * idle.getClip().duration; // eight pawns should not breathe in step
     current.current = "Idle";
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actions]);
 
   useImperativeHandle(ref, () => ({ core: gem.current, coreRadius: GEM_RADIUS[kind], act }));
@@ -142,7 +165,77 @@ export function GlyphDisc({ color, kind }: { color: Color; kind: PieceSymbol }) 
   );
 }
 
-useGLTF.preload(RIG_URL);
 export function preloadArmies() {
-  for (const color of ["w", "b"] as Color[]) for (const kind of KINDS) useGLTF.preload(url(color, kind));
+  for (const color of ["w", "b"] as Color[]) {
+    useGLTF.preload(rigUrl(color));
+    for (const kind of KINDS) useGLTF.preload(url(color, kind));
+  }
 }
+
+// ------------------------------------------------------------------ the table: torches and treasure
+
+const TORCH_URL = "/props/torch_lit.glb";
+const COIN_URL = { small: "/props/coin_stack_small.glb", medium: "/props/coin_stack_medium.glb", large: "/props/coin_stack_large.glb" };
+
+/** A lit torch at each corner of the board, flames flickering (KayKit Dungeon, CC0). */
+export function Torches({ lights }: { lights: boolean }) {
+  const { scene } = useGLTF(TORCH_URL);
+  const torches = useMemo(() => {
+    const size = new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3());
+    const scale = 1.5 / (size.y || 1);
+    return [
+      [-4.75, -4.75],
+      [4.75, -4.75],
+      [-4.75, 4.75],
+      [4.75, 4.75],
+    ].map(([x, z]) => ({ x, z, scale, model: scene.clone() }));
+  }, [scene]);
+  const flames = useRef<(THREE.PointLight | null)[]>([]);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    flames.current.forEach((l, i) => {
+      if (l) l.intensity = 6 + Math.sin(t * 13 + i * 2) * 1.2 + Math.sin(t * 7.3 + i) * 0.8;
+    });
+  });
+  return (
+    <group>
+      {torches.map((t, i) => (
+        <group key={i} position={[t.x, -0.06, t.z]}>
+          <primitive object={t.model} scale={t.scale} />
+          {lights && (
+            <pointLight
+              ref={(l) => {
+                flames.current[i] = l;
+              }}
+              position-y={1.55}
+              color="#ff9a3c"
+              distance={7}
+              decay={1.6}
+            />
+          )}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/** Each side's treasure beside the board: the pile grows and shrinks with that side's share of the pot. */
+export function Treasure({ share }: { share: { w: number; b: number } }) {
+  const small = useGLTF(COIN_URL.small).scene;
+  const medium = useGLTF(COIN_URL.medium).scene;
+  const large = useGLTF(COIN_URL.large).scene;
+  const pile = (s: number) => (s < 0.3 ? small : s < 0.62 ? medium : large);
+  const models = useMemo(
+    () => ({ w: pile(share.w).clone(), b: pile(share.b).clone() }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [share.w < 0.3, share.w < 0.62, share.b < 0.3, share.b < 0.62, small, medium, large]
+  );
+  return (
+    <group>
+      <primitive object={models.w} position={[-4.95, -0.06, 2.4]} scale={1 + share.w * 0.6} />
+      <primitive object={models.b} position={[4.95, -0.06, -2.4]} scale={1 + share.b * 0.6} />
+    </group>
+  );
+}
+
+useGLTF.preload(TORCH_URL);

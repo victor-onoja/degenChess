@@ -146,6 +146,7 @@ export default function Sandbox() {
       captureLabel={(kind) => `${money((stake * PIECE_WEIGHT[kind]) / 39)} tUSD`}
       set={set}
       onSetChange={props.immersive ? setSet : undefined}
+      share={(() => { const v = payout ?? balance; const t = v.w + v.b || 1; return { w: v.w / t, b: v.b / t }; })()}
     />
   );
 

@@ -10,7 +10,7 @@ import { trackPieces, type MoveEvent, type TrackedPiece } from "../../lib/pieces
 import { sfx } from "../../lib/sound";
 import { ChessPiece, PIECE_HEIGHT, type PieceParts } from "./pieces3d";
 import { ANATOMY } from "../../lib/pieceShapes";
-import { Figure, GlyphDisc, gemY, type FigureParts } from "./armies";
+import { Figure, GlyphDisc, gemY, Torches, Treasure, type FigureParts } from "./armies";
 import type { PieceSet } from "../../lib/pieceSet";
 
 // The arena: a living board floating in an indigo dimension. Pieces turn towards the play, breathe,
@@ -29,6 +29,14 @@ const KIND: Record<PieceSymbol, string> = { p: "pawn", n: "knight", b: "bishop",
 
 const xz = (square: string): [number, number] => [square.charCodeAt(0) - 97 - 3.5, 3.5 - (Number(square[1]) - 1)];
 const now = () => performance.now() / 1000;
+/** The square under a point on the board, or null off the board. */
+const squareAt = (p: THREE.Vector3): Square | null => {
+  const file = Math.round(p.x + 3.5);
+  const rank = Math.round(3.5 - p.z) + 1;
+  return file < 0 || file > 7 || rank < 1 || rank > 8 ? null : ((String.fromCharCode(97 + file) + rank) as Square);
+};
+const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+type Drag = { square: Square; at: THREE.Vector3; moved: boolean };
 const FOV = 40;
 
 /** Timing of a move: a hop to the square; a capture is a higher hop that lands on the victim. */
@@ -72,6 +80,9 @@ function Piece({
   onPick,
   figure,
   celebrating,
+  drag,
+  onDragStart,
+  rise,
 }: {
   piece: TrackedPiece;
   animation: Animation;
@@ -90,6 +101,11 @@ function Piece({
   figure: boolean;
   /** Its side just delivered checkmate. */
   celebrating: boolean;
+  /** The piece being dragged, if any, and where it is. */
+  drag: MutableRefObject<Drag | null>;
+  onDragStart: (square: Square) => void;
+  /** A new game is starting: characters that can, rise out of the board. */
+  rise: boolean;
 }) {
   const outer = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
@@ -167,6 +183,16 @@ function Piece({
       }
     }
 
+    // Being dragged: it follows the pointer, held up off the board.
+    const held = drag.current?.square === piece.square && piece.alive ? drag.current : null;
+    if (held) {
+      x = held.at.x;
+      z = held.at.z;
+      y = 0.45;
+      settled = false;
+      heading = Math.atan2(held.at.x - hx, held.at.z - hz);
+    }
+
     // Life: breathing, trembling when attacked, leaning in with a capture available.
     const breath = 1 + Math.sin(t * 1.7) * 0.012;
     const tremble = nervous && settled ? Math.sin(t * 47) * 0.008 : 0;
@@ -208,7 +234,8 @@ function Piece({
       if (toppled || (role === "victim" && tl && since > tl.dieAt)) p?.act?.("Death_A");
       else if (role === "victim" && tl && since > tl.dieAt - 0.25) p?.act?.("Hit_A");
       else if (celebrating && settled) p?.act?.("Cheer");
-      else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("1H_Melee_Attack_Chop");
+      else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("Attack");
+      else if (role === "mover" && tl && event?.victimId && since >= tl.total && since < tl.total + 1.8) p?.act?.("Taunt");
       else p?.act?.(settled ? "Idle" : "Walking_A");
     } else {
       mesh.rotation.set(Math.cos(heading) * lean, home + turn.current, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
@@ -231,6 +258,11 @@ function Piece({
         e.stopPropagation();
         onPick(piece.square);
       }}
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        if (!selectable) return;
+        e.stopPropagation();
+        onDragStart(piece.square);
+      }}
       onPointerOver={(e: ThreeEvent<PointerEvent>) => {
         e.stopPropagation();
         if (selectable) document.body.style.cursor = "pointer";
@@ -247,7 +279,11 @@ function Piece({
       )}
       {figure && <GlyphDisc color={piece.color} kind={piece.kind} />}
       <group ref={body} rotation-y={home}>
-        {figure ? <Figure ref={parts as never} color={piece.color} kind={piece.kind} /> : <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />}
+        {figure ? (
+          <Figure ref={parts as never} color={piece.color} kind={piece.kind} rise={rise} />
+        ) : (
+          <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />
+        )}
       </group>
     </group>
   );
@@ -613,6 +649,8 @@ export interface ArenaProps {
   set?: PieceSet;
   /** Show a switch between the two sets. */
   onSetChange?: (set: PieceSet) => void;
+  /** Each side's share of the pot (0 to 1), shown as the treasure beside the board. */
+  share?: { w: number; b: number };
 }
 
 // ------------------------------------------------------------------ the multiverse
@@ -687,7 +725,9 @@ function Scene({
   insets,
   askPromotion,
   set,
-}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet }) {
+  lite,
+  share,
+}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet; lite: boolean }) {
   const { pieces, last } = useMemo(() => trackPieces(history), [history]);
 
   // Animate only when exactly one new move arrives; anything else (first load, undo) snaps.
@@ -744,8 +784,53 @@ function Scene({
   useEffect(() => setSelected(null), [history.length, movable]);
   const targets = useMemo(() => (selected ? legalTargets(selected) : []), [selected, legalTargets]);
 
+  // Drag and drop: press on one of your pieces, carry it, let go on a highlighted square.
+  // A press that never leaves its square is a tap, and tap-to-move carries on as before.
+  const drag = useRef<Drag | null>(null);
+  const ignoreClickUntil = useRef(0);
+  const controls = useThree((st) => st.controls) as OrbitControlsImpl | null;
+  const onDragStart = (square: Square) => {
+    if (!movable || !pieces.some((p) => p.alive && p.square === square && p.color === movable)) return;
+    const [x, z] = xz(square);
+    drag.current = { square, at: new THREE.Vector3(x, 0, z), moved: false };
+    if (selected !== square) sfx.select();
+    setSelected(square);
+    if (controls) controls.enabled = false; // the camera holds still while a piece is carried
+  };
+  const hit = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ raycaster, pointer, camera }) => {
+    const d = drag.current;
+    if (!d) return;
+    raycaster.setFromCamera(pointer, camera);
+    if (!raycaster.ray.intersectPlane(GROUND, hit)) return;
+    d.at.copy(hit);
+    if (squareAt(hit) !== d.square) d.moved = true;
+  });
+  useEffect(() => {
+    const drop = () => {
+      const d = drag.current;
+      if (!d) return;
+      drag.current = null;
+      if (controls) controls.enabled = !attract;
+      if (!d.moved) return;
+      ignoreClickUntil.current = now() + 0.35; // the browser's click after a drop must not re-select
+      const to = squareAt(d.at);
+      const target = to ? legalTargets(d.square).find((t) => t.to === to) : undefined;
+      setSelected(null);
+      if (!to || !target) return;
+      if (target.promotion) askPromotion(d.square, to);
+      else onMove(d.square, to);
+    };
+    window.addEventListener("pointerup", drop);
+    window.addEventListener("pointercancel", drop);
+    return () => {
+      window.removeEventListener("pointerup", drop);
+      window.removeEventListener("pointercancel", drop);
+    };
+  }, [controls, attract, legalTargets, askPromotion, onMove]);
+
   const pick = (square: Square) => {
-    if (!movable) return;
+    if (!movable || now() < ignoreClickUntil.current) return;
     const target = targets.find((t) => t.to === square);
     if (selected && target) {
       setSelected(null);
@@ -804,6 +889,12 @@ function Scene({
 
       <Motes />
       <Multiverse />
+      {set === "armies" && (
+        <>
+          <Torches lights={!lite} />
+          <Treasure share={share ?? { w: 0.5, b: 0.5 }} />
+        </>
+      )}
       <Board selected={selected} targets={targets.map((t) => t.to)} lastMove={lastMove} onPick={pick} onPoint={pointAt} />
       {pieces.map((piece) => (
         <Piece
@@ -820,6 +911,9 @@ function Scene({
           onPick={pick}
           figure={set === "armies"}
           celebrating={mated !== null && mated !== piece.color}
+          drag={drag}
+          onDragStart={onDragStart}
+          rise={history.length === 0}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (
@@ -878,7 +972,7 @@ export default function Arena3D(props: ArenaProps) {
             </Html>
           }
         >
-          <Scene {...props} set={set} askPromotion={(from, to) => setPromotion({ from, to })} />
+          <Scene {...props} set={set} lite={lite} askPromotion={(from, to) => setPromotion({ from, to })} />
         </Suspense>
         <OrbitControls makeDefault enablePan={false} enabled={!props.attract} minPolarAngle={0.2} maxPolarAngle={1.38} />
         {!lite && (
