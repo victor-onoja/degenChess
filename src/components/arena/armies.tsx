@@ -21,7 +21,9 @@ const ATTACK: Record<Color, Record<PieceSymbol, string>> = {
   w: { p: "1H_Melee_Attack_Stab", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "2H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "2H_Melee_Attack_Slice" },
   b: { p: "1H_Melee_Attack_Chop", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "1H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "Spellcast_Summon" },
 };
-const url = (color: Color, kind: PieceSymbol) => `/armies/${ARMY[color]}-${kind}.glb`;
+const url = (color: Color, kind: PieceSymbol, variant = 0) => `/armies/${ARMY[color]}-${kind}${variant ? variant + 1 : ""}.glb`;
+/** Pieces with more than one look (pawns alternate their weapons). */
+const VARIANTS: Partial<Record<PieceSymbol, number>> = { p: 2 };
 const KINDS: PieceSymbol[] = ["p", "n", "b", "r", "q", "k"];
 
 /** How tall each character stands, in board squares: rank reads as size. */
@@ -40,8 +42,11 @@ export interface FigureParts extends PieceParts {
   act: (action: Action) => void;
 }
 
-export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol; rise?: boolean }>(function Figure({ color, kind, rise = false }, ref) {
-  const { scene } = useGLTF(url(color, kind));
+export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol; rise?: boolean; variant?: number }>(function Figure(
+  { color, kind, rise = false, variant = 0 },
+  ref
+) {
+  const { scene } = useGLTF(url(color, kind, variant % (VARIANTS[kind] ?? 1)));
   const { animations } = useGLTF(rigUrl(color));
   /** A one-off (rising from the ground) that the board's per-frame requests must not cut short. */
   const lockedUntil = useRef(0);
@@ -168,74 +173,6 @@ export function GlyphDisc({ color, kind }: { color: Color; kind: PieceSymbol }) 
 export function preloadArmies() {
   for (const color of ["w", "b"] as Color[]) {
     useGLTF.preload(rigUrl(color));
-    for (const kind of KINDS) useGLTF.preload(url(color, kind));
+    for (const kind of KINDS) for (let v = 0; v < (VARIANTS[kind] ?? 1); v++) useGLTF.preload(url(color, kind, v));
   }
 }
-
-// ------------------------------------------------------------------ the table: torches and treasure
-
-const TORCH_URL = "/props/torch_lit.glb";
-const COIN_URL = { small: "/props/coin_stack_small.glb", medium: "/props/coin_stack_medium.glb", large: "/props/coin_stack_large.glb" };
-
-/** A lit torch at each corner of the board, flames flickering (KayKit Dungeon, CC0). */
-export function Torches({ lights }: { lights: boolean }) {
-  const { scene } = useGLTF(TORCH_URL);
-  const torches = useMemo(() => {
-    const size = new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3());
-    const scale = 1.5 / (size.y || 1);
-    return [
-      [-4.75, -4.75],
-      [4.75, -4.75],
-      [-4.75, 4.75],
-      [4.75, 4.75],
-    ].map(([x, z]) => ({ x, z, scale, model: scene.clone() }));
-  }, [scene]);
-  const flames = useRef<(THREE.PointLight | null)[]>([]);
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime;
-    flames.current.forEach((l, i) => {
-      if (l) l.intensity = 6 + Math.sin(t * 13 + i * 2) * 1.2 + Math.sin(t * 7.3 + i) * 0.8;
-    });
-  });
-  return (
-    <group>
-      {torches.map((t, i) => (
-        <group key={i} position={[t.x, -0.06, t.z]}>
-          <primitive object={t.model} scale={t.scale} />
-          {lights && (
-            <pointLight
-              ref={(l) => {
-                flames.current[i] = l;
-              }}
-              position-y={1.55}
-              color="#ff9a3c"
-              distance={7}
-              decay={1.6}
-            />
-          )}
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/** Each side's treasure beside the board: the pile grows and shrinks with that side's share of the pot. */
-export function Treasure({ share }: { share: { w: number; b: number } }) {
-  const small = useGLTF(COIN_URL.small).scene;
-  const medium = useGLTF(COIN_URL.medium).scene;
-  const large = useGLTF(COIN_URL.large).scene;
-  const pile = (s: number) => (s < 0.3 ? small : s < 0.62 ? medium : large);
-  const models = useMemo(
-    () => ({ w: pile(share.w).clone(), b: pile(share.b).clone() }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [share.w < 0.3, share.w < 0.62, share.b < 0.3, share.b < 0.62, small, medium, large]
-  );
-  return (
-    <group>
-      <primitive object={models.w} position={[-4.95, -0.06, 2.4]} scale={1 + share.w * 0.6} />
-      <primitive object={models.b} position={[4.95, -0.06, -2.4]} scale={1 + share.b * 0.6} />
-    </group>
-  );
-}
-
-useGLTF.preload(TORCH_URL);

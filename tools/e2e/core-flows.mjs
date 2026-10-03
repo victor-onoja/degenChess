@@ -53,9 +53,10 @@ async function signUp(p) {
   await click(p, "Play now");
   await p.page.getByText("You're in.").waitFor({ timeout: 60000 });
 }
-async function createGame(p, clock = "5 + 3") {
+async function createGame(p, clock = "5 + 3", side = "White") {
   await go(p, "/");
   await p.page.getByRole("button", { name: new RegExp(`^${clock.replace(/\+/g, "\\+")}`) }).click();
+  await p.page.getByRole("button", { name: side, exact: true }).click();
   await click(p, "Create Game");
   await p.page.waitForURL(/game=\d+/, { timeout: 60000 });
   await p.page.getByText("Waiting for an opponent").waitFor();
@@ -193,6 +194,14 @@ await shot(desk, "claim-desktop");
 await click(desk, "Claim win on timeout");
 await desk.page.getByText("Finished - White wins").waitFor({ timeout: 60000 });
 check(true, "White wins on time after claiming");
+
+step("Choosing a side: the creator plays Black");
+const url3 = await createGame(desk, "5 + 3", "Black");
+await go(phone, url3);
+await click(phone, /^Join as White/);
+await desk.page.getByText("White to move").waitFor({ timeout: 60000 });
+await desk.page.getByText(/Black · .*\(you\)/).first().waitFor({ timeout: 30000 });
+check(true, "the creator who chose Black sits as Black, and the joiner moves first as White");
 
 await browser.close();
 console.log("CORE FLOWS OK");

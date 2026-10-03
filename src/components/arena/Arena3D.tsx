@@ -10,7 +10,7 @@ import { trackPieces, type MoveEvent, type TrackedPiece } from "../../lib/pieces
 import { sfx } from "../../lib/sound";
 import { ChessPiece, PIECE_HEIGHT, type PieceParts } from "./pieces3d";
 import { ANATOMY } from "../../lib/pieceShapes";
-import { Figure, GlyphDisc, gemY, Torches, Treasure, type FigureParts } from "./armies";
+import { Figure, GlyphDisc, gemY, type FigureParts } from "./armies";
 import type { PieceSet } from "../../lib/pieceSet";
 
 // The arena: a living board floating in an indigo dimension. Pieces turn towards the play, breathe,
@@ -35,6 +35,8 @@ const squareAt = (p: THREE.Vector3): Square | null => {
   const rank = Math.round(3.5 - p.z) + 1;
   return file < 0 || file > 7 || rank < 1 || rank > 8 ? null : ((String.fromCharCode(97 + file) + rank) as Square);
 };
+/** A stable small number per piece, to pick between a character's looks. */
+const variantOf = (id: string) => [...id].reduce((n, c) => n + c.charCodeAt(0), 0);
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 type Drag = { square: Square; at: THREE.Vector3; moved: boolean };
 const FOV = 40;
@@ -280,7 +282,7 @@ function Piece({
       {figure && <GlyphDisc color={piece.color} kind={piece.kind} />}
       <group ref={body} rotation-y={home}>
         {figure ? (
-          <Figure ref={parts as never} color={piece.color} kind={piece.kind} rise={rise} />
+          <Figure ref={parts as never} color={piece.color} kind={piece.kind} rise={rise} variant={variantOf(piece.id)} />
         ) : (
           <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />
         )}
@@ -649,8 +651,6 @@ export interface ArenaProps {
   set?: PieceSet;
   /** Show a switch between the two sets. */
   onSetChange?: (set: PieceSet) => void;
-  /** Each side's share of the pot (0 to 1), shown as the treasure beside the board. */
-  share?: { w: number; b: number };
 }
 
 // ------------------------------------------------------------------ the multiverse
@@ -725,9 +725,7 @@ function Scene({
   insets,
   askPromotion,
   set,
-  lite,
-  share,
-}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet; lite: boolean }) {
+}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet }) {
   const { pieces, last } = useMemo(() => trackPieces(history), [history]);
 
   // Animate only when exactly one new move arrives; anything else (first load, undo) snaps.
@@ -751,12 +749,16 @@ function Scene({
   useEffect(() => {
     if (!event || attract) return;
     const tl = timeline(event);
+    // Characters walk, so they are heard walking (a knight leaps, so it only lands).
+    const mover = pieces.find((p) => p.id === event.moverId);
+    if (set === "armies" && mover && mover.kind !== "n") sfx.steps(tl.hop, mover.color === "b");
     if (event.victimId) {
       sfx.hit(tl.dieAt);
       sfx.coins(tl.dieAt + 0.4);
     } else {
       sfx.land(tl.hop);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, attract]);
 
   // Who is in danger, and who has a capture to make, in the current position.
@@ -889,12 +891,6 @@ function Scene({
 
       <Motes />
       <Multiverse />
-      {set === "armies" && (
-        <>
-          <Torches lights={!lite} />
-          <Treasure share={share ?? { w: 0.5, b: 0.5 }} />
-        </>
-      )}
       <Board selected={selected} targets={targets.map((t) => t.to)} lastMove={lastMove} onPick={pick} onPoint={pointAt} />
       {pieces.map((piece) => (
         <Piece
@@ -946,7 +942,9 @@ export default function Arena3D(props: ArenaProps) {
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   // Phones skip shadows and glow, and render at a lower resolution; any device drops further if it struggles.
   const [lite, setLite] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 640);
-  const [dpr, setDpr] = useState(lite ? 1.5 : 1.75);
+  // Render close to the screen's real density so the characters stay crisp on phones (which are 3x);
+  // the glow and shadows are what phones skip, not sharpness.
+  const [dpr, setDpr] = useState(() => (typeof window === "undefined" ? 1.5 : Math.min(window.devicePixelRatio || 1, lite ? 2.5 : 2)));
 
   return (
     <div
@@ -961,8 +959,9 @@ export default function Arena3D(props: ArenaProps) {
       <Canvas key={props.orientation} shadows={!lite} camera={{ position: [0, 7, 13], fov: FOV }} dpr={dpr}>
         <PerformanceMonitor
           onDecline={() => {
-            setDpr(1);
+            // Struggling: drop the effects first, then sharpness a step at a time, never below 1.25x.
             setLite(true);
+            setDpr((d) => Math.max(1.25, d - 0.5));
           }}
         />
         <Suspense
@@ -972,7 +971,7 @@ export default function Arena3D(props: ArenaProps) {
             </Html>
           }
         >
-          <Scene {...props} set={set} lite={lite} askPromotion={(from, to) => setPromotion({ from, to })} />
+          <Scene {...props} set={set} askPromotion={(from, to) => setPromotion({ from, to })} />
         </Suspense>
         <OrbitControls makeDefault enablePan={false} enabled={!props.attract} minPolarAngle={0.2} maxPolarAngle={1.38} />
         {!lite && (

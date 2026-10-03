@@ -40,6 +40,11 @@ export const degenChessAbi = [
   },
   {
     "inputs": [],
+    "name": "InvalidSide",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidStake",
     "type": "error"
   },
@@ -379,6 +384,31 @@ export const degenChessAbi = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "white",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "black",
+        "type": "address"
+      }
+    ],
+    "name": "Seated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "player",
         "type": "address"
       },
@@ -593,6 +623,45 @@ export const degenChessAbi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_stake",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_gameKey",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_clockSeconds",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_incrementSeconds",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_side",
+        "type": "uint8"
+      }
+    ],
+    "name": "createGameAs",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "gameCount",
     "outputs": [
@@ -653,6 +722,25 @@ export const degenChessAbi = [
         "internalType": "uint32",
         "name": "blackTime",
         "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCreatorSide",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "side",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",

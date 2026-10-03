@@ -33,6 +33,8 @@ const body = (who) => [`${who}_ArmLeft`, `${who}_ArmRight`, `${who}_Body`, `${wh
 const ARMIES = {
   heroes: {
     p: ["Rogue_Hooded", [...body("Rogue"), "Rogue_Head_Hooded", "Rogue_Cape", "Knife"]],
+    // Every other pawn carries a crossbow instead, so the front line isn't eight copies.
+    p2: ["Rogue_Hooded", [...body("Rogue"), "Rogue_Head_Hooded", "Rogue_Cape", "1H_Crossbow"]],
     n: ["Knight", [...body("Knight"), "Knight_Head", "Knight_Helmet", "Knight_Cape", "1H_Sword", "Badge_Shield"]],
     b: ["Mage", [...body("Mage"), "Mage_Head", "Mage_Hat", "Mage_Cape", "2H_Staff"]],
     r: ["Barbarian", [...body("Barbarian"), "Barbarian_Head", "Barbarian_Hat", "Barbarian_Cape", "2H_Axe"]],
@@ -41,6 +43,7 @@ const ARMIES = {
   },
   undead: {
     p: ["Skeleton_Minion", [...body("Skeleton_Minion"), "Skeleton_Minion_Head", "Skeleton_Minion_Jaw", "Skeleton_Minion_Eyes", "Skeleton_Minion_Cloak"], [["Skeleton_Blade", "r"]]],
+    p2: ["Skeleton_Minion", [...body("Skeleton_Minion"), "Skeleton_Minion_Head", "Skeleton_Minion_Jaw", "Skeleton_Minion_Eyes"], [["Skeleton_Axe", "r"], ["Skeleton_Shield_Small_A", "l"]]],
     n: ["Skeleton_Warrior", [...body("Skeleton_Warrior"), "Skeleton_Warrior_Head", "Skeleton_Warrior_Jaw", "Skeleton_Warrior_Eyes", "Skeleton_Warrior_Helmet"], [["Skeleton_Blade", "r"], ["Skeleton_Shield_Small_A", "l"]]],
     b: ["Skeleton_Mage", [...body("Skeleton_Mage"), "Skeleton_Mage_Skull", "Skeleton_Mage_Jaw", "Skeleton_Mage_Eyes", "Skeleton_Mage_Hat"], [["Skeleton_Staff", "r"]]],
     r: ["Skeleton_Warrior", [...body("Skeleton_Warrior"), "Skeleton_Warrior_Head", "Skeleton_Warrior_Jaw", "Skeleton_Warrior_Eyes", "Skeleton_Warrior_Helmet", "Skeleton_Warrior_Cloak"], [["Skeleton_Axe", "r"], ["Skeleton_Shield_Large_A", "l"]]],

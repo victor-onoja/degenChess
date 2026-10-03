@@ -14,11 +14,11 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): DegenChess `0x917b22e817906c3f04d3b60092e87bf3473953d6`, ChessReferee `0x498d7dc71e6ac9d9556a347fc2fac92bd7569cda`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): DegenChess `0x17c898b9814323a5bd364c77b6a41b341cdbda51`, ChessReferee `0x2a54f9443c84c472488020c878797a2fead78cdf`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
 
-Run the tests with `npm install && npm test` (30 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Run the tests with `npm install && npm test` (32 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 
@@ -52,10 +52,11 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 3. **Draw claims.** Rule draws are settled by the referee. Without it, a draw needs the opponent's agreement.
 4. **Fees** accrue in `accruedFees` and are pulled with `withdrawFees`, so a failing transfer to the owner cannot block settlement. Check that `accruedFees` can never exceed what the contract holds beyond players' balances.
 5. **Referral farming.** A player can refer themselves through a second account and so get back 10% of the fee on their own games. It is a discount, not a drain: referral shares come out of the fee, never out of a player's payout. Check that `accruedFees + referralEarnings` can never exceed what the contract holds beyond players' balances.
-6. **Token assumptions.** The stake token is assumed to be a plain ERC-20. Fee-on-transfer and rebasing tokens would break the accounting.
-7. **Promotion and the value cap.** A promoted piece can be worth more than the pawn it was, so one side's pieces can exceed one stake. `_transferCaptureValue` caps each transfer at the victim's balance.
-8. **Faucet abuse.** `/api/drip` rate-limits per address in memory only, so anyone can drain it with fresh addresses. It holds testnet funds only.
-9. **Keys live in page memory.** Both keys are derived from the passkey in the browser. Any script running on the page could sign with the live game key, which is why that key is scoped by the contract and the money key is wiped after each money action. An XSS or a malicious dependency could still play moves for a user, or capture the money key during a money action.
+6. **Random sides.** With side 2 the seats are decided at join by `keccak256(prevrandao, gameId, joiner)`. A joiner who can predict `prevrandao` could join only when the coin falls their way. It decides colour, not money; fine for testnet, worth a commit-reveal or VRF before real stakes.
+7. **Token assumptions.** The stake token is assumed to be a plain ERC-20. Fee-on-transfer and rebasing tokens would break the accounting.
+8. **Promotion and the value cap.** A promoted piece can be worth more than the pawn it was, so one side's pieces can exceed one stake. `_transferCaptureValue` caps each transfer at the victim's balance.
+9. **Faucet abuse.** `/api/drip` rate-limits per address in memory only, so anyone can drain it with fresh addresses. It holds testnet funds only.
+10. **Keys live in page memory.** Both keys are derived from the passkey in the browser. Any script running on the page could sign with the live game key, which is why that key is scoped by the contract and the money key is wiped after each money action. An XSS or a malicious dependency could still play moves for a user, or capture the money key during a money action.
 
 ## Places we'd like a second pair of eyes
 

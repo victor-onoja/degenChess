@@ -59,6 +59,9 @@ contract DegenChess is ReentrancyGuard {
         address drawOfferedBy;
         bool whiteWithdrawn;
         bool blackWithdrawn;
+        // The side the creator asked for: 0 white, 1 black, 2 random. While the game is open the creator
+        // sits in the white slot; the seats are settled when someone joins.
+        uint8 creatorSide;
         uint16[] moves; // from | to << 6 | promotion << 12
     }
 
@@ -108,6 +111,7 @@ contract DegenChess is ReentrancyGuard {
     event ArbiterSet(address indexed arbiter);
     event Arbitrated(uint256 indexed gameId, address indexed by, Result result, bool forfeit);
     event ReferrerSet(address indexed player, address indexed referrer);
+    event Seated(uint256 indexed gameId, address indexed white, address indexed black);
     event ReferralCredited(uint256 indexed gameId, address indexed referrer, uint256 amount);
 
     error NotOwner();
@@ -124,6 +128,7 @@ contract DegenChess is ReentrancyGuard {
     error GasForwardFailed();
     error ReferrerAlreadySet();
     error InvalidReferrer();
+    error InvalidSide();
 
     constructor(address _paymentToken, uint256 _moveTimeout) {
         paymentToken = IERC20(_paymentToken);
@@ -144,6 +149,24 @@ contract DegenChess is ReentrancyGuard {
         nonReentrant
         returns (uint256 gameId)
     {
+        return _create(_stake, _gameKey, _clockSeconds, _incrementSeconds, 0);
+    }
+
+    /// @notice Create a game and choose your side: 0 white, 1 black, 2 random (decided when someone joins).
+    function createGameAs(uint256 _stake, address _gameKey, uint32 _clockSeconds, uint32 _incrementSeconds, uint8 _side)
+        external
+        payable
+        nonReentrant
+        returns (uint256 gameId)
+    {
+        if (_side > 2) revert InvalidSide();
+        return _create(_stake, _gameKey, _clockSeconds, _incrementSeconds, _side);
+    }
+
+    function _create(uint256 _stake, address _gameKey, uint32 _clockSeconds, uint32 _incrementSeconds, uint8 _side)
+        internal
+        returns (uint256 gameId)
+    {
         // Keeps capture values non-zero and exact-ish; LINK has 18 decimals so this is tiny.
         if (_stake < TOTAL_WEIGHT) revert InvalidStake();
         // Bounded so the uint32 clock arithmetic in makeMove can never overflow and lock a game.
@@ -159,6 +182,7 @@ contract DegenChess is ReentrancyGuard {
         g.clockBase = _clockSeconds;
         g.clockIncrement = _incrementSeconds;
         g.status = Status.Open;
+        g.creatorSide = _side;
         emit GameCreated(gameId, msg.sender, _stake);
         _setKey(g, gameId, _gameKey);
     }
@@ -191,6 +215,20 @@ contract DegenChess is ReentrancyGuard {
         g.blackTime = g.clockBase;
         emit PlayerJoined(_gameId, msg.sender);
         _setKey(g, _gameId, _gameKey);
+
+        // Seat the players: the creator plays black if they asked to, or on a coin flip for random.
+        bool swap = g.creatorSide == 1
+            || (g.creatorSide == 2 && uint256(keccak256(abi.encodePacked(block.prevrandao, _gameId, msg.sender))) & 1 == 1);
+        if (swap) {
+            (g.white, g.black) = (g.black, g.white);
+            (g.whiteKey, g.blackKey) = (g.blackKey, g.whiteKey);
+        }
+        emit Seated(_gameId, g.white, g.black);
+    }
+
+    /// @return side the side the creator chose: 0 white, 1 black, 2 random.
+    function getCreatorSide(uint256 _gameId) external view returns (uint8 side) {
+        return games[_gameId].creatorSide;
     }
 
     /// @notice Replace (or revoke with address(0)) your game key, e.g. after switching devices.

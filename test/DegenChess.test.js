@@ -175,6 +175,34 @@ describe("DegenChess", () => {
     });
   });
 
+  describe("choosing a side", () => {
+    async function openAs(f, side) {
+      await f.chess.write.createGameAs([STAKE, zeroAddress, 0, 0, side], f.as(f.white));
+      await f.chess.write.joinGame([1n, zeroAddress], f.as(f.black));
+      return gameInfo(f.chess, 1n);
+    }
+    it("the creator can play black: the joiner gets white and moves first", async () => {
+      const f = await loadFixture(activeGameFixture);
+      const g = await openAs(f, 1);
+      expect(g.white.toLowerCase()).to.equal(f.black.account.address.toLowerCase());
+      expect(g.black.toLowerCase()).to.equal(f.white.account.address.toLowerCase());
+      await expect(f.chess.write.makeMove([1n, encodeMove({ from: "e2", to: "e4" })], f.as(f.white))).to.be.rejectedWith("NotYourTurn");
+      await f.chess.write.makeMove([1n, encodeMove({ from: "e2", to: "e4" })], f.as(f.black));
+      expect(await f.chess.read.getCreatorSide([1n])).to.equal(1);
+    });
+    it("white is the default, random seats someone, and a bad side is refused", async () => {
+      const f = await loadFixture(activeGameFixture);
+      const g = await openAs(f, 0);
+      expect(g.white.toLowerCase()).to.equal(f.white.account.address.toLowerCase());
+      await expect(f.chess.write.createGameAs([STAKE, zeroAddress, 0, 0, 3], f.as(f.white))).to.be.rejectedWith("InvalidSide");
+      await f.chess.write.createGameAs([STAKE, zeroAddress, 0, 0, 2], f.as(f.white));
+      await f.chess.write.joinGame([2n, zeroAddress], f.as(f.black));
+      const r = await gameInfo(f.chess, 2n);
+      const seats = [r.white, r.black].map((a) => a.toLowerCase()).sort();
+      expect(seats).to.deep.equal([f.white.account.address, f.black.account.address].map((a) => a.toLowerCase()).sort());
+    });
+  });
+
   describe("settlement", () => {
     it("pays the winner, lets the loser keep their capture gains, and takes a 2.5% fee", async () => {
       const f = await loadFixture(activeGameFixture);

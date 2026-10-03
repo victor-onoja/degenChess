@@ -14,7 +14,7 @@ import { ShareButton } from "./ShareButton";
 import { type Cell, MiniBoard, waitingBoard } from "./MiniBoard";
 
 const STAKE_PRESETS = ["1", "5", "10"];
-const WAITING = waitingBoard();
+const WAITING = { 0: waitingBoard("w"), 1: waitingBoard("b"), 2: waitingBoard("both") } as Record<number, Cell[][]>;
 const START: Cell[][] = waitingBoard().map((row) => row.map(() => null));
 
 function parseStake(value: string): bigint | null {
@@ -32,6 +32,7 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const { balance } = useTokenState();
   const [stakeInput, setStakeInput] = useState("1");
   const [control, setControl] = useState<(typeof TIME_CONTROLS)[number]>(TIME_CONTROLS[1]);
+  const [side, setSide] = useState(0);
 
   const hasAccount = address !== null || returning;
   const stake = parseStake(stakeInput);
@@ -43,8 +44,8 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const receipt = await sendMoney(`Stake ${stakeInput} ${TOKEN_SYMBOL} & create game`, async (id) =>
       withApproval(id.address, stake, {
         ...chessContract,
-        functionName: "createGame",
-        args: [stake, id.gameKey, control.base, control.increment],
+        functionName: "createGameAs",
+        args: [stake, id.gameKey, control.base, control.increment, side],
         value: await gameKeyTopUp(id.gameKey),
       })
     );
@@ -87,6 +88,17 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         ))}
       </div>
 
+      <p id="side-label" className="field-label">
+        Play as
+      </p>
+      <div className="rank mb-4" role="group" aria-labelledby="side-label">
+        {["White", "Black", "Random"].map((name, i) => (
+          <button key={name} className="rank__square" aria-pressed={side === i} onClick={() => setSide(i)}>
+            {name}
+          </button>
+        ))}
+      </div>
+
       <p className="soft mb-2 text-sm">You get a link to send your opponent. Whoever opens it can sit down in one tap.</p>
       <button onClick={createGame} disabled={!hasAccount || stake === null || short || busy !== null} className="act w-full">
         {busy ?? (hasAccount ? "Create Game" : "Press Play now to get started")}
@@ -97,7 +109,7 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         ) : hasAccount ? (
           "Staking asks for your passkey. Moves never do."
         ) : (
-          "You play White and move first."
+          ["You play White and move first.", "You play Black: your opponent moves first.", "A coin flip picks your side when someone joins."][side]
         )}
       </p>
     </div>
@@ -163,7 +175,8 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const share = total > 0n ? Number((g.whiteBalance * 1000n) / total) / 10 : 50;
     const action = isOpen ? (sameAddress(g.white, me) ? "View" : "Join") : isLive ? (mine(g) ? "Resume" : "Watch") : "Review";
     const result = g.result === Result.Draw ? "drawn" : g.result === Result.WhiteWins ? "White won" : "Black won";
-    const who = isOpen ? `${label(g.white)} is waiting` : `${label(g.white)} v ${label(g.black)}`;
+    const seat = ["plays White", "plays Black", "side by coin flip"][g.creatorSide] ?? "plays White";
+    const who = isOpen ? `${label(g.white)} is waiting, ${seat}` : `${label(g.white)} v ${label(g.black)}`;
     const stake = `${formatToken(g.stake)} ${TOKEN_SYMBOL}`;
     const winner = g.result === Result.WhiteWins ? g.white : g.black;
     const loser = g.result === Result.WhiteWins ? g.black : g.white;
@@ -179,7 +192,7 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     return (
       <div key={g.id.toString()} className="relative">
       <button className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>
-        <MiniBoard rows={isOpen ? WAITING : (positions.get(g.id.toString()) ?? START)} waiting={isOpen} />
+        <MiniBoard rows={isOpen ? (WAITING[g.creatorSide] ?? WAITING[0]) : (positions.get(g.id.toString()) ?? START)} waiting={isOpen} />
         <span className="mt-3 flex items-baseline justify-between gap-2">
           <span className="min-w-0 truncate font-bold">
             <span className="amount">

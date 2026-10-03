@@ -9,6 +9,8 @@ export interface ListedGame extends GameInfo {
   id: bigint;
   /** "5 + 3", or "No clock". */
   clock: string;
+  /** The side the creator chose: 0 white, 1 black, 2 random. */
+  creatorSide: number;
 }
 
 const RECENT_GAMES = 30;
@@ -28,17 +30,20 @@ export function useRecentGames(): { games: ListedGame[]; total: bigint | undefin
     contracts: ids.flatMap((id) => [
       { ...chessContract, functionName: "getGame" as const, args: [id] as const },
       { ...chessContract, functionName: "getClock" as const, args: [id] as const },
+      { ...chessContract, functionName: "getCreatorSide" as const, args: [id] as const },
     ]),
     query: { enabled: ids.length > 0, refetchInterval: POLL_MS },
   });
 
   const games: ListedGame[] = [];
   ids.forEach((id, i) => {
-    const game = data?.[i * 2];
-    const clock = data?.[i * 2 + 1];
+    const game = data?.[i * 3];
+    const clock = data?.[i * 3 + 1];
+    const side = data?.[i * 3 + 2];
     if (game?.status !== "success") return;
     const [base, increment] = clock?.status === "success" ? (clock.result as readonly number[]) : [0, 0];
-    games.push({ id, clock: describeClock(base, increment), ...toGameInfo(game.result as Parameters<typeof toGameInfo>[0]) });
+    const creatorSide = side?.status === "success" ? Number(side.result) : 0;
+    games.push({ id, clock: describeClock(base, increment), creatorSide, ...toGameInfo(game.result as Parameters<typeof toGameInfo>[0]) });
   });
   return { games, total: gameCount };
 }

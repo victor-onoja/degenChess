@@ -3,12 +3,18 @@ import { PieceIcon } from "./PieceIcon";
 
 export type Cell = { type: PieceSymbol; color: Color } | null;
 
-/** A board where White has set up and nobody sits opposite yet. */
-export function waitingBoard(): Cell[][] {
+/** A board where the creator's side has set up and nobody sits opposite yet (random shows both, waiting). */
+export function waitingBoard(side: "w" | "b" | "both" = "w"): Cell[][] {
   const rows: Cell[][] = Array.from({ length: 8 }, () => Array<Cell>(8).fill(null));
   const back: PieceSymbol[] = ["r", "n", "b", "q", "k", "b", "n", "r"];
-  rows[6] = back.map(() => ({ type: "p", color: "w" }));
-  rows[7] = back.map((type) => ({ type, color: "w" }));
+  if (side !== "b") {
+    rows[6] = back.map(() => ({ type: "p", color: "w" }));
+    rows[7] = back.map((type) => ({ type, color: "w" }));
+  }
+  if (side !== "w") {
+    rows[1] = back.map(() => ({ type: "p", color: "b" }));
+    rows[0] = back.map((type) => ({ type, color: "b" }));
+  }
   return rows;
 }
 

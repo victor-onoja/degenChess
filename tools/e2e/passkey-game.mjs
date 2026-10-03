@@ -200,7 +200,8 @@ await idle(p1);
 await click(p1, /^Rematch /);
 await p1.page.getByText("Waiting for an opponent").waitFor({ timeout: 60000 });
 await click(p2, /wants a rematch/);
-await p2.page.getByRole("button", { name: /^Join as Black/ }).waitFor({ timeout: 30000 });
+// A rematch swaps colours: White offered it, so the other player is offered White.
+await p2.page.getByRole("button", { name: /^Join as White/ }).waitFor({ timeout: 30000 });
 await shot(p2, "5-rematch");
 
 await browser.close();

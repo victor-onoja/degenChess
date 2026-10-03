@@ -468,6 +468,37 @@ input::placeholder {
 .table .board {
   transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
 }
+.move-list {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+.move-list::-webkit-scrollbar {
+  display: none;
+}
+.move-list__move {
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.move-list__move[aria-pressed="true"] {
+  background: var(--bone);
+  color: var(--obsidian);
+}
+/* A captured piece sits on a little square of the board, so dark pieces read on the dark dock. */
+.taken {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  margin: 1px;
+  padding: 1px;
+  border-radius: 3px;
+  background: var(--sq-light);
+}
 .table__share {
   position: absolute;
   top: 6px;

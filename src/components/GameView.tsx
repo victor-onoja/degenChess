@@ -21,8 +21,9 @@ import { Icon } from "./Icon";
 import { PieceIcon } from "./PieceIcon";
 import { usePieceSet } from "../lib/pieceSet";
 import { say, useVoices } from "../lib/voices";
-import { useMusic } from "../lib/music";
+import { nextTrack, useMusic } from "../lib/music";
 import { ShareButton } from "./ShareButton";
+import { MoveList } from "./MoveList";
 import { BOARD_PIECES } from "./boardPieces";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
@@ -64,6 +65,8 @@ export function GameView({
   });
   const { data: withdrawn } = useReadContract({ ...chessContract, functionName: "getWithdrawn", args: [gameId] });
   const { data: moveTimeout } = useReadContract({ ...chessContract, functionName: "moveTimeout" });
+  // The side the creator chose (0 white, 1 black, 2 random); it only matters until someone joins.
+  const { data: creatorSide } = useReadContract({ ...chessContract, functionName: "getCreatorSide", args: [gameId] });
   const { data: gameKeys } = useReadContract({ ...chessContract, functionName: "getGameKeys", args: [gameId] });
   // When a referee (the Chainlink CRE workflow's contract) is registered, finished games settle themselves.
   const { data: arbiter } = useReadContract({ ...chessContract, functionName: "arbiter" });
@@ -188,10 +191,24 @@ export function GameView({
   const [compact, setCompact] = useState(false);
   useEffect(() => setCompact(window.innerWidth < 640), []);
 
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen().catch(() => {});
+  // Focus: nothing but the board. Uses the browser's fullscreen too where the device allows it.
+  const [focus, setFocusState] = useState(false);
+  const setFocus = (on: boolean) => {
+    if (on) neededAtEntry.current = needsYou.current;
+    setFocusState(on);
+    if (on && canFullscreen && !document.fullscreenElement) void document.documentElement.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) void document.exitFullscreen().catch(() => {});
   };
+  // Leave focus by itself when something needs the player (a draw offer, time up, the end of the game).
+  // Only something that happens after entering focus counts, not the state it was entered in.
+  const needsYou = useRef(false);
+  const neededAtEntry = useRef(false);
+  useEffect(() => {
+    if (!focus) return;
+    if (needsYou.current && !neededAtEntry.current) setFocus(false);
+    if (!needsYou.current) neededAtEntry.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [now, focus]);
 
   // Fanfare when the game settles while you're watching (not when opening an already-finished game).
   const lastStatus = useRef<Status | null>(null);
@@ -220,6 +237,9 @@ export function GameView({
 
   const myColor = sameAddress(address, info.white) ? "w" : sameAddress(address, info.black) ? "b" : null;
   const opponent = myColor === "w" ? info.black : info.white;
+  // While a game waits, the creator is stored as White; show them where they will actually sit.
+  const waitingAsBlack = info.status === Status.Open && Number(creatorSide ?? 0) === 1;
+  const seatColor = waitingAsBlack && myColor === "w" ? "b" : myColor;
   const active = info.status === Status.Active;
   // Out of time on the clock: the game is over in all but name until the win is claimed.
   const turn = game.turn();
@@ -292,7 +312,7 @@ export function GameView({
   const boardProps = {
     id: `game-${gameId}`,
     position: viewedFen ?? pendingMove?.fen ?? game.fen(),
-    boardOrientation: (myColor === "b" ? "black" : "white") as "white" | "black",
+    boardOrientation: (seatColor === "b" ? "black" : "white") as "white" | "black",
     arePiecesDraggable: canMove,
     isDraggablePiece: ({ piece }: { piece: string }) => piece[0] === myColor,
     onPieceDragBegin: () => setPicked(null),
@@ -366,7 +386,6 @@ export function GameView({
     info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
 
   const total = info.whiteBalance + info.blackBalance;
-  const potShare = total > 0n ? { w: Number((info.whiteBalance * 1000n) / total) / 1000, b: Number((info.blackBalance * 1000n) / total) / 1000 } : undefined;
   const bullShare = total > 0n ? Number((info.whiteBalance * 1000n) / total) / 10 : 50;
   const statusLine =
     info.status === Status.Finished
@@ -377,7 +396,7 @@ export function GameView({
 
   const plate = (color: "w" | "b") => {
     const bull = color === "w";
-    const addr = bull ? info.white : info.black;
+    const addr = waitingAsBlack ? (bull ? ZERO_ADDRESS : info.white) : bull ? info.white : info.black;
     const balance = bull ? info.whiteBalance : info.blackBalance;
     const onMove = active && turn === color;
     return (
@@ -419,7 +438,7 @@ export function GameView({
       .find((g) => g !== null && g.status === Status.Open && sameAddress(g.white, opponent) && g.stake === info.stake) ?? null;
 
   // Round so small layout shifts (a status line wrapping) don't re-frame the camera.
-  const insets = { top: Math.ceil(topSize.height / 24) * 24, bottom: Math.ceil(bottomSize.height / 24) * 24 };
+  const insets = focus ? { top: 0, bottom: 0 } : { top: Math.ceil(topSize.height / 24) * 24, bottom: Math.ceil(bottomSize.height / 24) * 24 };
   const boardWidth = Math.max(Math.floor(Math.min(midSize.width, midSize.height)) - 16, 0);
   // Side by side needs a wide space: two squares and a gap. Otherwise fall back to 3D (phones in portrait).
   const splitWidth = Math.max(Math.floor(Math.min((midSize.width - 36) / 2, midSize.height - 8)), 0);
@@ -429,6 +448,7 @@ export function GameView({
   const needsAttention =
     !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || flagFell;
   const slimDock = compact && !needsAttention;
+  needsYou.current = boardNotice !== null || drawOfferedByOpponent || flagFell || !active;
 
   return (
     <div className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-[var(--field-deep)]">
@@ -437,10 +457,9 @@ export function GameView({
           immersive
           insets={insets}
           set={pieceSet}
-          onSetChange={setPieceSet}
-          share={potShare}
+          onSetChange={focus ? undefined : setPieceSet}
           history={arenaHistory}
-          orientation={myColor ?? "w"}
+          orientation={seatColor ?? "w"}
           movable={canMove && !pendingMove ? myColor : null}
           legalTargets={legalTargets}
           onMove={(from, to, promotion) => void submitMove(from, to, promotion)}
@@ -448,7 +467,23 @@ export function GameView({
         />
       )}
 
+      {focus && (
+        <>
+          {clockOn && active && (
+            <div className="slab pointer-events-none absolute left-3 top-3 z-20 px-3 py-1.5 text-sm font-bold">
+              <span className={turn === "w" ? "" : "soft"}>{formatClock(clockLeft.w)}</span>
+              <span className="soft"> · </span>
+              <span className={turn === "b" ? "" : "soft"}>{formatClock(clockLeft.b)}</span>
+            </div>
+          )}
+          <button className="ghost absolute right-3 top-3 z-20" aria-label="Exit focus" onClick={() => setFocus(false)}>
+            <Icon name="fullscreen" />
+          </button>
+        </>
+      )}
+
       {/* Top HUD: navigation, view controls and the scoreboard. Only the controls catch clicks. */}
+      {!focus && (
       <div ref={setTopEl} className="pointer-events-none relative z-10 flex flex-col gap-2 p-3">
         <div className="flex items-center justify-between gap-2">
           <button className="ghost pointer-events-auto" onClick={onExit} aria-label="Back to the yard">
@@ -479,18 +514,21 @@ export function GameView({
             <button
               className="ghost"
               aria-label={muted ? "Unmute" : "Mute"}
+              title="Tap to mute. Hold for the next song."
               onClick={() => {
                 setMuted(!muted);
                 setMutedState(!muted);
               }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                nextTrack();
+              }}
             >
               <Icon name={muted ? "soundOff" : "soundOn"} />
             </button>
-            {canFullscreen && (
-              <button className="ghost" aria-label="Fullscreen" onClick={toggleFullscreen}>
-                <Icon name="fullscreen" />
-              </button>
-            )}
+            <button className="ghost" aria-label="Focus" title="Just the board" onClick={() => setFocus(true)}>
+              <Icon name="fullscreen" />
+            </button>
             {unlocked && (
               <button className="ghost" aria-label="Lock" title="Wipe the game key from this tab" onClick={account.lock}>
                 <Icon name="lock" />
@@ -549,8 +587,10 @@ export function GameView({
           </p>
         </section>
       </div>
+      )}
 
       {/* The board's space. In 3D it is empty (the arena shows through); in 2D it holds the flat board. */}
+
       <div ref={setMidEl} className={`relative z-10 min-h-0 flex-1 ${mode === "3d" ? "pointer-events-none" : ""}`}>
         {mode === "2d" && boardWidth > 0 && (
           <div className="flex h-full items-center justify-center">
@@ -569,9 +609,8 @@ export function GameView({
               <Arena3D
                 fill
                 set={pieceSet}
-                share={potShare}
                 history={arenaHistory}
-                orientation={myColor ?? "w"}
+                orientation={seatColor ?? "w"}
                 movable={canMove && !pendingMove ? myColor : null}
                 legalTargets={legalTargets}
                 onMove={(from, to, promotion) => void submitMove(from, to, promotion)}
@@ -583,12 +622,23 @@ export function GameView({
       </div>
 
       {/* Bottom dock: what you can do right now. */}
+      {!focus && (
       <div ref={setBottomEl} className="pointer-events-none relative z-10 p-3">
         {slimDock ? (
           <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl items-center gap-2 px-3 py-2">
-            <p className="min-w-0 flex-1 truncate text-sm">
-              {pending ? `${pending}...` : myTurn ? "Your move - tap a piece." : `Waiting for ${label(opponent)}...`}
+            <button className="ghost !min-w-[40px] !px-0" aria-label="Previous move" disabled={(viewPly ?? history.length) === 0} onClick={() => step((viewPly ?? history.length) - 1)}>
+              <Icon name="prev" size={18} />
+            </button>
+            <p className="min-w-0 flex-1 truncate text-center text-sm">
+              {viewing
+                ? `Move ${viewPly} of ${history.length}${viewPly! > 0 ? ` · ${history[viewPly! - 1].san}` : ""}`
+                : pending
+                  ? `${pending}...`
+                  : `${myTurn ? "Your move" : `Waiting for ${label(opponent)}`}${lastMove ? ` · last ${lastMove.san}` : ""}`}
             </p>
+            <button className="ghost !min-w-[40px] !px-0" aria-label="Next move" disabled={!viewing} onClick={() => step((viewPly ?? history.length) + 1)}>
+              <Icon name="next" size={18} />
+            </button>
             <button className="ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
               <Icon name="more" />
             </button>
@@ -632,6 +682,8 @@ export function GameView({
             </div>
           )}
 
+          {history.length > 0 && info.status !== Status.Open && <MoveList history={history} shown={viewPly ?? history.length} onSelect={step} />}
+
           {/* What each side has taken: the pieces themselves, and what they were worth. */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             {(["w", "b"] as const).map((c) => (
@@ -645,7 +697,9 @@ export function GameView({
                 {captures[c].length > 0 && (
                   <span className={`flex min-w-0 flex-wrap ${c === "b" ? "justify-end" : ""}`}>
                     {captures[c].map((p, i) => (
-                      <PieceIcon key={i} kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-5 w-5" />
+                      <span key={i} className="taken">
+                        <PieceIcon kind={p as PieceSymbol} color={c === "w" ? "b" : "w"} className="h-full w-full" />
+                      </span>
                     ))}
                   </span>
                 )}
@@ -664,7 +718,10 @@ export function GameView({
           )}
 
           {info.status === Status.Open && myColor === null && !hasAccount && (
-            <p className="text-sm">This board is waiting for an opponent. Press Play now to sit down as Black.</p>
+            <p className="text-sm">
+              This board is waiting for an opponent. Press Play now to sit down{" "}
+              {["as Black", "as White", "(a coin flip picks the sides)"][Number(creatorSide ?? 0)] ?? "as Black"}.
+            </p>
           )}
           {info.status === Status.Open && myColor === null && hasAccount && (
             <button
@@ -681,7 +738,8 @@ export function GameView({
                 )
               }
             >
-              {pending ?? `Join as Black (${formatToken(info.stake)} ${TOKEN_SYMBOL})`}
+              {pending ??
+                `${["Join as Black", "Join as White", "Join, coin flip for sides"][Number(creatorSide ?? 0)] ?? "Join as Black"} (${formatToken(info.stake)} ${TOKEN_SYMBOL})`}
             </button>
           )}
 
@@ -790,8 +848,9 @@ export function GameView({
                       const receipt = await sendMoney(`Rematch for ${formatToken(info.stake)} ${TOKEN_SYMBOL}`, async (id) =>
                         withApproval(id.address, info.stake, {
                           ...chessContract,
-                          functionName: "createGame",
-                          args: [info.stake, id.gameKey, clockBase, clockIncrement],
+                          // A rematch swaps colours, as over the board.
+                          functionName: "createGameAs",
+                          args: [info.stake, id.gameKey, clockBase, clockIncrement, myColor === "w" ? 1 : 0],
                           value: await gameKeyTopUp(id.gameKey),
                         })
                       );
@@ -800,7 +859,7 @@ export function GameView({
                       if (created) onOpenGame(created.args.gameId);
                     }}
                   >
-                    Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play White)
+                    Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play {myColor === "w" ? "Black" : "White"})
                   </button>
                 ))}
             </>
@@ -824,6 +883,7 @@ export function GameView({
         </div>
         )}
       </div>
+      )}
     </div>
   );
 }

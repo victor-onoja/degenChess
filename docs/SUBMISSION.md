@@ -16,7 +16,7 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **Live link (Monad testnet):** <https://degen-chess.vercel.app>
 
-**Contract (Monad testnet, chain 10143):** `0x917b22e817906c3f04d3b60092e87bf3473953d6`
+**Contract (Monad testnet, chain 10143):** `0x17c898b9814323a5bd364c77b6a41b341cdbda51`
 
 **Primary track:** Consumer Products & Payments
 
@@ -42,7 +42,7 @@ Nothing secret is stored. Clear your browser or pick up another device mid-game 
 
 You play on a clean 2D board (tap a piece, tap a square; the default on phones), in 3D, or both side by side. The 3D board floats in a void among other drifting boards, the same game in other dimensions, and its pieces are alive: a sculpted Staunton set in bone and obsidian where each piece breathes, turns towards the play, trembles when attacked and carries a glowing gold core sized to its share of the stake. A capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. Under it all runs a shuffled soundtrack of public-domain orchestra and Asian and African instruments, and the armies speak at the big moments ("For the crown!", "Your gold is mine.", "Checkmate. Rest forever."). By default the 3D pieces are two armies of animated characters, Heroes against the Undead: they walk to their squares, attack on a capture, fall when taken and cheer a checkmate, each carrying its stake as a gold gem over its head, with a classic Staunton set one tap away. The lobby, the Yard, shows every open, live and finished game as a small board at its real position, and anyone can sit down or watch; spectators always watch in 3D.
 
-Games have real chess clocks (3+2, 5+3, 10+5) and a rematch is one tap. Players are known by unique usernames, never addresses, and can send money to each other by username from the wallet, which also shows a QR code for deposits.
+Games have real chess clocks (3+2, 5+3, 10+5), you choose to play White, Black or a coin flip, every move can be replayed, a focus mode shows nothing but the board, and a rematch is one tap (colours swapped). Players are known by unique usernames, never addresses, and can send money to each other by username from the wallet, which also shows a QR code for deposits.
 
 Nobody has to be trusted to call the result. A Chainlink CRE workflow acts as referee: it replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move.
 

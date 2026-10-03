@@ -9,6 +9,7 @@ import { chessContract, tokenContract, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress } from "../lib/format";
 import { cleanName, NAME_RULE, namesContract, useNames } from "../lib/names";
 import { Icon } from "./Icon";
+import { inviteUrl, shareInvite } from "../lib/share";
 
 /**
  * Your money outside a game: what you hold, how to add more, and how to send it to anyone by
@@ -48,7 +49,8 @@ export function Wallet({ onClose }: { onClose: () => void }) {
     query: { enabled: NAME_RULE.test(name) },
   });
   const recipient = isAddress(to) ? to : holder && holder !== zeroAddress ? holder : null;
-  const { label } = useNames([recipient]);
+  const { label, nameOf } = useNames([recipient, address]);
+  const myRef = (address && nameOf(address)) || address || "";
   let value: bigint | null = null;
   try {
     value = amount.trim() ? parseUnits(amount.trim(), TOKEN_DECIMALS) : null;
@@ -140,7 +142,16 @@ export function Wallet({ onClose }: { onClose: () => void }) {
             Every link you share carries your name. When someone signs up through it, you earn 20% of the fee on each game
             they finish. Draws are free for everyone.
           </p>
-          <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="mt-3 flex items-stretch">
+            <code className="flex min-h-[44px] min-w-0 flex-1 items-center truncate rounded-l-[3px] bg-[var(--field)] px-3 text-xs">
+              {myRef ? inviteUrl(myRef).replace(/^https?:\/\//, "") : ""}
+            </code>
+            <button className="act act--sm act--bone shrink-0" style={{ minHeight: 44, borderRadius: "0 3px 3px 0" }} onClick={() => void shareInvite(myRef)}>
+              <Icon name="share" size={18} /> Share
+            </button>
+          </div>
+          {address && !nameOf(address) && <p className="soft mt-1 text-xs">Choose a username for a shorter link.</p>}
+          <div className="mt-3 flex items-center justify-between gap-3">
             <span>
               Earned{" "}
               <span className="amount">

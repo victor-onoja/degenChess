@@ -27,3 +27,26 @@ export async function shareGame(id: bigint, text: string, ref?: string) {
     toast.info(`Share this link: ${url}`, { autoClose: 8000 });
   }
 }
+
+/** Your own invite link: the Yard, carrying your name, so sign-ups through it count as your invites. */
+export const inviteUrl = (ref: string) => `${window.location.origin}/?ref=${encodeURIComponent(ref)}`;
+
+export async function shareInvite(ref: string) {
+  const url = inviteUrl(ref);
+  const text = "Play me at chess on DegenChess: every piece you take pays.";
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  if (touch && typeof navigator.share === "function") {
+    try {
+      await navigator.share({ title: "DegenChess", text, url });
+      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    toast.success("Invite link copied.", { autoClose: 2500 });
+  } catch {
+    toast.info(`Your invite link: ${url}`, { autoClose: 8000 });
+  }
+}

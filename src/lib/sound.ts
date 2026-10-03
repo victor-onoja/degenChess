@@ -58,10 +58,6 @@ function noise(at: number, duration: number, gain: number, cutoff: number) {
 export const sfx = {
   /** A piece is picked up. */
   select: () => tone(660, 0, 0.07, "triangle", 0.08),
-  /** Footsteps for a walk lasting `seconds`. */
-  steps: (seconds: number) => {
-    for (let t = 0; t < seconds; t += 0.26) noise(t, 0.07, 0.16, 900);
-  },
   /** A piece touching down after a quiet move. */
   land: (at = 0) => {
     noise(at, 0.06, 0.2, 700);
@@ -71,6 +67,24 @@ export const sfx = {
   hit: (at = 0) => {
     noise(at, 0.22, 0.5, 1400);
     tone(140, at, 0.25, "sine", 0.4, 45);
+  },
+  /**
+   * Footsteps across a walk of `duration` seconds: soft boots for the Heroes, bony clicks for the
+   * Undead. Alternating feet, slightly uneven, so it never sounds like a metronome.
+   */
+  steps: (duration: number, undead: boolean, at = 0) => {
+    const count = Math.max(2, Math.round(duration / 0.2));
+    for (let i = 0; i < count; i++) {
+      const t = at + (i * duration) / count + (Math.random() - 0.5) * 0.02;
+      const foot = i % 2 === 0 ? 1 : 0.85;
+      if (undead) {
+        tone(1900 + Math.random() * 500, t, 0.035, "square", 0.025 * foot, 900);
+        noise(t, 0.03, 0.05 * foot, 4200);
+      } else {
+        noise(t, 0.07, 0.11 * foot, 520);
+        tone(95, t, 0.06, "sine", 0.05 * foot, 60);
+      }
+    }
   },
   /** Coins flying to the vault. */
   coins: (at = 0) => {
