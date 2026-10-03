@@ -31,7 +31,7 @@ The 3D board (react-three-fiber) floats in a void where other boards drift at th
 
 Motion is designed for the game: a piece hops to its square with squash and stretch, a capture lands on the victim, which shatters while its core flies into the piece that took it, labelled with the amount, a king in check flashes, and a mated king falls over. A HUD floats over the board with both clocks and a live tug-of-war bar showing how the pot is split. Sound is synthesized in the browser.
 
-**Armies (prototype).** Pieces can also be played by animated characters: Kay Lousberg's CC0 KayKit packs, built by `tools/armies/build.mjs`. All characters share one rig, so the animations are stored once and an army is about 1.8 MB, loaded only when chosen. The Heroes army plays White; preview it with `?army=heroes`. The Undead army and an in-game switch are next.
+**The armies.** By default the 3D pieces are two armies of animated characters: Heroes (White) against the Undead (Black), from Kay Lousberg's CC0 KayKit packs, built by `tools/armies/build.mjs` (the Undead's weapons are attached to their hands there). Each character carries its share of the stake as a gold gem over its head and stands on a disc showing its chess piece, so the board reads at a glance. They walk to their squares (a knight leaps), attack on a capture, fall and sink when taken, and the winning side cheers a checkmate. All characters share one rig, so the animations are stored once: the two armies are about 4 MB together, loaded only when the 3D board is shown. A **Classic set** switch in the corner of the 3D board swaps to the Staunton set and is remembered on the device.
 
 ### The Yard
 

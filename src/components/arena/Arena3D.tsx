@@ -10,7 +10,8 @@ import { trackPieces, type MoveEvent, type TrackedPiece } from "../../lib/pieces
 import { sfx } from "../../lib/sound";
 import { ChessPiece, PIECE_HEIGHT, type PieceParts } from "./pieces3d";
 import { ANATOMY } from "../../lib/pieceShapes";
-import { Figure, readArmy, type Army, type FigureParts } from "./armies";
+import { Figure, GlyphDisc, gemY, type FigureParts } from "./armies";
+import type { PieceSet } from "../../lib/pieceSet";
 
 // The arena: a living board floating in an indigo dimension. Pieces turn towards the play, breathe,
 // flinch when attacked and lean in when they can capture. Each carries its share of the stake as a
@@ -69,7 +70,8 @@ function Piece({
   inCheck,
   toppled,
   onPick,
-  army,
+  figure,
+  celebrating,
 }: {
   piece: TrackedPiece;
   animation: Animation;
@@ -84,13 +86,14 @@ function Piece({
   /** A mated king falls over. */
   toppled: boolean;
   onPick: (square: Square) => void;
-  /** Played by a character instead of a chess piece. */
-  army?: Army | null;
+  /** Played by a character (the armies) instead of a chess piece. */
+  figure: boolean;
+  /** Its side just delivered checkmate. */
+  celebrating: boolean;
 }) {
   const outer = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
   const parts = useRef<PieceParts & Partial<FigureParts>>(null);
-  const figure = !!army;
   const turn = useRef(0);
   const lift = useRef(0);
   const fall = useRef(0);
@@ -130,8 +133,10 @@ function Piece({
       const since = now() - start;
       const tl = timeline(event);
       if (role === "victim") {
-        visible = since < tl.dieAt;
-        coreGone = true; // the core is in flight (CoreFlight draws it)
+        // A chess piece shatters on impact; a character falls, then sinks into the board.
+        visible = since < tl.dieAt + (figure ? 1.5 : 0);
+        if (figure && since > tl.dieAt + 0.8) y = -(since - tl.dieAt - 0.8) * 0.9;
+        coreGone = since > tl.dieAt || !figure; // the core is in flight (CoreFlight draws it)
       } else {
         const [fx, fz] = xz(role === "rook" ? event.rook!.from : event.from);
         const dx = hx - fx;
@@ -200,7 +205,9 @@ function Piece({
       mesh.rotation.set(0, mesh.rotation.y + d * (settled ? 0.12 : 0.35), 0, "YXZ");
       const since = event ? now() - start : Infinity;
       const tl = event ? timeline(event) : null;
-      if (toppled) p?.act?.("Death_A");
+      if (toppled || (role === "victim" && tl && since > tl.dieAt)) p?.act?.("Death_A");
+      else if (role === "victim" && tl && since > tl.dieAt - 0.25) p?.act?.("Hit_A");
+      else if (celebrating && settled) p?.act?.("Cheer");
       else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("1H_Melee_Attack_Chop");
       else p?.act?.(settled ? "Idle" : "Walking_A");
     } else {
@@ -238,8 +245,9 @@ function Piece({
           <meshBasicMaterial color={inCheck ? ALERT_GLOW : GOLD_GLOW} toneMapped={false} />
         </mesh>
       )}
+      {figure && <GlyphDisc color={piece.color} kind={piece.kind} />}
       <group ref={body} rotation-y={home}>
-        {army ? <Figure ref={parts as never} army={army} kind={piece.kind} /> : <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />}
+        {figure ? <Figure ref={parts as never} color={piece.color} kind={piece.kind} /> : <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />}
       </group>
     </group>
   );
@@ -601,6 +609,10 @@ export interface ArenaProps {
   attract?: boolean;
   /** Pixels covered by overlays at the top and bottom, so the board is framed in the space between. */
   insets?: { top: number; bottom: number };
+  /** The armies (default) or the classic Staunton set. */
+  set?: PieceSet;
+  /** Show a switch between the two sets. */
+  onSetChange?: (set: PieceSet) => void;
 }
 
 // ------------------------------------------------------------------ the multiverse
@@ -674,8 +686,8 @@ function Scene({
   attract = false,
   insets,
   askPromotion,
-  army,
-}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; army: Army | null }) {
+  set,
+}: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet }) {
   const { pieces, last } = useMemo(() => trackPieces(history), [history]);
 
   // Animate only when exactly one new move arrives; anything else (first load, undo) snaps.
@@ -751,6 +763,7 @@ function Scene({
     gaze.current.until = now() + 2.5;
   };
 
+  const coreHeight = (kind: PieceSymbol) => (set === "armies" ? gemY(kind) : ANATOMY[kind].coreY);
   const lastMove = history.length ? history[history.length - 1] : null;
   const victim = event?.victimId ? pieces.find((p) => p.id === event.victimId) : null;
   const capturer = event?.victimId ? pieces.find((p) => p.id === event.moverId) : null;
@@ -805,11 +818,13 @@ function Scene({
           inCheck={piece.kind === "k" && (checked === piece.color || mated === piece.color)}
           toppled={piece.kind === "k" && mated === piece.color}
           onPick={pick}
-          army={piece.color === "w" ? army : null}
+          figure={set === "armies"}
+          celebrating={mated !== null && mated !== piece.color}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (
         <>
+          {set === "classic" && (
           <Shatter
             key={`x${event.ply}`}
             at={xz(event.victimSquare)}
@@ -817,10 +832,11 @@ function Scene({
             color={victim.color}
             height={PIECE_HEIGHT[event.victimKind ?? "p"]}
           />
+          )}
           <CoreFlight
             key={`c${event.ply}`}
-            from={[xz(event.victimSquare)[0], ANATOMY[event.victimKind ?? "p"].coreY, xz(event.victimSquare)[1]]}
-            to={[xz(event.to)[0], ANATOMY[capturer.kind].coreY, xz(event.to)[1]]}
+            from={[xz(event.victimSquare)[0], coreHeight(event.victimKind ?? "p"), xz(event.victimSquare)[1]]}
+            to={[xz(event.to)[0], coreHeight(capturer.kind), xz(event.to)[1]]}
             start={hitAt}
             size={0.09}
             label={event.victimKind && captureLabel ? `+${captureLabel(event.victimKind)}` : undefined}
@@ -832,8 +848,7 @@ function Scene({
 }
 
 export default function Arena3D(props: ArenaProps) {
-  // Which army plays White: the classic set, or characters (a saved choice, or ?army= to preview).
-  const [army] = useState(readArmy);
+  const set = props.set ?? "armies";
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
   // Phones skip shadows and glow, and render at a lower resolution; any device drops further if it struggles.
   const [lite, setLite] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 640);
@@ -863,7 +878,7 @@ export default function Arena3D(props: ArenaProps) {
             </Html>
           }
         >
-          <Scene {...props} army={army} askPromotion={(from, to) => setPromotion({ from, to })} />
+          <Scene {...props} set={set} askPromotion={(from, to) => setPromotion({ from, to })} />
         </Suspense>
         <OrbitControls makeDefault enablePan={false} enabled={!props.attract} minPolarAngle={0.2} maxPolarAngle={1.38} />
         {!lite && (
@@ -873,6 +888,16 @@ export default function Arena3D(props: ArenaProps) {
           </EffectComposer>
         )}
       </Canvas>
+      {props.onSetChange && (
+        <button
+          className="ghost absolute right-3 z-10 text-sm"
+          style={{ bottom: (props.insets?.bottom ?? 0) + 12 }}
+          onClick={() => props.onSetChange?.(set === "armies" ? "classic" : "armies")}
+          title="Switch between the armies and the classic chess set"
+        >
+          {set === "armies" ? "Classic set" : "Armies"}
+        </button>
+      )}
       {promotion && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(8,10,34,0.72)]">
           <div className="slab flex flex-col items-center gap-4 p-6">

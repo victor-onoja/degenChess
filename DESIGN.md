@@ -48,7 +48,7 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 
 The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in polished bone and obsidian. Set into each one is a gold core sized to its value; the king's core is pale because the king has no price. No labels float over pieces in play: money is shown only when it moves. In `Arena3D.tsx` they breathe, turn towards the last move and the pointer, tremble when attacked and lean in when they can capture. On a capture the victim's core flies into the capturer with the amount on it. Fog begins behind the board at any camera distance, so narrow screens keep full contrast. Around the board, a dozen translucent boards drift at their own angles (`Multiverse`): the same game in other dimensions.
 
-Armies (prototype): pieces can be played by animated KayKit characters (CC0), each with its stake as a spinning gold gem over its head. Characters walk to their square (a knight leaps), face where they are going, attack on a capture, and turn back to face the enemy. `?army=heroes` previews the Heroes as White.
+The armies (default): Heroes (White) against the Undead (Black), animated KayKit characters (CC0), each with its stake as a spinning gold gem over its head and a disc underfoot showing its chess piece (bone piece on obsidian for White, obsidian on bone for Black), turned to read upright from the camera. Characters walk to their square (a knight leaps), face where they are going, attack on a capture, fall and sink when taken, and cheer a checkmate. The Staunton set is the classic option, switched from the corner of the 3D board.
 
 ## Motion
 

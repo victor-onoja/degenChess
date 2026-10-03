@@ -35,7 +35,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 - Time controls: 3+2, 5+3, 10+5, or no clock (24 hours a move).
 - Usernames are unique, lowercase, 3 to 16 characters.
 - Testnet only. No real money. Do not claim otherwise.
-- The 3D board uses a sculpted CC0 Staunton set by default; animated KayKit characters (CC0) are a prototype theme.
+- The 3D board's default pieces are two animated armies (Heroes vs Undead, KayKit, CC0); the sculpted CC0 Staunton set is the classic option. The owner called the armies "the missing piece" (3 October 2026).
 - Passkeys are bound to the domain degen-chess.vercel.app.
 - Next.js pages router, Tailwind, deployed on Vercel.
 

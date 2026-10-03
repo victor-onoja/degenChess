@@ -3,35 +3,39 @@ import { useFrame } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import { SkeletonUtils } from "three-stdlib";
 import * as THREE from "three";
-import type { PieceSymbol } from "chess.js";
+import type { Color, PieceSymbol } from "chess.js";
+import { STANDARD_PIECES } from "../../lib/standardPieces";
 import type { PieceParts } from "./pieces3d";
 
-// Character armies: chess played by little rigged characters (Kay Lousberg's CC0 KayKit packs,
-// built by tools/armies/build.mjs). Each piece is a character carrying its share of the stake as a
-// gold gem floating over its head. All characters share one rig, so one animation file drives them.
+// The armies: chess played by little rigged characters, Heroes (White) against the Undead (Black),
+// from Kay Lousberg's CC0 KayKit packs, built by tools/armies/build.mjs. Each carries its share of the
+// stake as a gold gem over its head, and stands on a disc showing which chess piece it is. All the
+// characters share one rig, so one animation file drives both armies.
 
-export type Army = "heroes";
-export const ARMIES: Army[] = ["heroes"];
 export type Action = "Idle" | "Walking_A" | "1H_Melee_Attack_Chop" | "Hit_A" | "Death_A" | "Cheer";
-
+const ARMY: Record<Color, string> = { w: "heroes", b: "undead" };
 const RIG_URL = "/armies/rig.glb";
-const url = (army: Army, kind: PieceSymbol) => `/armies/${army}-${kind}.glb`;
+const url = (color: Color, kind: PieceSymbol) => `/armies/${ARMY[color]}-${kind}.glb`;
+const KINDS: PieceSymbol[] = ["p", "n", "b", "r", "q", "k"];
 
 /** How tall each character stands, in board squares: rank reads as size. */
 const HEIGHT: Record<PieceSymbol, number> = { p: 0.82, n: 1.0, b: 1.08, r: 1.04, q: 1.14, k: 1.24 };
 const GEM_RADIUS: Record<PieceSymbol, number> = { p: 0.05, n: 0.07, b: 0.07, r: 0.08, q: 0.095, k: 0.05 };
+/** Height of a character's gem, where a captured stake leaves from and arrives. */
+export const gemY = (kind: PieceSymbol) => HEIGHT[kind] + 0.16;
 
 const GEM = new THREE.OctahedronGeometry(1, 0);
 const GOLD = new THREE.MeshBasicMaterial({ color: new THREE.Color("#ffc233").multiplyScalar(2.4), toneMapped: false });
 const PALE = new THREE.MeshBasicMaterial({ color: new THREE.Color("#dfe4ff").multiplyScalar(1.6), toneMapped: false });
+const ONCE: Action[] = ["1H_Melee_Attack_Chop", "Hit_A", "Death_A"];
 
 export interface FigureParts extends PieceParts {
   /** Switch to an animation; repeated calls with the same name do nothing. */
   act: (action: Action) => void;
 }
 
-export const Figure = forwardRef<FigureParts, { army: Army; kind: PieceSymbol }>(function Figure({ army, kind }, ref) {
-  const { scene } = useGLTF(url(army, kind));
+export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol }>(function Figure({ color, kind }, ref) {
+  const { scene } = useGLTF(url(color, kind));
   const { animations } = useGLTF(RIG_URL);
   const root = useRef<THREE.Group>(null);
   const gem = useRef<THREE.Mesh>(null);
@@ -43,7 +47,7 @@ export const Figure = forwardRef<FigureParts, { army: Army; kind: PieceSymbol }>
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
         o.castShadow = true;
-        o.frustumCulled = false; // skinned bounds are the bind pose; don't let them pop out
+        o.frustumCulled = false; // skinned bounds are the bind pose; don't let a raised arm vanish
       }
     });
     const height = new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3()).y || 1;
@@ -57,10 +61,8 @@ export const Figure = forwardRef<FigureParts, { army: Army; kind: PieceSymbol }>
     if (!next) return;
     const previous = current.current ? actions[current.current] : null;
     next.reset();
-    if (action === "Death_A" || action === "1H_Melee_Attack_Chop" || action === "Hit_A" || action === "Cheer") {
-      next.setLoop(THREE.LoopOnce, 1);
-      next.clampWhenFinished = true;
-    }
+    next.setLoop(ONCE.includes(action) ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    next.clampWhenFinished = true;
     next.fadeIn(0.18).play();
     previous?.fadeOut(0.18);
     current.current = action;
@@ -84,24 +86,63 @@ export const Figure = forwardRef<FigureParts, { army: Army; kind: PieceSymbol }>
       <group ref={root} scale={scale}>
         <primitive object={model} />
       </group>
-      <mesh ref={gem} geometry={GEM} material={kind === "k" ? PALE : GOLD} position-y={HEIGHT[kind] + 0.16} scale={GEM_RADIUS[kind]} />
+      <mesh ref={gem} geometry={GEM} material={kind === "k" ? PALE : GOLD} position-y={gemY(kind)} scale={GEM_RADIUS[kind]} />
     </group>
   );
 });
 
-export function preloadArmy(army: Army) {
-  useGLTF.preload(RIG_URL);
-  for (const kind of ["p", "n", "b", "r", "q", "k"] as PieceSymbol[]) useGLTF.preload(url(army, kind));
+// ------------------------------------------------------------------ which piece is which
+
+const glyphs = new Map<string, THREE.Texture>();
+/** The flat chess piece on a disc of its side's tone, drawn once per piece type and side. */
+function glyph(color: Color, kind: PieceSymbol) {
+  const key = color + kind;
+  const cached = glyphs.get(key);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 128;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const g = canvas.getContext("2d")!;
+  g.fillStyle = color === "w" ? "rgba(10, 10, 20, 0.82)" : "rgba(241, 233, 214, 0.88)";
+  g.beginPath();
+  g.arc(64, 64, 62, 0, Math.PI * 2);
+  g.fill();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45">${STANDARD_PIECES[color + kind.toUpperCase()]}</svg>`;
+  const image = new Image();
+  image.onload = () => {
+    g.drawImage(image, 22, 20, 84, 84);
+    texture.needsUpdate = true;
+  };
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  glyphs.set(key, texture);
+  return texture;
 }
 
-/** The army chosen for a side, from `?army=` or the saved choice. Prototype: heroes play White. */
-export function readArmy(): Army | null {
-  if (typeof window === "undefined") return null;
-  const fromUrl = new URLSearchParams(window.location.search).get("army");
-  let saved: string | null = null;
-  try {
-    saved = localStorage.getItem("degenchess.army");
-  } catch {}
-  const choice = fromUrl ?? saved;
-  return ARMIES.includes(choice as Army) ? (choice as Army) : null;
+const DISC = new THREE.CircleGeometry(0.3, 40);
+
+/** A disc under a character showing its chess piece, turned so it always reads upright to the viewer. */
+export function GlyphDisc({ color, kind }: { color: Color; kind: PieceSymbol }) {
+  const group = useRef<THREE.Group>(null);
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: glyph(color, kind), transparent: true, depthWrite: false, toneMapped: false }),
+    [color, kind]
+  );
+  const here = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera }) => {
+    const g = group.current;
+    if (!g) return;
+    g.getWorldPosition(here);
+    g.rotation.y = Math.atan2(camera.position.x - here.x, camera.position.z - here.z);
+  });
+  return (
+    <group ref={group} position-y={0.014}>
+      <mesh geometry={DISC} material={material} rotation-x={-Math.PI / 2} />
+    </group>
+  );
+}
+
+useGLTF.preload(RIG_URL);
+export function preloadArmies() {
+  for (const color of ["w", "b"] as Color[]) for (const kind of KINDS) useGLTF.preload(url(color, kind));
 }

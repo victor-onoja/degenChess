@@ -19,6 +19,7 @@ import { degenChessAbi } from "../contracts/abi";
 import { withApproval } from "../lib/stake";
 import { Icon } from "./Icon";
 import { PieceIcon } from "./PieceIcon";
+import { usePieceSet } from "../lib/pieceSet";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
@@ -109,6 +110,7 @@ export function GameView({
   const arenaHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
 
   // 3D arena, flat 2D board, or both side by side (2D to play precisely, 3D for the show).
+  const [pieceSet, setPieceSet] = usePieceSet();
   const [view, setView] = useState<ViewMode>("3d");
   useEffect(() => {
     let saved: string | null = null;
@@ -386,6 +388,8 @@ export function GameView({
         <Arena3D
           immersive
           insets={insets}
+          set={pieceSet}
+          onSetChange={setPieceSet}
           history={arenaHistory}
           orientation={myColor ?? "w"}
           movable={canMove && !pendingMove ? myColor : null}
@@ -515,6 +519,7 @@ export function GameView({
             <div className="shrink-0" style={{ width: splitWidth, height: splitWidth }}>
               <Arena3D
                 fill
+                set={pieceSet}
                 history={arenaHistory}
                 orientation={myColor ?? "w"}
                 movable={canMove && !pendingMove ? myColor : null}
