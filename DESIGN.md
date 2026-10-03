@@ -43,6 +43,8 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 - 2D board: tap a piece, then a square. The picked square gets a gold inset, legal moves a gold dot, captures a gold ring.
 - `Wordmark`: a pair of eyes that follow the pointer, then the name. When signed in on a phone it shows only the mark, so the header stays on one line.
 - Account bar: the name is the rename control; without one, a bone "Choose a username" button takes its place. The balance opens the wallet sheet (deposit address with QR, send by username). Locked, it shows only Unlock; Switch account sits under the headline.
+- Sharing: `ShareButton` (icon in each Yard board's corner, full-width *Share invite link* on a waiting game, *Share this game* when finished) uses the phone's share sheet or copies the link.
+- `/sandbox`: the practice board, same components, no chain; header, scoreboard and stake row around the board.
 - `NameEditor`: username field that checks availability as you type (gold when free, alert when taken) and claims with one passkey prompt.
 
 ## The 3D board

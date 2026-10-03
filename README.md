@@ -35,7 +35,11 @@ Motion is designed for the game: a piece hops to its square with squash and stre
 
 ### The Yard
 
-The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review.
+The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review. Every board has a share button in its corner (the phone's share sheet, or the link is copied), a waiting game shows a large *Share invite link*, and live and finished games can be shared from the game screen, each with its own line of text ("alice beat bob for 10 tUSD on DegenChess. See how.").
+
+### Practice board
+
+`/sandbox` is a practice board for demos and quick tests: one person plays both sides with the real 2D, 3D and split views, the armies and the money moving exactly as in a staked game (captures, the pot bar, the payout at checkmate), with nothing staked and nothing on-chain. It is not linked from the site and is marked noindex; set `NEXT_PUBLIC_SANDBOX=off` to turn it off.
 
 ### Clocks, names and rematch
 
@@ -85,6 +89,7 @@ src/lib/                     move encoding/replay, contract hooks
 tools/e2e/passkey-game.mjs   two-player browser test with simulated passkeys
 tools/e2e/core-flows.mjs     cancel, tap-to-move on a phone, promotion, spectating, draw, win on time
 tools/e2e/account-flows.mjs  usernames and the wallet
+tools/e2e/sandbox.mjs        the practice board
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
@@ -122,6 +127,7 @@ npm test          # contract tests
 node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL, default localhost:3000)
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
+node tools/e2e/sandbox.mjs        # the practice board on desktop and phone
 npm run lint
 npm run build
 ```

@@ -20,6 +20,8 @@ import { withApproval } from "../lib/stake";
 import { Icon } from "./Icon";
 import { PieceIcon } from "./PieceIcon";
 import { usePieceSet } from "../lib/pieceSet";
+import { ShareButton } from "./ShareButton";
+import { BOARD_PIECES } from "./boardPieces";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
@@ -27,19 +29,6 @@ const VIEW_PREF = "degenchess.view";
 type ViewMode = "3d" | "2d" | "split";
 
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
-// The flat board uses the same living pieces as everywhere else.
-const BOARD_PIECES = Object.fromEntries(
-  (["w", "b"] as const).flatMap((color) =>
-    (["p", "n", "b", "r", "q", "k"] as const).map((kind) => [
-      `${color}${kind.toUpperCase()}`,
-      ({ squareWidth }: { squareWidth: number }) => (
-        <div style={{ width: squareWidth, height: squareWidth, padding: "4% 6% 2%" }}>
-          <PieceIcon kind={kind} color={color} className="h-full w-full" />
-        </div>
-      ),
-    ])
-  )
-);
 
 function useNow() {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -315,6 +304,19 @@ export function GameView({
       : "The position is drawn by the rules of chess. Offer / accept a draw to settle.";
   }
 
+  // What a shared link says, depending on where the game is.
+  const stakeText = `${formatToken(info.stake)} ${TOKEN_SYMBOL}`;
+  const sharePitch =
+    info.status === Status.Open
+      ? myColor === "w"
+        ? `Play me at chess for ${stakeText} on DegenChess. Every piece you take pays.`
+        : `${label(info.white)} wants a ${stakeText} game of chess on DegenChess. Every piece you take pays.`
+      : info.status === Status.Active
+        ? `${label(info.white)} v ${label(info.black)}, live for ${stakeText} on DegenChess. Every capture pays.`
+        : info.result === Result.Draw
+          ? `${label(info.white)} and ${label(info.black)} drew a ${stakeText} game on DegenChess.`
+          : `${label(info.result === Result.WhiteWins ? info.white : info.black)} beat ${label(info.result === Result.WhiteWins ? info.black : info.white)} for ${stakeText} on DegenChess. See how.`;
+
   const resultText =
     info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
 
@@ -570,7 +572,8 @@ export function GameView({
 
           {info.status === Status.Open && myColor === "w" && (
             <>
-              <p className="text-sm">Waiting for an opponent. Share game ID #{gameId.toString()} or this page&apos;s URL.</p>
+              <p className="text-sm">Waiting for an opponent. Send them the link: they can sit down in one tap.</p>
+              <ShareButton gameId={gameId} text={sharePitch} label="Share invite link" className="act act--bone w-full" />
               <button className="ghost" disabled={pending !== null} onClick={() => moneyCall("Cancel game", "cancelGame")}>
                 {pending ?? "Cancel & Refund"}
               </button>
@@ -652,6 +655,7 @@ export function GameView({
                       ? "Your move - tap a piece."
                       : `Waiting for ${label(opponent)} to move...`}
                 </p>
+                <ShareButton gameId={gameId} text={sharePitch} />
                 <button
                   className="ghost"
                   disabled={pending !== null || iOfferedDraw}
@@ -674,6 +678,7 @@ export function GameView({
                 {resultText}
                 <span className="soft block text-xs font-normal">Balances above are final payouts after the 2.5% fee.</span>
               </p>
+              <ShareButton gameId={gameId} text={sharePitch} label="Share this game" className="ghost w-full" />
               {myColor && (
                 <button
                   className="act"
@@ -724,7 +729,13 @@ export function GameView({
           )}
 
           {info.status === Status.Cancelled && <p className="text-sm">This game was cancelled and refunded.</p>}
-          {myColor === null && info.status !== Status.Open && <p className="soft text-sm">You are spectating.</p>}
+          {myColor === null && info.status === Status.Active && (
+            <div className="flex items-center gap-2">
+              <p className="soft min-w-0 flex-1 text-sm">You are spectating.</p>
+              <ShareButton gameId={gameId} text={sharePitch} label="Share" className="ghost" />
+            </div>
+          )}
+          {myColor === null && info.status === Status.Open && <ShareButton gameId={gameId} text={sharePitch} label="Share this board" className="ghost w-full" />}
         </div>
         )}
       </div>

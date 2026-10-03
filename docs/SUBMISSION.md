@@ -55,7 +55,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 **Go-to-market:**
 
 1. **Chess streamers and clubs.** A staked game with money visibly flying on every capture is watchable. Sponsor small stakes for streamer matches and club nights; every viewer gets a "play the streamer's opening for $1" link.
-2. **Share links as the growth loop.** A game is a URL. Creating one produces a link that opens straight into the 3D board with a "Join for $1" button and one-tap sign-up, so every challenge sent to a friend is an acquisition.
+2. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Sharing is never more than a tap away: every board in the Yard has a share button, a new game leads with *Share invite link*, and live and finished games share with a ready-made line ("alice beat bob for $10 on DegenChess. See how."). Every challenge sent to a friend is an acquisition.
 3. **Crypto communities.** Weekly community-vs-community matches with a leaderboard, watched live from the Yard.
 4. **Low-stakes default.** $1 games keep the first experience safe and make "try it once" an easy ask.
 

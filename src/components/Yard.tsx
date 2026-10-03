@@ -10,6 +10,7 @@ import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
 import { withApproval } from "../lib/stake";
 import { Icon } from "./Icon";
+import { ShareButton } from "./ShareButton";
 import { type Cell, MiniBoard, waitingBoard } from "./MiniBoard";
 
 const STAKE_PRESETS = ["1", "5", "10"];
@@ -86,6 +87,7 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
         ))}
       </div>
 
+      <p className="soft mb-2 text-sm">You get a link to send your opponent. Whoever opens it can sit down in one tap.</p>
       <button onClick={createGame} disabled={!hasAccount || stake === null || short || busy !== null} className="act w-full">
         {busy ?? (hasAccount ? "Create Game" : "Press Play now to get started")}
       </button>
@@ -162,8 +164,21 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const action = isOpen ? (sameAddress(g.white, me) ? "View" : "Join") : isLive ? (mine(g) ? "Resume" : "Watch") : "Review";
     const result = g.result === Result.Draw ? "drawn" : g.result === Result.WhiteWins ? "White won" : "Black won";
     const who = isOpen ? `${label(g.white)} is waiting` : `${label(g.white)} v ${label(g.black)}`;
+    const stake = `${formatToken(g.stake)} ${TOKEN_SYMBOL}`;
+    const winner = g.result === Result.WhiteWins ? g.white : g.black;
+    const loser = g.result === Result.WhiteWins ? g.black : g.white;
+    const pitch = isOpen
+      ? sameAddress(g.white, me)
+        ? `Play me at chess for ${stake} on DegenChess. Every piece you take pays.`
+        : `${label(g.white)} wants a ${stake} game of chess on DegenChess. Every piece you take pays.`
+      : isLive
+        ? `${label(g.white)} v ${label(g.black)}, live for ${stake} on DegenChess. Every capture pays.`
+        : g.result === Result.Draw
+          ? `${label(g.white)} and ${label(g.black)} drew a ${stake} game on DegenChess.`
+          : `${label(winner)} beat ${label(loser)} for ${stake} on DegenChess. See how.`;
     return (
-      <button key={g.id.toString()} className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>
+      <div key={g.id.toString()} className="relative">
+      <button className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>
         <MiniBoard rows={isOpen ? WAITING : (positions.get(g.id.toString()) ?? START)} waiting={isOpen} />
         <span className="mt-3 flex items-baseline justify-between gap-2">
           <span className="min-w-0 truncate font-bold">
@@ -181,6 +196,9 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
           </span>
         )}
       </button>
+      {/* Every board can be shared from the corner: the link opens straight onto it. */}
+      <ShareButton gameId={g.id} text={pitch} className="ghost table__share" />
+      </div>
     );
   };
 

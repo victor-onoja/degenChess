@@ -468,6 +468,15 @@ input::placeholder {
 .table .board {
   transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out);
 }
+.table__share {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  background: rgba(8, 7, 13, 0.82);
+}
 .table:hover .board,
 .table:focus-visible .board {
   transform: translateY(-4px);
