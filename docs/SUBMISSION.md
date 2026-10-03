@@ -1,8 +1,10 @@
 # DegenChess: submission pack
 
-Draft answers for every field on the submission form, plus the three video scripts. Items marked **TODO** aren't done yet.
+Answers for every field on the submission form, the evidence judges can check, the three video scripts, and what is left before the deadline.
 
-Deadline: 14 October 2026, 04:59 GMT+1.
+Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
+
+> **Name.** A rebrand to **Purple Chess** is under consideration (Monad's purple, and the board is already violet). Decide before recording the videos. `purplechess.com` is registered and parked (an aftermarket purchase); `purplechess.gg`, `.xyz`, `.io` and `playpurplechess.com` were unregistered on 3 October. Passkeys are bound to the domain, so a domain move must happen before the public launch (see the README).
 
 ---
 
@@ -10,43 +12,50 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **Project name:** DegenChess
 
-**One-line description:** Chess where every capture pays: stake dollars, take a piece, take its value, with one passkey tap and no wallet.
+**One-line description:** Chess where every piece carries a share of your stake: take a piece and its value is yours, settled on Monad in under a second, with one passkey tap and no wallet.
 
-**Repo URL:** <https://github.com/victor-onoja/degenChess>
+**Repo:** <https://github.com/victor-onoja/degenChess>
 
-**Live link (Monad testnet):** <https://degen-chess.vercel.app>
+**Live app (Monad testnet):** <https://degen-chess.vercel.app>
 
-**Contract (Monad testnet, chain 10143):** `0x17c898b9814323a5bd364c77b6a41b341cdbda51`
+**Contracts (Monad testnet, chain 10143):**
+
+| Contract | Address |
+| --- | --- |
+| DegenChess (games and stakes) | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
+| ChessReferee (Chainlink CRE consumer) | `0x2a54f9443c84c472488020c878797a2fead78cdf` |
+| PlayerNames (usernames) | `0xaf87e4ad92ea3cae05f8696f534d43b19a40a5e6` |
+| tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
 **Primary track:** Consumer Products & Payments
 
 **Sponsor bounties:**
 
-- Best Mera-Powered UX on Monad (Monad Foundation). Mera is the whole account layer.
-- Best workflow with CRE (Chainlink). A CRE workflow is the game's referee: it fires on every move, replays the game and settles it on-chain. See `cre/README.md`.
+- **Best Mera-Powered UX on Monad.** Mera is the whole account layer: one passkey, no wallet, a money key that always asks and a game key that never does.
+- **Best workflow with CRE (Chainlink).** A CRE workflow is the game's referee: it fires on every move, replays the game with a chess engine and settles checkmates, rule draws and illegal moves on-chain.
 
-**Logo:** `public/brand/logo-mark.png` (1024×1024, the eyes on the board) and `public/brand/logo-wide.png` (1600×480). All brand images are rendered from the live app by `tools/brand/render.mjs`. Share image: `public/og.png`. Video title card: `public/brand/title-card.png`. Story poster: `public/brand/poster.png`.
+**Images:** logo `public/brand/logo-mark.png` (1024×1024) and `public/brand/logo-wide.png` (1600×480); share image `public/og.png`; video title card `public/brand/title-card.png`; story poster `public/brand/poster.png`. All rendered from the live app by `tools/brand/render.mjs`.
 
 ### Description
 
 DegenChess is staked chess for people who have never used crypto.
 
-Two players put up the same dollar stake. Every piece is worth a fixed share of it: a pawn is 1/39, a queen is 9/39. When you capture a piece, its value moves from your opponent's balance to yours, on-chain, in under a second. The winner takes the pot, but the loser keeps whatever they captured, so every move matters and a lost game is not a total loss.
+Two players put up the same stake. Every piece is worth a fixed share of it: a pawn 1/39, a knight or bishop 3/39, a rook 5/39, a queen 9/39. Capture a piece and its value moves from your opponent's balance to yours, on-chain, in under a second. The winner takes the pot, but the loser keeps whatever they captured, so every move matters and a lost game is not a total loss. A won game pays a 2.5% fee; draws are free.
 
-There is no wallet to install and no seed phrase. You tap "Play now", confirm with Face ID or a fingerprint, and you're in a game about five seconds later. Your passkey creates two keys:
+There is no wallet to install and no seed phrase. You tap "Play now", confirm with Face ID or a fingerprint, and you're ready about five seconds later. Your passkey creates two keys:
 
-- a **money key** that holds your funds and asks for your passkey every time money moves (staking, resigning, withdrawing);
-- a **game key** that can only make chess moves in games you registered it for. The contract enforces that it can never touch money. It lives in the browser tab, so playing needs no prompts at all.
+- a **money key** that holds your funds and asks for your passkey every time money moves (staking, resigning, withdrawing, sending);
+- a **game key** that can only make chess moves in games you registered it for. The contract enforces that it can never touch money, so playing needs no prompts at all.
 
 Nothing secret is stored. Clear your browser or pick up another device mid-game and one passkey tap brings back your account and your game.
 
-You play on a clean 2D board (tap a piece, tap a square; the default on phones), in 3D, or both side by side. The 3D board floats in a void among other drifting boards, the same game in other dimensions, and its pieces are alive: a sculpted Staunton set in bone and obsidian where each piece breathes, turns towards the play, trembles when attacked and carries a glowing gold core sized to its share of the stake. A capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. Under it all runs a shuffled soundtrack of public-domain orchestra and Asian and African instruments, and the armies speak at the big moments ("For the crown!", "Your gold is mine.", "Checkmate. Rest forever."). By default the 3D pieces are two armies of animated characters, Heroes against the Undead: they walk to their squares, attack on a capture, fall when taken and cheer a checkmate, each carrying its stake as a gold gem over its head, with a classic Staunton set one tap away. The lobby, the Yard, shows every open, live and finished game as a small board at its real position, and anyone can sit down or watch; spectators always watch in 3D.
+You play on a clean 2D board (tap or drag; the default on phones), in 3D, or both side by side, and a focus mode shows nothing but the board. In 3D the pieces are two armies of animated characters, Heroes against the Undead, on a violet board floating among other boards drifting in the void: the same game in other dimensions. They walk to their squares to the sound of their footsteps, each strikes in its own way on a capture, the taken piece falls while its share of the stake flies to the attacker as a gold gem with the amount on it, the Undead rise from the board at the start, and the winners cheer a checkmate. The armies speak at the big moments ("For the crown!", "Your gold is mine.", "Checkmate. Rest forever.") over a shuffled soundtrack of public-domain orchestra and Asian and African instruments. A classic sculpted Staunton set is one tap away.
 
-Games have real chess clocks (3+2, 5+3, 10+5), you choose to play White, Black or a coin flip, every move can be replayed, a focus mode shows nothing but the board, and a rematch is one tap (colours swapped). Players are known by unique usernames, never addresses, and can send money to each other by username from the wallet, which also shows a QR code for deposits.
+The lobby, the Yard, shows every open, live and finished game as a small board at its real position; anyone can sit down or watch. Games have chess clocks (3+2, 5+3, 10+5), you choose White, Black or a coin flip, every move can be replayed, and a rematch is one tap with colours swapped. Players are known by unique usernames, never addresses; they can pay each other by username, and every link they share carries their name, so whoever invited a player earns part of the fee on that player's games.
 
-Nobody has to be trusted to call the result. A Chainlink CRE workflow acts as referee: it replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move.
+Nobody has to be trusted to call the result. A Chainlink CRE workflow replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move, including what the illegal move captured.
 
-Monad is what makes this playable. Each move is a transaction; at about 0.8 seconds to confirm, with a tiny gas fee, on-chain chess feels like chess.
+Monad is what makes this playable. Each move is a transaction; at about 0.8 seconds to confirm with a tiny gas fee, on-chain chess feels like chess.
 
 ### Who it's for and how we reach them
 
@@ -54,89 +63,106 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 **Go-to-market:**
 
-1. **Chess streamers and clubs.** A staked game with money visibly flying on every capture is watchable. Sponsor small stakes for streamer matches and club nights; every viewer gets a "play the streamer's opening for $1" link.
-2. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Sharing is never more than a tap away: every board in the Yard has a share button, a new game leads with *Share invite link*, and live and finished games share with a ready-made line ("alice beat bob for $10 on DegenChess. See how."). Every challenge sent to a friend is an acquisition.
-3. **Crypto communities.** Weekly community-vs-community matches with a leaderboard, watched live from the Yard.
-4. **Low-stakes default.** $1 games keep the first experience safe and make "try it once" an easy ask.
+1. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Every board in the Yard has a share button, a new game leads with *Share invite link*, finished games share with a ready-made line ("alice beat bob for $10 on DegenChess. See how."), and every link pays its sender a share of the fee on the games of the people who join through it.
+2. **Chess streamers and clubs.** Money visibly changing hands on every capture is watchable. Sponsor small stakes for streamer matches and club nights; viewers get a "play the streamer for $1" link.
+3. **Crypto communities.** Community-against-community matches, watched live from the Yard.
+4. **Low stakes by default.** $1 games make "try it once" an easy ask.
 
-**Business model:** 2.5% of the pot when a game is won; draws are free. A fifth of each player's share of that fee goes to whoever invited them, so every share link pays its sender, which turns players into the acquisition channel.
+**Business model:** 2.5% of the pot when a game is won; draws are free. 20% of each player's half of the fee goes to whoever invited them.
 
-**Why they stay:** stakes that move during the game make even a losing position worth playing out, and a rematch is one tap.
+**Why they stay:** stakes that move during the game make a losing position worth playing out; rematches are one tap; the armies make every game a small show.
 
-**Beyond chess:** the account layer (one passkey, a scoped game key, stakes that shift during play) is game-agnostic. DegenChess is the first title in a planned "Degen Yard" of staked skill games.
+**Beyond chess:** the account layer (one passkey, a scoped game key, stakes that shift during play) is game-agnostic. DegenChess is the first title of a planned "Degen Yard" of staked skill games.
 
-### Progress update (shareable now, for mentor support)
+---
 
-> **DegenChess, status 3 October.** Live on Monad testnet at degen-chess.vercel.app.
->
-> **Working end to end:** passkey sign-up with Mera (one prompt, about 5 seconds to the first confirmed transaction), staked games with on-chain moves and capture payouts, chess clocks, usernames, rematch, withdrawals, and a 3D arena you can also play in 2D or side by side. A Chainlink CRE workflow referees every game: on testnet it has settled a checkmate, a stalemate and an illegal move (the cheater forfeited everything), and it runs on a server around the clock. Two automated browser suites cover the whole flow: sign-up, staking, prompt-free moves, wiping a player's storage mid-game and restoring from the passkey, resign, withdraw, rematch, cancel, tap-to-move on a phone, promotion, spectating, draws and wins on time. Our own review found that Chainlink's simulation forwarder let anyone deliver a verdict; we fixed it the same day (see `docs/AUDIT.md`).
->
-> **Built since the hackathon started:** a new contract (the earlier prototype's payout maths locked funds), per-game keys so moves need no prompts, the Mera account layer, the faucet, the referee workflow and its consumer contract, clocks, usernames, the 3D arena and the redesign.
->
-> **Where we'd value help:**
->
-> 1. Chainlink CRE: the referee runs through `cre workflow simulate --broadcast` while our deployment-access request is pending. Can access be granted before the deadline so it runs on a DON with the production forwarder?
-> 2. Mera: anything we should do for session scoping or recovery beyond a contract-scoped game key and a 30-minute idle lock?
-> 3. Monad's reserve-balance rule cost us a day. Is there a recommended gas-sponsorship pattern for brand-new accounts instead of a faucet?
->
-> **Next:** a security review (brief sent to an independent auditor), leaderboard, demo videos.
+## Evidence for judges
+
+### Mera (passkey accounts)
+
+| Criterion | Where to see it |
+| --- | --- |
+| Time to first transaction | The "You're in" banner after sign-up shows the measured time: about 3 to 6 seconds on testnet. |
+| One prompt to start | Sign-up is one passkey ceremony; the username and invite are claimed in the same session. |
+| Session design | Money key re-prompts for every money action; game key is prompt-free and contract-scoped (`_playerFor`, and `resign`/`cancel`/`withdraw` reject it). Lock, tab close, reload or 30 idle minutes wipe it. |
+| Stateless test | Clear site data mid-game, reload, tap "I have a passkey": account and game key are rebuilt, the game continues. Automated in `tools/e2e/passkey-game.mjs`. |
+| Code | `src/lib/mera.ts`, `src/lib/account.tsx`, `contracts/DegenChess.sol` (`_setKey`, `_playerFor`). |
+
+### Chainlink CRE (the referee)
+
+| Item | Where |
+| --- | --- |
+| Workflow | `cre/referee/main.ts` (EVM log trigger on `MoveMade`, reads `getGame`/`getMoves`), verdict logic `cre/referee/judge.ts` with unit tests |
+| Consumer contract | `contracts/ChessReferee.sol`: `onReport` → `DegenChess.arbitrate` |
+| Checkmate settled automatically | game 0, verdict tx `0x7cc3e603b7ca850600bd94842a48641893e8427a3f10cb076301e85bbfb76825`: White wins, 1.95 / 0 tUSD |
+| Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0xacfa35cca3578043b1dbdae7c88dbea2e726b6792cac8a239e83d41230cdc24e`); verdict tx `0xd30eae7f681cd4a6361cd0e23f87d28090f0f3e1936194526fa82e9ab41adfe2` forfeited White: 0 / 1.95 tUSD, the stolen queen value included |
+| Earlier runs | stalemate and rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
+| Running | a Docker service on a server (`deploy/referee`) watches every move. It runs the workflow with the CRE CLI and, until our CRE API key and DON deployment access arrive, delivers the same `judge.ts` verdict through the same forwarder itself |
+| Security | our review found Chainlink's simulation forwarder let anyone deliver a verdict; fixed the same day with a reporter allowlist (`docs/AUDIT.md`) |
+
+### Quality
+
+- 32 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
+- Four browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `sandbox`.
+- Security brief for an independent reviewer: `docs/AUDIT.md`.
 
 ---
 
 ## Videos
 
-Record at 1080p. Use the production site; the landing page's backdrop replays a demo game for clean close-ups. Judges must be able to open the links: upload as unlisted YouTube or Loom and test them in a private window.
+Record at 1080p on the production site. Use `/sandbox` (the practice board: you play both sides, money moves as in a real game, nothing on-chain) for clean 3D close-ups and captures. Upload as unlisted YouTube or Loom and test the links in a private window.
 
 ### Technical demo (3 minutes)
 
 | Time | Show | Say |
 | --- | --- | --- |
-| 0:00 | Landing page, arena circling | "DegenChess is staked chess on Monad. Every capture moves money. I'll show the whole thing live on testnet." |
-| 0:15 | Phone or second browser: tap Play now, passkey prompt, "You're in" banner with the timer | "One passkey prompt. No extension, no seed phrase. That banner is the measured time to my first confirmed transaction." |
-| 0:40 | Create a $1 game, passkey prompt; second player opens the link and joins | "Staking asks for the passkey. Mera derives two keys from it: a money key, and a game key the contract only lets make chess moves." |
-| 1:05 | Play several moves quickly, no prompts | "Moves are signed by the game key in memory. No prompts, about 0.8 seconds each, and each one is a real transaction." Show one on the explorer. |
-| 1:30 | A capture: the piece shatters, coins fly, the stake bar shifts | "That pawn was worth one thirty-ninth of the stake. It just moved on-chain. The bar is the live split of the pot." |
-| 1:50 | Clear site data mid-game, reload, tap "I have a passkey" | "The stateless test. Nothing secret is stored. One prompt rebuilds my account and my game key, and the game is exactly where I left it." |
-| 2:15 | Lock button; then resign with a passkey prompt; withdraw | "Lock wipes the game key. Anything that settles money needs the passkey again. The loser still withdraws what they captured." |
-| 2:40 | Code: `_playerFor` and the game-key checks in the contract; the test output | "The scoping is enforced by the contract, not the UI. 28 contract tests, plus browser tests for every core flow." |
-| 2:55 | Back to the arena | "Live now at degen-chess.vercel.app." |
+| 0:00 | Landing page, the armies playing in the backdrop | "DegenChess is staked chess on Monad. Every capture moves money. Everything here is live on testnet." |
+| 0:15 | Phone: type a username, Play now, Face ID, "You're in" banner | "One passkey prompt. No extension, no seed phrase. That banner is the measured time to my first confirmed transaction." |
+| 0:35 | Create a $1 game as White, Share invite link; second player opens it and joins | "Staking asks for the passkey. Mera derives two keys: a money key, and a game key the contract only lets make chess moves." |
+| 1:00 | Several quick moves, no prompts, one opened on the explorer | "Moves are signed by the game key. No prompts, under a second each, every one a transaction." |
+| 1:20 | A capture in 3D: the attack, the gem flying with "+$0.08", the pot bar moving | "That knight was worth three thirty-ninths of the stake. It just moved on-chain." |
+| 1:40 | Clear site data, reload, "I have a passkey" | "The stateless test: nothing secret is stored. One prompt rebuilds the account and the game key, and the game is where I left it." |
+| 2:00 | Deliver checkmate; the referee settles it with no resignation; show the verdict tx | "Nobody resigned. A Chainlink CRE workflow replayed the game and settled it on-chain. Play an illegal move and it forfeits you, stolen value included." |
+| 2:30 | Withdraw (passkey), the wallet: invite link and earnings | "Money out asks for the passkey again. Every link you share earns you part of the fee on your friends' games." |
+| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 32 contract tests and four browser suites." |
+| 2:55 | Back to the board | "Live now at degen-chess.vercel.app." |
 
 ### Pitch (2 minutes)
 
 | Time | Say |
 | --- | --- |
-| 0:00 | "Hundreds of millions of people play chess online. Plenty of them bet on it: side bets in clubs, in Discords, on streams. None of that is built into the game, and none of it is safe." |
-| 0:20 | "Crypto could fix that, but crypto games ask you to install a wallet, save a seed phrase and approve a pop-up for every action. Nobody plays chess like that." |
-| 0:40 | "DegenChess is chess where every capture pays. Both players stake a dollar. Every piece is worth a share of it. Take a piece and its value is yours immediately. Lose the game and you still keep what you captured." (Show a capture.) |
-| 1:05 | "You start with one tap: Face ID, and you're playing in five seconds. Your passkey is your account. Moves need no confirmation at all, and anything involving money asks for your face again." |
-| 1:25 | "This only works on Monad. Every move is a transaction, confirmed in under a second for a tiny fee." |
-| 1:40 | "We start with chess players who already bet, through streamers and share links: every game is a link that opens straight onto the board. Chess is the first game. The same account and staking layer works for any skill game. That's Degen Yard." |
-| 1:55 | "DegenChess. Play it now on Monad testnet." |
+| 0:00 | "Hundreds of millions of people play chess online, and plenty of them bet on it: in clubs, in Discords, on streams. None of that is built into the game, and none of it is safe." |
+| 0:20 | "Crypto could fix that, but crypto games ask you to install a wallet, save a seed phrase and approve a pop-up for every move. Nobody plays chess like that." |
+| 0:40 | "DegenChess is chess where every piece carries part of your stake. Take a piece and its value is yours, right then. Lose the game and you still keep what you captured." (Show a capture.) |
+| 1:00 | "You start with one tap. Face ID, and you're in. Moves never ask for anything; money always asks for your face." |
+| 1:15 | "Nobody calls the result: a Chainlink workflow referees every game, and only Monad confirms a move in under a second for a fraction of a cent." |
+| 1:30 | "Every game is a link, and every link pays the person who shared it. Chess is the first game; the same account and staking layer works for any skill game. That's Degen Yard." |
+| 1:50 | "DegenChess. Play it now on Monad testnet." |
 
 ### Advert (30 seconds)
 
-No voice-over; music and on-screen text.
+No voice-over: the soundtrack and the armies' own lines.
 
 | Time | Picture | Text |
 | --- | --- | --- |
-| 0:00 | Board circling, the pieces watching each other | "Every piece has skin in the game." |
-| 0:05 | A piece hops in and strikes; the victim shatters | "Every capture..." |
-| 0:09 | The gold core flies to the capturer, "+$0.26" label, stake bar swings | "...pays." |
-| 0:14 | Phone: tap Play now, Face ID, board appears | "One tap. No wallet." |
-| 0:20 | Fast cuts of three captures | "Real stakes. Settled in under a second." |
+| 0:00 | The Undead rising from the board; the Heroes facing them | "Every piece has skin in the game." |
+| 0:05 | A Heroes knight walks in and strikes; the skeleton falls | "Every capture..." |
+| 0:09 | The gold gem flies to the attacker, "+$0.26", the pot bar swings | "...pays." |
+| 0:14 | Phone: Play now, Face ID, the board | "One tap. No wallet." |
+| 0:20 | Fast cuts: a mage casting, a crossbow, "Checkmate. Rest forever." | "Settled in under a second." |
 | 0:26 | Logo | "DegenChess. Play now on Monad." |
 
 ---
 
-## Before submission: what would make this stronger
+## Before submission
 
 In priority order.
 
-1. **Get the referee onto a Chainlink DON.** Deployment access is requested. Until it is granted, the referee runs on the server (`deploy/referee`); add a `CRE_API_KEY` there as soon as one can be created, so verdicts go through the CRE workflow rather than the direct fallback.
-2. **Security review.** Brief is in `docs/AUDIT.md`. Fix what comes back and say so in the submission.
-3. **Leaderboard and game history.** Gives judges something to browse and supports the growth story.
-4. **Real-phone pass** on the new board and landing page, on at least one iPhone and one Android.
-5. **Faucet hardening and funding.** Keep the faucet wallet at 30+ MON through judging; add a simple per-IP limit.
-6. **Record the three videos** by 12 October, leaving a day for retakes. `public/brand/title-card.png` opens them.
-
-Done since the first draft of this list: the illegal-move gap (Chainlink referee), rematch, clocks, usernames, the referee server, the forwarder fix, tap-to-move, and browser tests for every core flow.
+1. **Decide the name and domain** (by 8 October), so the videos, logo and links are final. If the domain changes, move the app and passkeys before the launch.
+2. **Record the three videos** (by 12 October, leaving a day for retakes).
+3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
+4. **Chainlink:** add the CRE API key on the server as soon as one can be created, and deploy to a DON if access is granted; until then the evidence above stands.
+5. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
+6. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
+7. **Security review:** fold in what the independent reviewer finds and say so here.
+8. **Optional:** a leaderboard and player profiles; new characters from the KayKit EXTRA tiers.
