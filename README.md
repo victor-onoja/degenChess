@@ -34,6 +34,12 @@ Motion is designed for the game: a piece hops to its square with squash and stre
 
 **The armies.** By default the 3D pieces are two armies of animated characters: Heroes (White) against the Undead (Black), from Kay Lousberg's CC0 KayKit packs, built by `tools/armies/build.mjs` (the Undead's weapons are attached to their hands there). Each character carries its share of the stake as a gold gem over its head and stands on a disc showing its chess piece, so the board reads at a glance. They walk to their squares (a knight leaps) and each strikes in its own way on a capture: blades chop and stab, mages cast, crossbows shoot. The taken piece falls and sinks, the Undead taunt after a kill, they claw their way out of the board when a game starts, and the winning side cheers a checkmate. Lit torches stand at the board's corners and each side's coin pile beside the board grows and shrinks with its share of the pot (props from KayKit Dungeon Remastered, CC0, in `public/props`). Pieces can be dragged on the 3D board as well as tapped. All characters share one rig, so the animations are stored once: the two armies are about 4 MB together, loaded only when the 3D board is shown. A **Classic set** switch in the corner of the 3D board swaps to the Staunton set and is remembered on the device.
 
+### Sound: music and voices
+
+- **Music:** a shuffled soundtrack under every game: public-domain and CC0 orchestra (Wagner's Ride of the Valkyries, Grieg's In the Hall of the Mountain King, Saint-Saëns' Danse macabre, Holst's Mars) mixed with shakuhachi, erhu, guzheng and koto, Japanese festival drums, West African balafon and djembe. Fetched from Wikimedia Commons by `tools/music/fetch.mjs` into `public/music`; it starts on the first tap and plays quietly.
+- **Voices:** with the armies, the Heroes and the Undead speak at the moments that matter: a capture, a rook or queen taken (and the other side rallying), check, promotion, castling, checkmate, the start of a game, and your clock under ten seconds. Lines are rate-limited so they stay special. They are generated with Kokoro-82M (Apache-2.0) by `tools/voices/build.mjs` from `tools/voices/lines.json`; the Undead are slowed and lowered at playback.
+- The sound button mutes everything. Every recording, model and voice is credited on `/credits`.
+
 ### The Yard
 
 The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review. Every board has a share button in its corner (the phone's share sheet, or the link is copied), a waiting game shows a large *Share invite link*, and live and finished games can be shared from the game screen, each with its own line of text ("alice beat bob for 10 tUSD on DegenChess. See how.").
@@ -95,6 +101,8 @@ tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
 tools/armies/build.mjs       builds the character armies from the KayKit packs
+tools/voices/                the armies' voice lines (Kokoro) and their generator
+tools/music/fetch.mjs        downloads the soundtrack from Wikimedia Commons
 deploy/referee/              the referee as a Docker service
 tools/brand/render.mjs       renders og.png and public/brand/* from the running app
 ```

@@ -189,6 +189,9 @@ const Home: NextPage = () => {
             <a className="link" href={`https://testnet.monadexplorer.com/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noreferrer">
               Contract
             </a>
+            <Link className="link" href="/credits">
+              Credits
+            </Link>
           </nav>
         </footer>
       </main>

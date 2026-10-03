@@ -1,0 +1,24 @@
+{
+  "heroes": {
+    "start": [["bm_george", "To arms!"], ["bf_emma", "For the crown, everyone!"]],
+    "capture": [["am_puck", "Take that!"], ["bm_george", "For the crown!"], ["am_fenrir", "Another one falls!"], ["bf_emma", "That's ours now."], ["am_puck", "Pay up!"]],
+    "bigCapture": [["bm_george", "A fortune! Well struck!"], ["bf_emma", "Now that is a prize."]],
+    "check": [["bm_george", "Check!"], ["bf_emma", "Your king trembles."]],
+    "mate": [["bm_george", "Checkmate! Victory is ours!"]],
+    "promotion": [["bf_emma", "Rise, my queen!"]],
+    "castle": [["am_fenrir", "Hold the line!"]],
+    "rally": [["bm_george", "Steady! We fight on!"], ["bf_emma", "Chin up. We take it back."]],
+    "lowTime": [["am_puck", "Quickly now!"]]
+  },
+  "undead": {
+    "start": [["am_onyx", "We rise."], ["bm_lewis", "The dead are hungry."]],
+    "capture": [["am_onyx", "Your gold is mine."], ["bm_lewis", "Bones and coin."], ["am_onyx", "Join us in the dark."], ["bm_lewis", "Another soul for the pile."]],
+    "bigCapture": [["am_onyx", "Riches. Delicious."], ["bm_lewis", "Such a lovely treasure."]],
+    "check": [["am_onyx", "Check, mortal."], ["bm_lewis", "Your king is ours."]],
+    "mate": [["am_onyx", "Checkmate. Rest forever."]],
+    "promotion": [["bm_lewis", "Rise again!"]],
+    "castle": [["am_onyx", "The walls hold."]],
+    "rally": [["bm_lewis", "No matter. We have more bones."], ["am_onyx", "We do not stay dead."]],
+    "lowTime": [["bm_lewis", "Time is dying."]]
+  }
+}

@@ -10,6 +10,9 @@ import { PieceIcon } from "../components/PieceIcon";
 import { PIECE_WEIGHT } from "../lib/pieceShapes";
 import { usePieceSet } from "../lib/pieceSet";
 import { useElementSize } from "../lib/useElementSize";
+import { useVoices } from "../lib/voices";
+import { useMusic } from "../lib/music";
+import { isMuted, setMuted } from "../lib/sound";
 
 const Arena3D = dynamic(() => import("../components/arena/Arena3D"), { ssr: false });
 
@@ -46,6 +49,8 @@ export default function Sandbox() {
   const [view, setView] = useState<View>("3d");
   const [set, setSet] = usePieceSet();
   const [picked, setPicked] = useState<Square | null>(null);
+  const [muted, setMutedState] = useState(false);
+  useEffect(() => setMutedState(isMuted()), []);
   const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
   const stage = useElementSize(stageEl);
 
@@ -59,6 +64,8 @@ export default function Sandbox() {
     for (const m of history) g.move({ from: m.from, to: m.to, promotion: m.promotion });
     return g;
   }, [history]);
+  useVoices(history, set === "armies", true);
+  useMusic(true);
   const turn = game.turn();
   const over = game.isGameOver();
   const { balance, gains, taken } = settle(history, stake);
@@ -181,6 +188,16 @@ export default function Sandbox() {
           Practice board <span className="soft hidden font-normal sm:inline">· you play both sides · nothing staked</span>
         </span>
         <div className="flex gap-2">
+          <button
+            className="ghost"
+            aria-label={muted ? "Sound on" : "Sound off"}
+            onClick={() => {
+              setMuted(!muted);
+              setMutedState(!muted);
+            }}
+          >
+            <Icon name={muted ? "soundOff" : "soundOn"} />
+          </button>
           {(["3d", "2d", "split"] as const).map((v) => (
             <button key={v} className={`ghost uppercase ${v === "split" ? "hidden lg:inline-flex" : ""}`} aria-pressed={view === v} onClick={() => setView(v)}>
               {v === "split" ? "Split" : v}

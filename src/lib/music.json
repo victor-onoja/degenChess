@@ -1,0 +1,90 @@
+[
+  {
+    "file": "ride-of-the-valkyries.mp3",
+    "title": "Ride of the Valkyries",
+    "by": "Richard Wagner",
+    "kind": "orchestra",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Richard_Wagner_-_Ride_of_the_Valkyries.ogg"
+  },
+  {
+    "file": "in-the-hall-of-the-mountain-king.mp3",
+    "title": "In the Hall of the Mountain King",
+    "by": "Edvard Grieg, Musopen Symphony Orchestra",
+    "kind": "orchestra",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Musopen_-_In_the_Hall_Of_The_Mountain_King.ogg"
+  },
+  {
+    "file": "danse-macabre.mp3",
+    "title": "Danse macabre",
+    "by": "Camille Saint-Saëns, Philadelphia Orchestra, Leopold Stokowski",
+    "kind": "orchestra",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:PhiladelphiaSymphonyOrchestra-DanseMacabre.ogg"
+  },
+  {
+    "file": "mars-the-bringer-of-war.mp3",
+    "title": "Mars, the Bringer of War",
+    "by": "Gustav Holst, Skidmore College Orchestra",
+    "kind": "orchestra",
+    "licence": "CC0",
+    "source": "https://commons.wikimedia.org/wiki/File:Holst,_The_Planets,_Op._32_-_I._Mars,_the_Bringer_of_War.ogg"
+  },
+  {
+    "file": "shika-no-t-ne-shakuhachi.mp3",
+    "title": "Shika no Tōne (shakuhachi)",
+    "by": "Araki Kodō III",
+    "kind": "world",
+    "licence": "Public domain",
+    "source": "https://commons.wikimedia.org/wiki/File:Shikanotoone.ogg"
+  },
+  {
+    "file": "dances-with-erhu.mp3",
+    "title": "Dances With Erhu",
+    "by": "Antti Luode",
+    "kind": "world",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Dances_With_Erhu_(Antti_Luode).mp3"
+  },
+  {
+    "file": "guzheng-morning.mp3",
+    "title": "Guzheng Morning",
+    "by": "Antti Luode",
+    "kind": "world",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Guzheng_Morning_(Antti_Luode).mp3"
+  },
+  {
+    "file": "koto-performance.mp3",
+    "title": "Koto performance",
+    "by": "Torsodog",
+    "kind": "world",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Koto_performance.ogg"
+  },
+  {
+    "file": "drums-and-flute-at-sanja-matsuri.mp3",
+    "title": "Drums and flute at Sanja Matsuri",
+    "by": "Torsodog",
+    "kind": "world",
+    "licence": "CC BY 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Drums_and_flute_at_Sanja_Matsuri.ogg"
+  },
+  {
+    "file": "rythmes-du-balafon-traditionnel.mp3",
+    "title": "Rythmes du balafon traditionnel",
+    "by": "KONE IF",
+    "kind": "world",
+    "licence": "CC BY 4.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Rythmes_du_balafon_traditionnel.ogg"
+  },
+  {
+    "file": "village-drums-of-freedom-djembe-mix.mp3",
+    "title": "Village Drums of Freedom (djembe mix)",
+    "by": "Gerald Achee",
+    "kind": "world",
+    "licence": "CC BY-SA 3.0",
+    "source": "https://commons.wikimedia.org/wiki/File:Village_Drums_of_Freedom_%E2%80%93_Black_Africa(djembe_mix).ogg"
+  }
+]

@@ -53,6 +53,10 @@ The bodies are a sculpted Staunton set (Poly Haven, CC0; `public/set/`), in poli
 
 The armies (default): Heroes (White) against the Undead (Black), animated KayKit characters (CC0), each with its stake as a spinning gold gem over its head and a disc underfoot showing its chess piece (bone piece on obsidian for White, obsidian on bone for Black), turned to read upright from the camera. Characters walk to their square (a knight leaps), face where they are going, strike in their own style on a capture (chop, stab, cast, shoot), fall and sink when taken, and cheer a checkmate; the Undead rise from the board at a new game and taunt after a kill. Torches flicker at the corners (point lights only off lite mode) and coin piles beside each side scale with its share of the pot. Pieces can be dragged: press, carry (the piece lifts and follows the pointer, the camera holds still), drop on a highlighted square; a press that stays on its square is a tap. The Staunton set is the classic option, switched from the corner of the 3D board.
 
+## Sound
+
+One mute button for everything. Music sits under the game at low volume and starts on the first tap; voice lines are rare (one every few seconds at most, always at a real moment) and lead the eye to what just happened. Synth effects mark moves and captures.
+
 ## Motion
 
 Motion reports state: a move, a capture, whose turn it is, money changing sides. Layout properties are not animated; the split bar scales. `prefers-reduced-motion` turns off the beats and transitions.

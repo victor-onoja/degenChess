@@ -20,6 +20,8 @@ import { withApproval } from "../lib/stake";
 import { Icon } from "./Icon";
 import { PieceIcon } from "./PieceIcon";
 import { usePieceSet } from "../lib/pieceSet";
+import { say, useVoices } from "../lib/voices";
+import { useMusic } from "../lib/music";
 import { ShareButton } from "./ShareButton";
 import { BOARD_PIECES } from "./boardPieces";
 
@@ -98,6 +100,7 @@ export function GameView({
   const pendingMove = optimistic && optimistic.ply === history.length ? optimistic : null;
   const liveHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
 
+  const [pieceSet, setPieceSet] = usePieceSet();
   // Going back through the moves: `viewPly` is how many moves are shown, or null for the live position.
   const [viewPly, setViewPly] = useState<number | null>(null);
   const viewing = viewPly !== null && viewPly < history.length;
@@ -126,8 +129,19 @@ export function GameView({
     return () => window.removeEventListener("keydown", key);
   }, [step, viewPly, history.length]);
 
+  // The armies talk as moves land, and warn you once when your clock is nearly out.
+  useVoices(liveHistory, pieceSet === "armies" && !viewing, info?.status === Status.Active);
+  useMusic(true);
+  const lowTime = useRef<{ color: "w" | "b" | null; left: number; warned: boolean }>({ color: null, left: Infinity, warned: false });
+  useEffect(() => {
+    const t = lowTime.current;
+    if (pieceSet === "armies" && t.color && t.left > 0 && t.left <= 10 && !t.warned) {
+      t.warned = true;
+      say(t.color, "lowTime", { force: true });
+    }
+  }, [now, pieceSet]);
+
   // 3D arena, flat 2D board, or both side by side (2D to play precisely, 3D for the show).
-  const [pieceSet, setPieceSet] = usePieceSet();
   const [view, setView] = useState<ViewMode>("3d");
   useEffect(() => {
     let saved: string | null = null;
@@ -221,6 +235,9 @@ export function GameView({
   // Seconds until the side to move loses on time.
   const timeLeft = clockOn ? clockLeft[turn] : Number(info.lastMoveAt) + Number(moveTimeout ?? 0n) - now;
   const flagFell = active && timeLeft <= 0;
+  lowTime.current.color = clockOn && myTurn && myColor ? myColor : null;
+  lowTime.current.left = clockOn && myColor ? clockLeft[myColor] : Infinity;
+  if (lowTime.current.left > 20) lowTime.current.warned = false;
   const pieceValue = (t: string) => (info.stake * (WEIGHT[t] ?? 0n)) / 39n;
   const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver() && !flagFell && !viewing;
 

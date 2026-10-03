@@ -1,0 +1,174 @@
+{
+  "heroes": {
+    "start": [
+      {
+        "file": "heroes-start-0.mp3",
+        "text": "To arms!"
+      },
+      {
+        "file": "heroes-start-1.mp3",
+        "text": "For the crown, everyone!"
+      }
+    ],
+    "capture": [
+      {
+        "file": "heroes-capture-0.mp3",
+        "text": "Take that!"
+      },
+      {
+        "file": "heroes-capture-1.mp3",
+        "text": "For the crown!"
+      },
+      {
+        "file": "heroes-capture-2.mp3",
+        "text": "Another one falls!"
+      },
+      {
+        "file": "heroes-capture-3.mp3",
+        "text": "That's ours now."
+      },
+      {
+        "file": "heroes-capture-4.mp3",
+        "text": "Pay up!"
+      }
+    ],
+    "bigCapture": [
+      {
+        "file": "heroes-bigCapture-0.mp3",
+        "text": "A fortune! Well struck!"
+      },
+      {
+        "file": "heroes-bigCapture-1.mp3",
+        "text": "Now that is a prize."
+      }
+    ],
+    "check": [
+      {
+        "file": "heroes-check-0.mp3",
+        "text": "Check!"
+      },
+      {
+        "file": "heroes-check-1.mp3",
+        "text": "Your king trembles."
+      }
+    ],
+    "mate": [
+      {
+        "file": "heroes-mate-0.mp3",
+        "text": "Checkmate! Victory is ours!"
+      }
+    ],
+    "promotion": [
+      {
+        "file": "heroes-promotion-0.mp3",
+        "text": "Rise, my queen!"
+      }
+    ],
+    "castle": [
+      {
+        "file": "heroes-castle-0.mp3",
+        "text": "Hold the line!"
+      }
+    ],
+    "rally": [
+      {
+        "file": "heroes-rally-0.mp3",
+        "text": "Steady! We fight on!"
+      },
+      {
+        "file": "heroes-rally-1.mp3",
+        "text": "Chin up. We take it back."
+      }
+    ],
+    "lowTime": [
+      {
+        "file": "heroes-lowTime-0.mp3",
+        "text": "Quickly now!"
+      }
+    ]
+  },
+  "undead": {
+    "start": [
+      {
+        "file": "undead-start-0.mp3",
+        "text": "We rise."
+      },
+      {
+        "file": "undead-start-1.mp3",
+        "text": "The dead are hungry."
+      }
+    ],
+    "capture": [
+      {
+        "file": "undead-capture-0.mp3",
+        "text": "Your gold is mine."
+      },
+      {
+        "file": "undead-capture-1.mp3",
+        "text": "Bones and coin."
+      },
+      {
+        "file": "undead-capture-2.mp3",
+        "text": "Join us in the dark."
+      },
+      {
+        "file": "undead-capture-3.mp3",
+        "text": "Another soul for the pile."
+      }
+    ],
+    "bigCapture": [
+      {
+        "file": "undead-bigCapture-0.mp3",
+        "text": "Riches. Delicious."
+      },
+      {
+        "file": "undead-bigCapture-1.mp3",
+        "text": "Such a lovely treasure."
+      }
+    ],
+    "check": [
+      {
+        "file": "undead-check-0.mp3",
+        "text": "Check, mortal."
+      },
+      {
+        "file": "undead-check-1.mp3",
+        "text": "Your king is ours."
+      }
+    ],
+    "mate": [
+      {
+        "file": "undead-mate-0.mp3",
+        "text": "Checkmate. Rest forever."
+      }
+    ],
+    "promotion": [
+      {
+        "file": "undead-promotion-0.mp3",
+        "text": "Rise again!"
+      }
+    ],
+    "castle": [
+      {
+        "file": "undead-castle-0.mp3",
+        "text": "The walls hold."
+      }
+    ],
+    "rally": [
+      {
+        "file": "undead-rally-0.mp3",
+        "text": "No matter. We have more bones."
+      },
+      {
+        "file": "undead-rally-1.mp3",
+        "text": "We do not stay dead."
+      }
+    ],
+    "lowTime": [
+      {
+        "file": "undead-lowTime-0.mp3",
+        "text": "Time is dying."
+      }
+    ]
+  }
+}

@@ -82,8 +82,16 @@ export const sfx = {
 
 export const isMuted = () => muted;
 
+/** Everything that makes sound (the music, the voices) follows the one mute button. */
+const listeners = new Set<(muted: boolean) => void>();
+export const onMuteChange = (listener: (muted: boolean) => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
 export function setMuted(next: boolean) {
   muted = next;
+  listeners.forEach((l) => l(next));
   try {
     localStorage.setItem(MUTE_PREF, next ? "1" : "0");
   } catch {}
