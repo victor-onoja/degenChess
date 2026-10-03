@@ -1,15 +1,18 @@
 import { toast } from "react-toastify";
 
 /** The link to a game: it opens straight onto the board, with one-tap sign-up for anyone new. */
-export const gameUrl = (id: bigint) => `${window.location.origin}/?game=${id.toString()}`;
+export const gameUrl = (id: bigint, ref?: string) =>
+  `${window.location.origin}/?game=${id.toString()}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
 
 /**
- * Shares a game: the phone's share sheet where there is one, otherwise the link is copied.
+ * Shares a game: the share sheet on touch devices, otherwise the link is copied.
  * Every shared game is how DegenChess spreads, so this is never more than one tap away.
  */
-export async function shareGame(id: bigint, text: string) {
-  const url = gameUrl(id);
-  if (typeof navigator.share === "function") {
+export async function shareGame(id: bigint, text: string, ref?: string) {
+  const url = gameUrl(id, ref);
+  // The share sheet belongs on phones and tablets; on a desktop, copying the link is what people expect.
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  if (touch && typeof navigator.share === "function") {
     try {
       await navigator.share({ title: "DegenChess", text, url });
       return;

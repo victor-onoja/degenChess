@@ -64,7 +64,7 @@ export default function Sandbox() {
   const { balance, gains, taken } = settle(history, stake);
 
   // At the end, as the contract settles it: the winner takes the loser's balance except what the
-  // loser won by capturing; a draw leaves the balances; the fee is 2.5% of the pot.
+  // loser won by capturing; a draw leaves the balances and is free; otherwise the fee is 2.5% of the pot.
   const payout = useMemo(() => {
     if (!over) return null;
     const pot = stake * 2;
@@ -77,7 +77,8 @@ export default function Sandbox() {
       if (winner === "w") (w = pot - kept), (b = kept);
       else (b = pot - kept), (w = kept);
     }
-    return { w: w * 0.975, b: b * 0.975, text: game.isCheckmate() ? `Checkmate. ${turn === "w" ? "Black" : "White"} wins` : "Draw" };
+    if (!game.isCheckmate()) return { w, b, text: "Draw. No fee" };
+    return { w: w * 0.975, b: b * 0.975, text: `Checkmate. ${turn === "w" ? "Black" : "White"} wins` };
   }, [over, balance.w, balance.b, gains, game, turn, stake]);
 
   const play = useCallback(

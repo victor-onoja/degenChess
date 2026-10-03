@@ -16,7 +16,7 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 
 **Live link (Monad testnet):** <https://degen-chess.vercel.app>
 
-**Contract (Monad testnet, chain 10143):** `0x75e210a916fd5acd3bde6e065039cfac19fab2ac`
+**Contract (Monad testnet, chain 10143):** `0x917b22e817906c3f04d3b60092e87bf3473953d6`
 
 **Primary track:** Consumer Products & Payments
 
@@ -58,6 +58,8 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 2. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Sharing is never more than a tap away: every board in the Yard has a share button, a new game leads with *Share invite link*, and live and finished games share with a ready-made line ("alice beat bob for $10 on DegenChess. See how."). Every challenge sent to a friend is an acquisition.
 3. **Crypto communities.** Weekly community-vs-community matches with a leaderboard, watched live from the Yard.
 4. **Low-stakes default.** $1 games keep the first experience safe and make "try it once" an easy ask.
+
+**Business model:** 2.5% of the pot when a game is won; draws are free. A fifth of each player's share of that fee goes to whoever invited them, so every share link pays its sender, which turns players into the acquisition channel.
 
 **Why they stay:** stakes that move during the game make even a losing position worth playing out, and a rematch is one tap.
 

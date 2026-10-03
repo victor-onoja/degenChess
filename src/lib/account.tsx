@@ -13,7 +13,8 @@ import {
 } from "viem";
 import { toast } from "react-toastify";
 import { CHAIN, CONTRACT_ADDRESS, NAMES_ADDRESS, TOKEN_ADDRESS } from "../config";
-import { erc20Abi, playerNamesAbi } from "../contracts/abi";
+import { degenChessAbi, erc20Abi, playerNamesAbi } from "../contracts/abi";
+import { referrerAddress } from "./referral";
 import {
   createAccount,
   forgetCredentialHint,
@@ -231,6 +232,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             functionName: "setName",
             args: [name],
           }).catch(() => toast.warn(`The name "${name}" is taken. You can pick another from the menu.`));
+        }
+        // Arrived through someone's invite: record it, so they earn part of the fee on this player's games.
+        const referrer = await referrerAddress(publicClient as never).catch(() => null);
+        if (referrer && referrer.toLowerCase() !== sessions.money.address.toLowerCase()) {
+          await write(sessions.money.account, {
+            address: CONTRACT_ADDRESS,
+            abi: degenChessAbi,
+            functionName: "setReferrer",
+            args: [referrer],
+          }).catch(() => undefined); // best effort: an invite must never block a sign-up
         }
       } finally {
         sessions.money.end();

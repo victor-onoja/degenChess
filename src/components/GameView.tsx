@@ -96,7 +96,35 @@ export function GameView({
   // A move shown on the board while its transaction confirms; `ply` pins it to the position it was made in.
   const [optimistic, setOptimistic] = useState<{ ply: number; fen: string; move: Move } | null>(null);
   const pendingMove = optimistic && optimistic.ply === history.length ? optimistic : null;
-  const arenaHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
+  const liveHistory = useMemo(() => (pendingMove ? [...history, pendingMove.move] : history), [history, pendingMove]);
+
+  // Going back through the moves: `viewPly` is how many moves are shown, or null for the live position.
+  const [viewPly, setViewPly] = useState<number | null>(null);
+  const viewing = viewPly !== null && viewPly < history.length;
+  const arenaHistory = useMemo(() => (viewing ? history.slice(0, viewPly) : liveHistory), [viewing, viewPly, history, liveHistory]);
+  const viewedFen = useMemo(() => {
+    if (!viewing) return null;
+    const g = new Chess();
+    for (const m of arenaHistory) g.move({ from: m.from, to: m.to, promotion: m.promotion });
+    return g.fen();
+  }, [viewing, arenaHistory]);
+  const step = useCallback(
+    (to: number) => {
+      const ply = Math.max(0, Math.min(to, history.length));
+      setViewPly(ply >= history.length ? null : ply);
+    },
+    [history.length]
+  );
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+      const at = viewPly ?? history.length;
+      if (e.key === "ArrowLeft") step(at - 1);
+      else if (e.key === "ArrowRight") step(at + 1);
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [step, viewPly, history.length]);
 
   // 3D arena, flat 2D board, or both side by side (2D to play precisely, 3D for the show).
   const [pieceSet, setPieceSet] = usePieceSet();
@@ -194,7 +222,7 @@ export function GameView({
   const timeLeft = clockOn ? clockLeft[turn] : Number(info.lastMoveAt) + Number(moveTimeout ?? 0n) - now;
   const flagFell = active && timeLeft <= 0;
   const pieceValue = (t: string) => (info.stake * (WEIGHT[t] ?? 0n)) / 39n;
-  const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver() && !flagFell;
+  const canMove = myTurn && keyReady && pending === null && illegalAt === null && !game.isGameOver() && !flagFell && !viewing;
 
   async function submitMove(from: Square, to: Square, promotion?: string) {
     const next = new Chess(game.fen());
@@ -230,7 +258,7 @@ export function GameView({
     setPicked(piece && piece.color === myColor && square !== picked ? square : null);
   }
 
-  const lastMove = history[history.length - 1];
+  const lastMove = arenaHistory[arenaHistory.length - 1];
   const squareStyles: Record<string, CSSProperties> = {};
   if (lastMove) {
     squareStyles[lastMove.from] = { boxShadow: "inset 0 0 0 3px rgba(241, 233, 214, 0.45)" };
@@ -246,7 +274,7 @@ export function GameView({
   // Everything the flat board needs, shared by the 2D and split views.
   const boardProps = {
     id: `game-${gameId}`,
-    position: pendingMove?.fen ?? game.fen(),
+    position: viewedFen ?? pendingMove?.fen ?? game.fen(),
     boardOrientation: (myColor === "b" ? "black" : "white") as "white" | "black",
     arePiecesDraggable: canMove,
     isDraggablePiece: ({ piece }: { piece: string }) => piece[0] === myColor,
@@ -549,6 +577,41 @@ export function GameView({
         <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
           {boardNotice && <p className="text-sm font-bold">{boardNotice}</p>}
 
+          {/* Going through the moves: a finished game from start to end, a live one back in time. */}
+          {history.length > 0 && info.status !== Status.Open && (
+            <div className="flex items-center gap-1.5">
+              <button className="ghost !min-w-[40px] !px-0" aria-label="First move" disabled={(viewPly ?? history.length) === 0} onClick={() => step(0)}>
+                <Icon name="first" size={18} />
+              </button>
+              <button className="ghost !min-w-[40px] !px-0" aria-label="Previous move" disabled={(viewPly ?? history.length) === 0} onClick={() => step((viewPly ?? history.length) - 1)}>
+                <Icon name="prev" size={18} />
+              </button>
+              <p className="min-w-0 flex-1 truncate text-center text-sm">
+                {viewing ? (
+                  <>
+                    Move {viewPly} of {history.length}
+                    {viewPly! > 0 && <span className="soft"> · {history[viewPly! - 1].san}</span>}
+                  </>
+                ) : (
+                  <span className="soft">
+                    {history.length} moves{lastMove ? ` · last ${lastMove.san}` : ""}
+                  </span>
+                )}
+              </p>
+              <button className="ghost !min-w-[40px] !px-0" aria-label="Next move" disabled={!viewing} onClick={() => step((viewPly ?? history.length) + 1)}>
+                <Icon name="next" size={18} />
+              </button>
+              <button className="ghost !min-w-[40px] !px-0" aria-label="Last move" disabled={!viewing} onClick={() => step(history.length)}>
+                <Icon name="last" size={18} />
+              </button>
+              {viewing && active && (
+                <button className="act act--sm act--bone" onClick={() => step(history.length)}>
+                  Live
+                </button>
+              )}
+            </div>
+          )}
+
           {/* What each side has taken: the pieces themselves, and what they were worth. */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             {(["w", "b"] as const).map((c) => (
@@ -676,7 +739,9 @@ export function GameView({
             <>
               <p className="text-center text-lg font-bold">
                 {resultText}
-                <span className="soft block text-xs font-normal">Balances above are final payouts after the 2.5% fee.</span>
+                <span className="soft block text-xs font-normal">
+                  {info.result === Result.Draw ? "Balances above are final payouts. Draws are free." : "Balances above are final payouts after the 2.5% fee."}
+                </span>
               </p>
               <ShareButton gameId={gameId} text={sharePitch} label="Share this game" className="ghost w-full" />
               {myColor && (

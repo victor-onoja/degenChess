@@ -157,6 +157,19 @@ await watcher.page.getByText("Finished - Draw").waitFor({ timeout: 60000 });
 check(true, "both sides and the spectator see the draw");
 await shot(phone, "draw");
 
+step("Going back through a finished game");
+await phone.page.getByRole("button", { name: "First move" }).click();
+await phone.page.getByText(/^Move 0 of \d+/).waitFor({ timeout: 10000 });
+await phone.page.locator('[data-square="h2"] [data-piece="wP"]').waitFor({ timeout: 10000 });
+check(true, "First move shows the starting position");
+await phone.page.getByRole("button", { name: "Next move" }).click();
+await phone.page.getByText(/^Move 1 of \d+/).waitFor({ timeout: 10000 });
+await phone.page.locator('[data-square="h4"] [data-piece="wP"]').waitFor({ timeout: 10000 });
+check(true, "Next move steps forward one move (h4)");
+await phone.page.getByRole("button", { name: "Last move" }).click();
+await phone.page.locator('[data-square="f8"] [data-piece="bK"]').waitFor({ timeout: 10000 });
+check(true, "Last move returns to the final position");
+
 step("Out of time: Black lets the clock run out, White claims the win");
 const url2 = await createGame(desk, "3 + 2");
 await join(phone, url2);

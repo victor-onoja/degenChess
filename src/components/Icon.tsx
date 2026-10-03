@@ -12,6 +12,10 @@ const PATHS = {
   eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM12 9.25a2.75 2.75 0 1 0 0 5.5 2.75 2.75 0 0 0 0-5.5z",
   more: "M6 12h.01M12 12h.01M18 12h.01",
   share: "M12 15V4M8 8l4-4 4 4M5 12v7h14v-7",
+  prev: "M15 6l-6 6 6 6",
+  next: "M9 6l6 6-6 6",
+  first: "M7 6v12M17 6l-6 6 6 6",
+  last: "M17 6v12M7 6l6 6-6 6",
 } as const;
 
 export type IconName = keyof typeof PATHS;

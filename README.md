@@ -17,8 +17,9 @@ Tech stack: Next.js, Mera passkey accounts, viem/wagmi, react-chessboard, chess.
 A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39).
 
 - **Win:** the winner gets the loser's balance minus the loser's capture gains.
-- **Draw:** each player keeps their capture-adjusted balance.
-- **Fee:** 2.5% of the pot on settlement.
+- **Draw:** each player keeps their capture-adjusted balance, with no fee.
+- **Fee:** 2.5% of the pot when a game is won. **Draws are free.**
+- **Invites:** every shared link carries the sharer's name. A player who signs up through one records the sharer as their referrer (`setReferrer`, once, in the sign-up session), and the referrer earns 20% of that player's half of the fee on every game they finish, withdrawn from the wallet (`withdrawReferralEarnings`).
 - **Ending a game:** checkmate and rule draws are settled by the referee. You can also resign, agree a draw, or claim a win when your opponent's move timer runs out.
 - **Cancel:** the creator can cancel and get a full refund until someone joins.
 - **Game keys:** each player can register a second, prompt-free key for a game. It can move, offer or accept draws and claim timeouts, but never resign, cancel or withdraw. MON sent with `createGame`/`joinGame` is forwarded to it for gas.

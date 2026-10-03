@@ -76,6 +76,8 @@ contract DegenChess is ReentrancyGuard {
     uint256 public constant TOTAL_WEIGHT = 39;
     uint256 public constant FEE_PERCENTAGE = 25; // 2.5%
     uint256 public constant FEE_DENOMINATOR = 1000;
+    /// @notice Share of each player's half of the fee paid to whoever referred them, in basis points.
+    uint256 public constant REFERRAL_SHARE_BPS = 2000; // 20%
     uint32 public constant MAX_CLOCK = 3 hours;
     uint32 public constant MAX_INCREMENT = 5 minutes;
 
@@ -85,6 +87,10 @@ contract DegenChess is ReentrancyGuard {
     address public arbiter;
     /// @notice Fees collected at settlement, waiting for the owner to withdraw them.
     uint256 public accruedFees;
+    /// @notice Who invited each player (set once, by the player). Earns part of the fee on their games.
+    mapping(address => address) public referrerOf;
+    /// @notice Referral earnings waiting to be withdrawn.
+    mapping(address => uint256) public referralEarnings;
     uint256 public immutable moveTimeout;
     uint256 public immutable initialBoard;
 
@@ -101,6 +107,8 @@ contract DegenChess is ReentrancyGuard {
     event Withdrawn(uint256 indexed gameId, address indexed player, uint256 amount);
     event ArbiterSet(address indexed arbiter);
     event Arbitrated(uint256 indexed gameId, address indexed by, Result result, bool forfeit);
+    event ReferrerSet(address indexed player, address indexed referrer);
+    event ReferralCredited(uint256 indexed gameId, address indexed referrer, uint256 amount);
 
     error NotOwner();
     error NotPlayer();
@@ -114,6 +122,8 @@ contract DegenChess is ReentrancyGuard {
     error NoDrawOffer();
     error NothingToWithdraw();
     error GasForwardFailed();
+    error ReferrerAlreadySet();
+    error InvalidReferrer();
 
     constructor(address _paymentToken, uint256 _moveTimeout) {
         paymentToken = IERC20(_paymentToken);
@@ -335,6 +345,21 @@ contract DegenChess is ReentrancyGuard {
         paymentToken.safeTransfer(owner, amount);
     }
 
+    /// @notice Record who invited you. Once only, and not yourself.
+    function setReferrer(address _referrer) external {
+        if (referrerOf[msg.sender] != address(0)) revert ReferrerAlreadySet();
+        if (_referrer == address(0) || _referrer == msg.sender) revert InvalidReferrer();
+        referrerOf[msg.sender] = _referrer;
+        emit ReferrerSet(msg.sender, _referrer);
+    }
+
+    function withdrawReferralEarnings() external nonReentrant {
+        uint256 amount = referralEarnings[msg.sender];
+        if (amount == 0) revert NothingToWithdraw();
+        referralEarnings[msg.sender] = 0;
+        paymentToken.safeTransfer(msg.sender, amount);
+    }
+
     function withdraw(uint256 _gameId) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Finished) revert WrongStatus();
@@ -473,7 +498,8 @@ contract DegenChess is ReentrancyGuard {
             whiteBal = keep;
         }
 
-        uint256 fee = (total * FEE_PERCENTAGE) / FEE_DENOMINATOR;
+        // A draw is free: nobody won, so nobody is charged.
+        uint256 fee = _result == Result.Draw ? 0 : (total * FEE_PERCENTAGE) / FEE_DENOMINATOR;
         uint256 whitePayout = (whiteBal * (total - fee)) / total;
         uint256 blackPayout = (blackBal * (total - fee)) / total;
         fee = total - whitePayout - blackPayout; // rounding dust goes to the fee, nothing gets stuck
@@ -481,7 +507,18 @@ contract DegenChess is ReentrancyGuard {
         g.whiteBalance = whitePayout;
         g.blackBalance = blackPayout;
         emit GameEnded(_gameId, _result, whitePayout, blackPayout, fee);
-        accruedFees += fee;
+        // Whoever invited each player gets part of that player's half of the fee; the owner keeps the rest.
+        uint256 credited = _creditReferral(_gameId, g.white, fee) + _creditReferral(_gameId, g.black, fee);
+        accruedFees += fee - credited;
+    }
+
+    function _creditReferral(uint256 _gameId, address _player, uint256 _fee) internal returns (uint256 amount) {
+        address referrer = referrerOf[_player];
+        if (referrer == address(0)) return 0;
+        amount = ((_fee / 2) * REFERRAL_SHARE_BPS) / 10_000;
+        if (amount == 0) return 0;
+        referralEarnings[referrer] += amount;
+        emit ReferralCredited(_gameId, referrer, amount);
     }
 
     function _weight(uint8 kind) internal pure returns (uint256) {

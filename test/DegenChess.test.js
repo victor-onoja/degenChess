@@ -234,6 +234,41 @@ describe("DegenChess", () => {
       expect(g.whiteBalance).to.equal(g.blackBalance);
     });
 
+    it("a draw is free: no fee, each side keeps exactly its balance", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await playSan(f, "e4 d5 exd5 Qxd5".split(" ")); // a pawn each way
+      const before = await gameInfo(f.chess);
+      await f.chess.write.offerDraw([0n], f.as(f.white));
+      await f.chess.write.acceptDraw([0n], f.as(f.black));
+      const g = await gameInfo(f.chess);
+      expect(g.whiteBalance).to.equal(before.whiteBalance);
+      expect(g.blackBalance).to.equal(before.blackBalance);
+      expect(await f.chess.read.accruedFees()).to.equal(0n);
+    });
+
+    it("whoever referred a player earns 20% of that player's half of the fee", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await expect(f.chess.write.setReferrer([f.white.account.address], f.as(f.white))).to.be.rejectedWith("InvalidReferrer");
+      await f.chess.write.setReferrer([f.stranger.account.address], f.as(f.white));
+      await expect(f.chess.write.setReferrer([f.black.account.address], f.as(f.white))).to.be.rejectedWith("ReferrerAlreadySet");
+      expect((await f.chess.read.referrerOf([f.white.account.address])).toLowerCase()).to.equal(f.stranger.account.address.toLowerCase());
+
+      await f.chess.write.resign([0n], f.as(f.white)); // black wins; only white was referred
+      const total = STAKE * 2n;
+      const g = await gameInfo(f.chess);
+      const fee = total - g.whiteBalance - g.blackBalance;
+      const share = ((fee / 2n) * 2000n) / 10000n;
+      expect(share > 0n).to.equal(true);
+      expect(await f.chess.read.referralEarnings([f.stranger.account.address])).to.equal(share);
+      expect(await f.chess.read.accruedFees()).to.equal(fee - share);
+
+      await expect(f.chess.write.withdrawReferralEarnings(f.as(f.black))).to.be.rejectedWith("NothingToWithdraw");
+      await f.chess.write.withdrawReferralEarnings(f.as(f.stranger));
+      await f.chess.write.withdraw([0n], f.as(f.black));
+      await f.chess.write.withdrawFees(f.as(f.owner));
+      expect(await f.link.read.balanceOf([f.chess.address])).to.equal(0n); // every token accounted for
+    });
+
     it("making a move declines the opponent's draw offer", async () => {
       const f = await loadFixture(activeGameFixture);
       await f.chess.write.offerDraw([0n], f.as(f.black));

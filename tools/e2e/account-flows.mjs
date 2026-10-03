@@ -1,7 +1,9 @@
 // End-to-end checks for usernames and the wallet: a taken name blocks sign-up, a player who skipped the
 // name is asked for one and claims it, and money is sent to another player by username.
 //   (app running against a local chain or testnet) node tools/e2e/account-flows.mjs
+//   With NEXT_PUBLIC_CONTRACT_ADDRESS (and RPC_URL) set it also checks the invite was recorded on-chain.
 import { chromium } from "playwright";
+import { createPublicClient, http, parseAbi } from "viem";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const SHOTS = process.env.SHOTS_DIR;
@@ -34,7 +36,9 @@ await first.getByText("You're in.").waitFor({ timeout: 60000 });
 await first.getByRole("button", { name: taken }).waitFor({ timeout: 30000 });
 check(true, `first player signed up as ${taken}`);
 
+// The second player arrives through the first one's invite link.
 const p = await player(true);
+await p.goto(`${APP}/?ref=${taken}`);
 await p.getByLabel("Username").fill(taken);
 await p.getByText("Someone has that name").waitFor({ timeout: 20000 });
 check(await p.getByRole("button", { name: "Play now", exact: true }).isDisabled(), "a taken name blocks Play now");
@@ -43,6 +47,12 @@ await p.getByRole("button", { name: "Play now", exact: true }).click();
 await p.getByText("You're in.").waitFor({ timeout: 60000 });
 await p.getByRole("button", { name: "Choose a username" }).waitFor();
 check(true, "without a name, the header asks for one");
+if (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS) {
+  const client = createPublicClient({ transport: http(process.env.RPC_URL ?? "http://127.0.0.1:8545") });
+  const [referrerSet] = parseAbi(["event ReferrerSet(address indexed player, address indexed referrer)"]);
+  const logs = await client.getLogs({ address: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, event: referrerSet, fromBlock: 0n });
+  check(logs.length > 0, `signing up through ${taken}'s link recorded them as the referrer`);
+}
 
 const mine = `b_${Date.now().toString(36).slice(-7)}`;
 await p.locator("#yard").getByLabel("Username").fill(mine);

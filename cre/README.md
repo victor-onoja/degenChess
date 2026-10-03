@@ -31,8 +31,8 @@ nothing), it also requires the transaction to come from an allowed reporter key 
 
 | Contract | Address |
 | --- | --- |
-| DegenChess | `0x75e210a916fd5acd3bde6e065039cfac19fab2ac` |
-| ChessReferee | `0xb770549f787d18519fe2e2faf8d0fb8e1158310e` |
+| DegenChess | `0x917b22e817906c3f04d3b60092e87bf3473953d6` |
+| ChessReferee | `0x498d7dc71e6ac9d9556a347fc2fac92bd7569cda` |
 | Forwarder (simulation `MockKeystoneForwarder`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
 
 ## Run it

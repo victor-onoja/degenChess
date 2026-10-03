@@ -5,7 +5,7 @@ import { erc20Abi, isAddress, keccak256, parseUnits, toBytes, zeroAddress } from
 import { useBalance, useReadContract } from "wagmi";
 import { CHAIN, TOKEN_DECIMALS, TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
-import { tokenContract, useTokenState } from "../lib/contract";
+import { chessContract, tokenContract, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress } from "../lib/format";
 import { cleanName, NAME_RULE, namesContract, useNames } from "../lib/names";
 import { Icon } from "./Icon";
@@ -18,6 +18,12 @@ export function Wallet({ onClose }: { onClose: () => void }) {
   const { address, busy, sendMoney } = useDegenAccount();
   const { balance } = useTokenState();
   const { data: gas } = useBalance({ address: address ?? undefined, chainId: CHAIN.id, query: { enabled: !!address } });
+  const { data: earned } = useReadContract({
+    ...chessContract,
+    functionName: "referralEarnings",
+    args: [address ?? zeroAddress],
+    query: { enabled: !!address },
+  });
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState(false);
   const [to, setTo] = useState("");
@@ -126,6 +132,29 @@ export function Wallet({ onClose }: { onClose: () => void }) {
             This is the test network: new players get 100 test dollars at sign-up, and they have no value. On mainnet this is
             also where you will add dollars by card.
           </p>
+        </section>
+
+        <section className="mt-6">
+          <h3 className="field-label">Invites</h3>
+          <p className="soft text-sm">
+            Every link you share carries your name. When someone signs up through it, you earn 20% of the fee on each game
+            they finish. Draws are free for everyone.
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span>
+              Earned{" "}
+              <span className="amount">
+                {formatToken(earned ?? 0n)} {TOKEN_SYMBOL}
+              </span>
+            </span>
+            <button
+              className="act act--sm"
+              disabled={!earned || busy !== null}
+              onClick={() => sendMoney("Withdraw invite earnings", () => [{ ...chessContract, functionName: "withdrawReferralEarnings" }])}
+            >
+              Withdraw
+            </button>
+          </div>
         </section>
 
         <section className="mt-6">
