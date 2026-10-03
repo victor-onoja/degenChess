@@ -40,7 +40,8 @@ The lobby. Start a board (stake and clock) on the left; on the right, every game
 ### Clocks, names and rematch
 
 - **Clocks:** a game can have a chess clock (3+2, 5+3, 10+5) enforced by the contract. The mover is charged for their thinking time, a player out of time can't move, and the opponent claims the win. Games without a clock have 24 hours per move.
-- **Usernames:** `PlayerNames` holds unique lowercase names. One can be claimed during sign-up, in the same passkey prompt.
+- **Usernames:** `PlayerNames` holds unique lowercase names, and the app shows them instead of addresses everywhere a player has one. A name can be claimed during sign-up (in the same passkey prompt), with availability checked as you type; a player who skips it is asked for one right after sign-up and in the header ("Choose a username"). Tap your name to change it.
+- **Wallet:** tap your balance for *Your money*: your account address with a QR code and copy button for deposits on Monad, and *Send*, which pays any player by username or any address (one passkey prompt). On mainnet this is where a card on-ramp goes.
 - **Rematch:** recreates the game at the same stake and clock; the opponent is shown the offer.
 
 ### Accounts: one passkey, two keys
@@ -83,13 +84,13 @@ src/pages/api/drip.ts        testnet faucet
 src/lib/                     move encoding/replay, contract hooks
 tools/e2e/passkey-game.mjs   two-player browser test with simulated passkeys
 tools/e2e/core-flows.mjs     cancel, tap-to-move on a phone, promotion, spectating, draw, win on time
+tools/e2e/account-flows.mjs  usernames and the wallet
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
 tools/armies/build.mjs       builds the character armies from the KayKit packs
 deploy/referee/              the referee as a Docker service
-tools/brand/                 brand graphics (title card, poster)
-tools/blender/, art/         character-model pipeline from an earlier iteration (not used by the arena)
+tools/brand/render.mjs       renders og.png and public/brand/* from the running app
 ```
 
 ## Run locally
@@ -120,6 +121,7 @@ npm test          # contract tests
 (cd cre/referee && node --test judge.test.ts)   # the referee's judging logic
 node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL, default localhost:3000)
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
+node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
 npm run lint
 npm run build
 ```

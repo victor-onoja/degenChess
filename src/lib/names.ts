@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { isAddress, zeroAddress } from "viem";
+import { useEffect, useMemo, useState } from "react";
+import { isAddress, keccak256, toBytes, zeroAddress } from "viem";
 import { useReadContract } from "wagmi";
 import { CHAIN, NAMES_ADDRESS } from "../config";
 import { playerNamesAbi } from "../contracts/abi";
@@ -35,3 +35,35 @@ export function useNames(addresses: readonly (string | null | undefined)[]) {
     return { nameOf, label };
   }, [unique, data]);
 }
+
+export type NameStatus = "empty" | "invalid" | "checking" | "available" | "yours" | "taken";
+
+/** Whether a username can be claimed by `me`, checked against the contract as the player types. */
+export function useNameStatus(name: string, me: string | null | undefined): NameStatus {
+  const [settled, setSettled] = useState(name);
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(name), 300);
+    return () => clearTimeout(t);
+  }, [name]);
+  const valid = NAME_RULE.test(settled);
+  const { data: holder, isFetching } = useReadContract({
+    ...namesContract,
+    functionName: "ownerOfName",
+    args: [keccak256(toBytes(valid ? settled : "_"))],
+    query: { enabled: !!NAMES_ADDRESS && valid, staleTime: 5_000 },
+  });
+  if (!name) return "empty";
+  if (!NAME_RULE.test(name)) return "invalid";
+  if (name !== settled || isFetching || holder === undefined) return "checking";
+  if (holder === zeroAddress) return "available";
+  return me && holder.toLowerCase() === me.toLowerCase() ? "yours" : "taken";
+}
+
+export const NAME_HINT: Record<NameStatus, string> = {
+  empty: "3 to 16 letters, numbers or _",
+  invalid: "3 to 16 letters, numbers or _",
+  checking: "Checking...",
+  available: "Available. It's yours if you want it",
+  yours: "That's already your name",
+  taken: "Someone has that name. Try another",
+};

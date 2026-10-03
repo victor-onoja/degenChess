@@ -3,68 +3,51 @@ import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { useTokenState } from "../lib/contract";
 import { formatToken, shortAddress } from "../lib/format";
-import { cleanName, NAME_RULE, namesContract, useNames } from "../lib/names";
+import { useNames } from "../lib/names";
 import { Icon } from "./Icon";
+import { NameEditor } from "./NameEditor";
+import { Wallet } from "./Wallet";
 
 /** Sign-up / unlock / lock. The only account UI in the app: one passkey, no extension, no seed phrase. */
 export function AccountBar() {
-  const { address, unlocked, returning, busy, signUp, unlock, lock, sendMoney } = useDegenAccount();
+  const { address, unlocked, returning, busy, signUp, unlock, lock } = useDegenAccount();
   const { balance } = useTokenState();
   const { nameOf } = useNames([address]);
   const name = nameOf(address);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [wallet, setWallet] = useState(false);
 
   if (unlocked && address) {
     return (
       <div className="flex min-w-0 items-center justify-end gap-x-3 sm:gap-x-4">
         {editing ? (
-          <form
-            className="flex items-stretch"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!NAME_RULE.test(draft)) return;
-              const ok = await sendMoney("Set username", () => [{ ...namesContract, functionName: "setName", args: [draft] }]);
-              if (ok) setEditing(false);
-            }}
-          >
-            <input
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(cleanName(e.target.value))}
-              placeholder="username"
-              aria-label="Username"
-              className="min-h-[44px] w-28 px-3 sm:w-36"
-              maxLength={16}
-            />
-            <button type="submit" className="act act--sm" style={{ minHeight: 44, borderRadius: 0 }} disabled={!NAME_RULE.test(draft) || busy !== null}>
-              Save
-            </button>
-            <button type="button" className="link ml-3" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-          </form>
+          <NameEditor current={name} onDone={() => setEditing(false)} autoFocus />
         ) : (
           <>
-            {/* The name is the rename control: tap it to change it. */}
-            <button
-              className="max-w-[9rem] truncate font-bold underline decoration-[var(--line)] underline-offset-4 sm:max-w-none"
-              title={name ? "Rename" : "Set a username"}
-              onClick={() => {
-                setDraft(name ?? "");
-                setEditing(true);
-              }}
-            >
-              {name ?? shortAddress(address)}
-            </button>
-            <span className="amount shrink-0">
+            {name ? (
+              // The name is the rename control: tap it to change it.
+              <button
+                className="max-w-[9rem] truncate font-bold underline decoration-[var(--line)] underline-offset-4 sm:max-w-none"
+                title="Rename"
+                onClick={() => setEditing(true)}
+              >
+                {name}
+              </button>
+            ) : (
+              // No name yet: claiming one is the expected next step, so it is the most visible thing here.
+              <button className="act act--sm act--bone" onClick={() => setEditing(true)}>
+                Choose a username
+              </button>
+            )}
+            <button className="amount shrink-0 underline decoration-[var(--line)] underline-offset-4" title="Add funds or send" onClick={() => setWallet(true)}>
               {formatToken(balance)} {TOKEN_SYMBOL}
-            </span>
+            </button>
           </>
         )}
         <button className="ghost" onClick={lock} aria-label="Lock" title="Wipe the game key from this tab">
           <Icon name="lock" />
         </button>
+        {wallet && <Wallet onClose={() => setWallet(false)} />}
       </div>
     );
   }

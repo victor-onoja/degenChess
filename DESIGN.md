@@ -42,7 +42,8 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 - The Yard shows three boards at a time (two on phones) under Waiting / Live / Finished / Yours, with a pager.
 - 2D board: tap a piece, then a square. The picked square gets a gold inset, legal moves a gold dot, captures a gold ring.
 - `Wordmark`: a pair of eyes that follow the pointer, then the name. When signed in on a phone it shows only the mark, so the header stays on one line.
-- Account bar: the name is the rename control. Locked, it shows only Unlock; Switch account sits under the headline.
+- Account bar: the name is the rename control; without one, a bone "Choose a username" button takes its place. The balance opens the wallet sheet (deposit address with QR, send by username). Locked, it shows only Unlock; Switch account sits under the headline.
+- `NameEditor`: username field that checks availability as you type (gold when free, alert when taken) and claims with one passkey prompt.
 
 ## The 3D board
 

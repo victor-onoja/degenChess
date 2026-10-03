@@ -25,7 +25,7 @@ Deadline: 14 October 2026, 04:59 GMT+1.
 - Best Mera-Powered UX on Monad (Monad Foundation). Mera is the whole account layer.
 - Best workflow with CRE (Chainlink). A CRE workflow is the game's referee: it fires on every move, replays the game and settles it on-chain. See `cre/README.md`.
 
-**Logo:** `public/brand/logo-mark.png` (1024×1024, transparent) and `public/brand/logo-wide.png` (1600×480). Share image: `public/og.png`. Video title card: `public/brand/title-card.png`. Story poster: `public/brand/poster.png`.
+**Logo:** `public/brand/logo-mark.png` (1024×1024, the eyes on the board) and `public/brand/logo-wide.png` (1600×480). All brand images are rendered from the live app by `tools/brand/render.mjs`. Share image: `public/og.png`. Video title card: `public/brand/title-card.png`. Story poster: `public/brand/poster.png`.
 
 ### Description
 
@@ -42,7 +42,7 @@ Nothing secret is stored. Clear your browser or pick up another device mid-game 
 
 You play on a clean 2D board (tap a piece, tap a square; the default on phones), in 3D, or both side by side. The 3D board floats in a void among other drifting boards, the same game in other dimensions, and its pieces are alive: a sculpted Staunton set in bone and obsidian where each piece breathes, turns towards the play, trembles when attacked and carries a glowing gold core sized to its share of the stake. A capture tears the victim's core out and sends it into the capturer with the amount on it, and a bar shows how the pot is splitting. By default the 3D pieces are two armies of animated characters, Heroes against the Undead: they walk to their squares, attack on a capture, fall when taken and cheer a checkmate, each carrying its stake as a gold gem over its head, with a classic Staunton set one tap away. The lobby, the Yard, shows every open, live and finished game as a small board at its real position, and anyone can sit down or watch; spectators always watch in 3D.
 
-Games have real chess clocks (3+2, 5+3, 10+5), players have usernames, and a rematch is one tap.
+Games have real chess clocks (3+2, 5+3, 10+5) and a rematch is one tap. Players are known by unique usernames, never addresses, and can send money to each other by username from the wallet, which also shows a QR code for deposits.
 
 Nobody has to be trusted to call the result. A Chainlink CRE workflow acts as referee: it replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move.
 

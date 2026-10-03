@@ -7,7 +7,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CONTRACT_ADDRESS } from "../config";
 import { useDegenAccount } from "../lib/account";
-import { cleanName, NAME_RULE, useNames } from "../lib/names";
+import { cleanName, NAME_HINT, NAME_RULE, useNames, useNameStatus } from "../lib/names";
+import { NameEditor } from "../components/NameEditor";
 import { AccountBar } from "../components/AccountBar";
 import { GameView } from "../components/GameView";
 import { Seo } from "../components/Seo";
@@ -42,6 +43,8 @@ const Home: NextPage = () => {
   const lockedName = nameOf(address);
   const hasAccount = address !== null || returning;
   const [name, setName] = useState("");
+  const nameStatus = useNameStatus(name, null);
+  const nameBlocked = name !== "" && nameStatus !== "available";
 
   // The game being viewed lives in the URL (?game=3) so it can be shared with an opponent.
   const gameParam = typeof router.query.game === "string" ? router.query.game : null;
@@ -107,17 +110,25 @@ const Home: NextPage = () => {
                   <input
                     value={name}
                     onChange={(e) => setName(cleanName(e.target.value))}
-                    placeholder="pick a name"
+                    placeholder="pick a username"
                     aria-label="Username"
                     maxLength={16}
                     autoComplete="off"
                   />
-                  <button type="submit" className="act" disabled={busy !== null || (name !== "" && !NAME_RULE.test(name))}>
+                  <button type="submit" className="act" disabled={busy !== null || nameBlocked}>
                     {busy ?? "Play now"}
                   </button>
                 </form>
+                {name !== "" && (
+                  <p
+                    className="mt-2 text-sm"
+                    style={{ color: nameStatus === "taken" ? "var(--alert)" : nameStatus === "available" ? "var(--gold)" : "var(--bone-soft)" }}
+                  >
+                    {NAME_HINT[nameStatus]}.
+                  </p>
+                )}
                 <p className="soft mt-3 text-sm">
-                  One tap with Face ID or a fingerprint. The name is optional.{" "}
+                  One tap with Face ID or a fingerprint. Opponents see your username, never your address.{" "}
                   <button className="link" disabled={busy !== null} onClick={() => void unlock()}>
                     I have a passkey
                   </button>
@@ -136,7 +147,14 @@ const Home: NextPage = () => {
               no extension.
             </p>
           )}
-          <div className={onboarding ? "mt-9" : ""}>
+          {/* Signed in without a username: picking one is the next step, before anyone sees an address. */}
+          {address && unlocked && !lockedName && (
+            <div className="mt-6 max-w-md">
+              <p className="mb-2 font-bold">Choose a username. Opponents and spectators see it instead of your address.</p>
+              <NameEditor />
+            </div>
+          )}
+          <div className={onboarding || (address && unlocked && !lockedName) ? "mt-9" : ""}>
             {CONTRACT_ADDRESS ? (
               <Yard onOpenGame={openGame} />
             ) : (

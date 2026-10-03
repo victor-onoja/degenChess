@@ -159,15 +159,10 @@ input::placeholder {
   /* ---------------------------------------------------------------- surfaces */
 
   /* A solid slab of the deep field. No glass. */
-  .slab,
-  .glass,
-  .retro-panel {
+  .slab {
     background: var(--field-deep);
     border: 1px solid var(--line);
     border-radius: 3px;
-  }
-  .retro-panel {
-    padding: 20px;
   }
 
   /* ---------------------------------------------------------------- the rank: controls as squares of the board */
@@ -222,10 +217,7 @@ input::placeholder {
   /* ---------------------------------------------------------------- actions */
 
   /* The action that stakes, or starts: a gold square. */
-  .act,
-  .btn,
-  .retro-button,
-  .retro-button-sm {
+  .act {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -241,26 +233,18 @@ input::placeholder {
     white-space: nowrap;
     transition: background-color 0.18s var(--ease-out), transform 0.18s var(--ease-out);
   }
-  .act:hover:not(:disabled),
-  .btn:hover:not(:disabled),
-  .retro-button:hover:not(:disabled),
-  .retro-button-sm:hover:not(:disabled) {
+  .act:hover:not(:disabled) {
     background: var(--gold-hot);
   }
-  .act:active:not(:disabled),
-  .btn:active:not(:disabled) {
+  .act:active:not(:disabled) {
     transform: translateY(1px);
   }
-  .act:disabled,
-  .btn:disabled,
-  .retro-button:disabled,
-  .retro-button-sm:disabled {
+  .act:disabled {
     background: var(--sq-dark);
     color: var(--bone-soft);
     cursor: not-allowed;
   }
-  .act--sm,
-  .retro-button-sm {
+  .act--sm {
     min-height: 38px;
     padding: 0 16px;
     font-size: 0.95rem;
@@ -272,18 +256,15 @@ input::placeholder {
   .act--bone:hover:not(:disabled) {
     background: #fff;
   }
-  .act.danger,
-  .btn.danger {
+  .act.danger {
     background: var(--alert);
     color: var(--obsidian);
   }
-  .act.danger:hover:not(:disabled),
-  .btn.danger:hover:not(:disabled) {
+  .act.danger:hover:not(:disabled) {
     background: #ff7d6b;
   }
 
-  .ghost,
-  .btn-ghost {
+  .ghost {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -298,18 +279,15 @@ input::placeholder {
     border: 1px solid var(--line);
     transition: border-color 0.18s var(--ease-out), background-color 0.18s var(--ease-out);
   }
-  .ghost:hover:not(:disabled),
-  .btn-ghost:hover:not(:disabled) {
+  .ghost:hover:not(:disabled) {
     border-color: var(--bone);
   }
-  .ghost[aria-pressed="true"],
-  .btn-ghost[aria-pressed="true"] {
+  .ghost[aria-pressed="true"] {
     background: var(--bone);
     color: var(--obsidian);
     border-color: var(--bone);
   }
-  .ghost:disabled,
-  .btn-ghost:disabled {
+  .ghost:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
@@ -323,8 +301,7 @@ input::placeholder {
   /* ---------------------------------------------------------------- the split of the pot */
 
   /* White's share in bone, Black's in obsidian, meeting wherever the money is. */
-  .split,
-  .stake-bar {
+  .split {
     position: relative;
     height: 10px;
     border-radius: 2px;
@@ -332,16 +309,14 @@ input::placeholder {
     background: var(--obsidian);
     box-shadow: inset 0 0 0 1px var(--line);
   }
-  .split > *,
-  .stake-bar > * {
+  .split > * {
     width: 100%;
     height: 100%;
     background: var(--bone);
     transform-origin: left;
     transition: transform 0.9s var(--ease-out);
   }
-  .split::after,
-  .stake-bar::after {
+  .split::after {
     content: "";
     position: absolute;
     left: calc(50% - 1px);
@@ -499,49 +474,6 @@ input::placeholder {
   box-shadow: 0 16px 0 -8px var(--field-deep), 0 22px 30px rgba(3, 2, 8, 0.45);
 }
 
-/* A king waiting alone breathes; its core beats. */
-.waiting {
-  animation: breathe 3.6s ease-in-out infinite;
-  transform-origin: 50% 100%;
-}
-@keyframes breathe {
-  50% {
-    transform: scale(1.035, 1.05);
-  }
-}
-.beat {
-  animation: beat 1.15s ease-in-out infinite;
-  transform-origin: center;
-  transform-box: fill-box;
-}
-@keyframes beat {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  6% {
-    transform: scale(1.35);
-  }
-  16% {
-    transform: scale(1);
-  }
-  24% {
-    transform: scale(1.22);
-  }
-  36% {
-    transform: scale(1);
-  }
-}
-
-.live-mark {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--alert);
-  animation: beat 1.15s ease-in-out infinite;
-}
-
 /* ---------------------------------------------------------------- how it runs */
 
 .facts {
@@ -574,10 +506,6 @@ input::placeholder {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .waiting,
-  .beat,
-  .live-mark,
-  .value-tag,
   .capture-amount {
     animation: none;
   }
