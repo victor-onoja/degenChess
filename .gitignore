@@ -58,3 +58,6 @@ yarn-error.log*
 /cre/**/.cre_build_tmp.js
 .referee-state.json
 /deploy/referee/.env*
+
+# Raw KayKit packs (CC0, large): the build reads them, the app ships only what tools/armies/build.mjs makes
+/KayKit_*/

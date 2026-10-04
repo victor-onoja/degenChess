@@ -24,6 +24,7 @@ function audio(): AudioContext | null {
 function tone(freq: number, at: number, duration: number, type: OscillatorType, gain: number, slideTo?: number) {
   const a = audio();
   if (!a) return;
+  at = Math.max(0, at); // the browser refuses (throws on) start times in the past
   const osc = a.createOscillator();
   const amp = a.createGain();
   const t0 = a.currentTime + at;
@@ -41,6 +42,7 @@ function tone(freq: number, at: number, duration: number, type: OscillatorType, 
 function noise(at: number, duration: number, gain: number, cutoff: number) {
   const a = audio();
   if (!a) return;
+  at = Math.max(0, at);
   const buffer = a.createBuffer(1, Math.ceil(a.sampleRate * duration), a.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
@@ -55,7 +57,7 @@ function noise(at: number, duration: number, gain: number, cutoff: number) {
   source.start(a.currentTime + at);
 }
 
-export const sfx = {
+const effects = {
   /** A piece is picked up. */
   select: () => tone(660, 0, 0.07, "triangle", 0.08),
   /** A piece touching down after a quiet move. */
@@ -93,6 +95,23 @@ export const sfx = {
   win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.14, 0.4, "triangle", 0.14)),
   lose: () => [392, 330, 262].forEach((f, i) => tone(f, i * 0.2, 0.5, "sawtooth", 0.07)),
 };
+
+/**
+ * The effects, each guarded: sound is decoration, so a browser refusing to play one must never
+ * break the game around it.
+ */
+export const sfx = Object.fromEntries(
+  Object.entries(effects).map(([name, play]) => [
+    name,
+    (...args: unknown[]) => {
+      try {
+        (play as (...a: unknown[]) => void)(...args);
+      } catch {
+        // ignore: no sound this time
+      }
+    },
+  ])
+) as typeof effects;
 
 export const isMuted = () => muted;
 
