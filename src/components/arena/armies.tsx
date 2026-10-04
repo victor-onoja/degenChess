@@ -14,7 +14,7 @@ import type { PieceParts } from "./pieces3d";
 // use one of two skeletons (medium, or large for the rooks), with one animation file each.
 
 /** What the board asks a character to do; each character plays it its own way (see CLIPS). */
-export type Action = "Idle" | "Walking_A" | "Hit_A" | "Death_A" | "Cheer" | "Attack" | "Taunt";
+export type Action = "Idle" | "Walking_A" | "Running_A" | "Hit_A" | "Death_A" | "Cheer" | "Attack" | "Taunt";
 type Size = "medium" | "large";
 const ARMY: Record<Color, string> = { w: "heroes", b: "undead" };
 const KINDS: PieceSymbol[] = ["p", "n", "b", "r", "q", "k"];
@@ -64,7 +64,7 @@ function clipFor(action: Action, color: Color, kind: PieceSymbol, variant: numbe
       return action;
   }
 }
-const LOOPED = ["Idle_A", "Idle_B", "Skeletons_Idle", "Walking_A", "Skeletons_Walking"];
+const LOOPED = ["Idle_A", "Idle_B", "Skeletons_Idle", "Walking_A", "Skeletons_Walking", "Running_A"];
 
 /** How tall each character stands, in board squares: rank reads as size, and rooks are the big ones. */
 const HEIGHT: Record<PieceSymbol, number> = { p: 0.82, n: 1.0, b: 1.08, r: 1.2, q: 1.14, k: 1.24 };

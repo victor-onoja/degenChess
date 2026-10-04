@@ -53,14 +53,14 @@ const CAST = {
 const CLIPS = {
   medium: {
     General: ["Idle_A", "Idle_B", "Hit_A", "Death_A"],
-    MovementBasic: ["Walking_A", "Jump_Full_Short"],
+    MovementBasic: ["Walking_A", "Running_A", "Jump_Full_Short"],
     CombatMelee: ["Melee_1H_Attack_Stab", "Melee_1H_Attack_Chop", "Melee_1H_Attack_Slice_Diagonal", "Melee_2H_Attack_Slice", "Melee_2H_Attack_Spin"],
     CombatRanged: ["Ranged_Bow_Release", "Ranged_Magic_Shoot", "Ranged_Magic_Summon"],
     Special: ["Skeletons_Awaken_Floor", "Skeletons_Idle", "Skeletons_Walking", "Skeletons_Taunt"],
   },
   large: {
     General: ["Idle_A", "Idle_B", "Hit_A", "Death_A"],
-    MovementBasic: ["Walking_A"],
+    MovementBasic: ["Walking_A", "Running_A"],
     CombatMelee: ["Melee_2H_Attack", "Melee_2H_Slam"],
   },
 };

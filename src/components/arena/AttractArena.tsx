@@ -14,12 +14,16 @@ export default function AttractArena() {
   const game = useRef(new Chess());
   const [history, setHistory] = useState<Move[]>([]);
   const [set] = usePieceSet();
+  const [round, setRound] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
       const next = DEMO[game.current.history().length];
       if (next) game.current.move(next);
-      else game.current = new Chess();
+      else {
+        game.current = new Chess();
+        setRound((r) => r + 1); // each replay brings a different pawn set
+      }
       setHistory(game.current.history({ verbose: true }));
     }, 2800);
     return () => clearInterval(timer);
@@ -30,6 +34,7 @@ export default function AttractArena() {
       immersive
       attract
       set={set}
+      pawnLook={round}
       history={history}
       orientation="w"
       movable={null}

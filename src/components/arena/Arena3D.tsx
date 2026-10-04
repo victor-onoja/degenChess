@@ -35,8 +35,6 @@ const squareAt = (p: THREE.Vector3): Square | null => {
   const rank = Math.round(3.5 - p.z) + 1;
   return file < 0 || file > 7 || rank < 1 || rank > 8 ? null : ((String.fromCharCode(97 + file) + rank) as Square);
 };
-/** A stable small number per piece, to pick between a character's looks. */
-const variantOf = (id: string) => [...id].reduce((n, c) => n + c.charCodeAt(0), 0);
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 type Drag = { square: Square; at: THREE.Vector3; moved: boolean };
 const FOV = 40;
@@ -85,6 +83,7 @@ function Piece({
   drag,
   onDragStart,
   rise,
+  look,
 }: {
   piece: TrackedPiece;
   animation: Animation;
@@ -108,6 +107,8 @@ function Piece({
   onDragStart: (square: Square) => void;
   /** A new game is starting: characters that can, rise out of the board. */
   rise: boolean;
+  /** Which look the pawns wear in this game: one set at a time, so the front line is uniform. */
+  look: number;
 }) {
   const outer = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
@@ -238,7 +239,11 @@ function Piece({
       else if (celebrating && settled) p?.act?.("Cheer");
       else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("Attack");
       else if (role === "mover" && tl && event?.victimId && since >= tl.total && since < tl.total + 1.8) p?.act?.("Taunt");
-      else p?.act?.(settled ? "Idle" : "Walking_A");
+      // A long way to go (a rook down a file, a queen across the board): run, don't stroll.
+      else if (!settled && event && role) {
+        const [fx, fz] = xz(role === "rook" ? event.rook!.from : event.from);
+        p?.act?.(Math.hypot(hx - fx, hz - fz) > 2.5 ? "Running_A" : "Walking_A");
+      } else p?.act?.("Idle");
     } else {
       mesh.rotation.set(Math.cos(heading) * lean, home + turn.current, -Math.sin(heading) * lean + fall.current * 1.45, "YXZ");
     }
@@ -282,7 +287,7 @@ function Piece({
       {figure && <GlyphDisc color={piece.color} kind={piece.kind} />}
       <group ref={body} rotation-y={home}>
         {figure ? (
-          <Figure ref={parts as never} color={piece.color} kind={piece.kind} rise={rise} variant={variantOf(piece.id)} />
+          <Figure ref={parts as never} color={piece.color} kind={piece.kind} rise={rise} variant={look} />
         ) : (
           <ChessPiece ref={parts} kind={piece.kind} color={piece.color} />
         )}
@@ -649,6 +654,8 @@ export interface ArenaProps {
   insets?: { top: number; bottom: number };
   /** The armies (default) or the classic Staunton set. */
   set?: PieceSet;
+  /** Which pawn look this game uses (any number; each army has a few looks). */
+  pawnLook?: number;
   /** Show a switch between the two sets. */
   onSetChange?: (set: PieceSet) => void;
 }
@@ -725,6 +732,7 @@ function Scene({
   insets,
   askPromotion,
   set,
+  pawnLook,
 }: ArenaProps & { askPromotion: (from: Square, to: Square) => void; set: PieceSet }) {
   const { pieces, last } = useMemo(() => trackPieces(history), [history]);
 
@@ -910,6 +918,7 @@ function Scene({
           drag={drag}
           onDragStart={onDragStart}
           rise={history.length === 0}
+          look={pawnLook ?? 0}
         />
       ))}
       {event && victim && capturer && event.victimSquare && (

@@ -46,6 +46,7 @@ const money = (n: number) => (n >= 10 ? n.toFixed(2) : n.toFixed(4)).replace(/\.
 export default function Sandbox() {
   const [stake, setStake] = useState(10);
   const [history, setHistory] = useState<Move[]>([]);
+  const [pawnLook, setPawnLook] = useState(0);
   const [view, setView] = useState<View>("3d");
   const [set, setSet] = usePieceSet();
   const [picked, setPicked] = useState<Square | null>(null);
@@ -152,6 +153,7 @@ export default function Sandbox() {
       onMove={(from, to, promotion) => void play(from, to, promotion)}
       captureLabel={(kind) => `${money((stake * PIECE_WEIGHT[kind]) / 39)} tUSD`}
       set={set}
+      pawnLook={pawnLook}
       onSetChange={props.immersive ? setSet : undefined}
     />
   );
@@ -255,7 +257,13 @@ export default function Sandbox() {
         <button className="ghost" disabled={history.length === 0} onClick={() => setHistory((h) => h.slice(0, -1))}>
           Undo
         </button>
-        <button className="act act--sm act--bone" onClick={() => setHistory([])}>
+        <button
+          className="act act--sm act--bone"
+          onClick={() => {
+            setHistory([]);
+            setPawnLook((n) => n + 1); // a new game, a new pawn set
+          }}
+        >
           New game
         </button>
       </footer>

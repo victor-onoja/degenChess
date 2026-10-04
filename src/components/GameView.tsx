@@ -457,6 +457,7 @@ export function GameView({
           immersive
           insets={insets}
           set={pieceSet}
+          pawnLook={Number(gameId % 1000n)}
           onSetChange={focus ? undefined : setPieceSet}
           history={arenaHistory}
           orientation={seatColor ?? "w"}
@@ -609,6 +610,7 @@ export function GameView({
               <Arena3D
                 fill
                 set={pieceSet}
+                pawnLook={Number(gameId % 1000n)}
                 history={arenaHistory}
                 orientation={seatColor ?? "w"}
                 movable={canMove && !pendingMove ? myColor : null}
