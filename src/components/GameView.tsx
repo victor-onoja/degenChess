@@ -28,7 +28,8 @@ import { BOARD_PIECES } from "./boardPieces";
 
 const WEIGHT: Record<string, bigint> = { p: 1n, n: 3n, b: 3n, r: 5n, q: 9n };
 const Arena3D = dynamic(() => import("./arena/Arena3D"), { ssr: false });
-const VIEW_PREF = "degenchess.view";
+const VIEW_PREF = "degenchess.view"; // the view you play in
+const WATCH_PREF = "degenchess.watchView"; // the view you watch other people's games in
 type ViewMode = "3d" | "2d" | "split";
 
 const LOW_MOVE_GAS = parseEther("0.03"); // about three moves left
@@ -144,22 +145,25 @@ export function GameView({
     }
   }, [now, pieceSet]);
 
-  // 3D arena, flat 2D board, or both side by side (2D to play precisely, 3D for the show).
-  const [view, setView] = useState<ViewMode>("3d");
+  // 3D arena, flat 2D board, or both side by side. Defaults: playing on a phone is 2D (easier to
+  // play precisely), playing on anything bigger is 3D, and watching is 3D. A saved choice wins, kept
+  // separately for playing and for watching.
+  const [views, setViews] = useState<{ play: ViewMode | null; watch: ViewMode | null; phone: boolean }>({ play: null, watch: null, phone: false });
   useEffect(() => {
-    let saved: string | null = null;
-    try {
-      saved = localStorage.getItem(VIEW_PREF);
-    } catch {}
-    if (saved === "2d" || saved === "3d" || saved === "split") setView(saved);
-    // No saved choice: phones get the flat board, which is easier to play on; wide screens get both.
-    else if (window.innerWidth < 768) setView("2d");
-    else if (window.innerWidth >= 1024 && window.innerWidth > window.innerHeight) setView("split");
+    const read = (key: string) => {
+      try {
+        const v = localStorage.getItem(key);
+        return v === "2d" || v === "3d" || v === "split" ? v : null;
+      } catch {
+        return null;
+      }
+    };
+    setViews({ play: read(VIEW_PREF), watch: read(WATCH_PREF), phone: window.innerWidth < 768 });
   }, []);
-  const chooseView = (next: ViewMode) => {
-    setView(next);
+  const chooseView = (next: ViewMode, watching: boolean) => {
+    setViews((v) => (watching ? { ...v, watch: next } : { ...v, play: next }));
     try {
-      localStorage.setItem(VIEW_PREF, next);
+      localStorage.setItem(watching ? WATCH_PREF : VIEW_PREF, next);
     } catch {}
   };
   // The square picked on the flat board for tap-to-move, and a pending promotion choice.
@@ -443,7 +447,8 @@ export function GameView({
   // Side by side needs a wide space: two squares and a gap. Otherwise fall back to 3D (phones in portrait).
   const splitWidth = Math.max(Math.floor(Math.min((midSize.width - 36) / 2, midSize.height - 8)), 0);
   const splitFits = midSize.width === 0 || splitWidth >= 260;
-  const mode: ViewMode = myColor === null ? "3d" : view === "split" && !splitFits ? "3d" : view;
+  const wanted: ViewMode = myColor === null ? (views.watch ?? "3d") : (views.play ?? (views.phone ? "2d" : "3d"));
+  const mode: ViewMode = wanted === "split" && !splitFits ? "3d" : wanted;
   // The one-line dock is only used mid-game when nothing needs the player's attention.
   const needsAttention =
     !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || flagFell;
@@ -499,19 +504,17 @@ export function GameView({
             >
               <Icon name={compact ? "down" : "up"} />
             </button>
-            {/* Spectators always watch in 3D. */}
-            {myColor !== null &&
-              (["3d", "2d", "split"] as const).map((v) => (
+            {(["3d", "2d", "split"] as const).map((v) => (
                 <button
                   key={v}
                   className={`ghost ${v === "split" ? "hidden sm:inline-flex" : ""}`}
                   aria-pressed={mode === v}
                   title={v === "split" ? "2D and 3D side by side" : `${v.toUpperCase()} board`}
-                  onClick={() => chooseView(v)}
+                  onClick={() => chooseView(v, myColor === null)}
                 >
                   {v === "split" ? "Split" : v.toUpperCase()}
                 </button>
-              ))}
+            ))}
             <button
               className="ghost"
               aria-label={muted ? "Unmute" : "Mute"}
@@ -647,6 +650,12 @@ export function GameView({
           </div>
         ) : (
         <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
+          {/* Back down to one line, for more board (only when nothing here needs the player). */}
+          {!needsAttention && (
+            <button className="-mt-1 mx-auto flex h-6 w-16 items-center justify-center rounded-[3px] soft" aria-label="Shrink panel" title="Shrink" onClick={() => setCompact(true)}>
+              <Icon name="down" size={18} />
+            </button>
+          )}
           {boardNotice && <p className="text-sm font-bold">{boardNotice}</p>}
 
           {/* Going through the moves: a finished game from start to end, a live one back in time. */}

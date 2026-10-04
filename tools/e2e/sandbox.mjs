@@ -17,6 +17,8 @@ for (const phone of [false, true]) {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(e.message.slice(0, 300)));
   await page.goto(`${APP}/sandbox`);
+  // Desktop opens in 3D; the split view shows the flat board to tap on, and the 3D board beside it.
+  if (!phone) await page.getByRole("button", { name: "Split", exact: true }).click();
   await page.locator('[data-square="e2"]').waitFor({ timeout: 60000 });
   const tap = async (sq) => (phone ? page.locator(`[data-square="${sq}"]`).tap() : page.locator(`[data-square="${sq}"]`).click());
   // Scholar's mate, with a capture on f7.

@@ -56,8 +56,8 @@ export default function Sandbox() {
   const stage = useElementSize(stageEl);
 
   useEffect(() => {
+    // The same defaults as a game: 2D on a phone, 3D on anything bigger.
     if (window.innerWidth < 768) setView("2d");
-    else if (window.innerWidth >= 1024) setView("split");
   }, []);
 
   const game = useMemo(() => {

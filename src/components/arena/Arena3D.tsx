@@ -235,7 +235,9 @@ function Piece({
       const since = event ? now() - start : Infinity;
       const tl = event ? timeline(event) : null;
       if (toppled || (role === "victim" && tl && since > tl.dieAt)) p?.act?.("Death_A");
-      else if (role === "victim" && tl && since > tl.dieAt - 0.25) p?.act?.("Hit_A");
+      // The defender sees it coming: guard up as the attacker closes, the blow lands on the block.
+      else if (role === "victim" && tl && since > tl.dieAt - 0.22) p?.act?.("BlockHit");
+      else if (role === "victim" && tl && since > tl.dieAt - 0.75) p?.act?.("Block");
       else if (celebrating && settled) p?.act?.("Cheer");
       else if (role === "mover" && tl && event?.victimId && since > tl.hop - 0.35 && since < tl.total) p?.act?.("Attack");
       else if (role === "mover" && tl && event?.victimId && since >= tl.total && since < tl.total + 1.8) p?.act?.("Taunt");
