@@ -8,26 +8,66 @@ import { STANDARD_PIECES } from "../../lib/standardPieces";
 import type { PieceParts } from "./pieces3d";
 
 // The armies: chess played by little rigged characters, Heroes (White) against the Undead (Black),
-// from Kay Lousberg's CC0 KayKit packs, built by tools/armies/build.mjs. Each carries its share of the
-// stake as a gold gem over its head, and stands on a disc showing which chess piece it is. All the
-// characters share one rig, so one animation file drives both armies.
+// from Kay Lousberg's CC0 KayKit packs (Adventurers 2.0, Skeletons 1.1, Character Animations 1.1),
+// built by tools/armies/build.mjs. Each piece type is its own character, carries its share of the
+// stake as a gold gem over its head, and stands on a disc showing which chess piece it is. Characters
+// use one of two skeletons (medium, or large for the rooks), with one animation file each.
 
-/** What the board asks a character to do. "Attack" and "Taunt" are resolved per character below. */
+/** What the board asks a character to do; each character plays it its own way (see CLIPS). */
 export type Action = "Idle" | "Walking_A" | "Hit_A" | "Death_A" | "Cheer" | "Attack" | "Taunt";
+type Size = "medium" | "large";
 const ARMY: Record<Color, string> = { w: "heroes", b: "undead" };
-const rigUrl = (color: Color) => `/armies/rig-${ARMY[color]}.glb`;
-/** Each character strikes in its own way: blades chop, mages cast, crossbows shoot. */
-const ATTACK: Record<Color, Record<PieceSymbol, string>> = {
-  w: { p: "1H_Melee_Attack_Stab", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "2H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "2H_Melee_Attack_Slice" },
-  b: { p: "1H_Melee_Attack_Chop", n: "1H_Melee_Attack_Slice_Diagonal", b: "Spellcast_Shoot", r: "1H_Melee_Attack_Chop", q: "2H_Ranged_Shoot", k: "Spellcast_Summon" },
-};
-const url = (color: Color, kind: PieceSymbol, variant = 0) => `/armies/${ARMY[color]}-${kind}${variant ? variant + 1 : ""}.glb`;
-/** Pieces with more than one look (pawns alternate their weapons). */
-const VARIANTS: Partial<Record<PieceSymbol, number>> = { p: 2 };
 const KINDS: PieceSymbol[] = ["p", "n", "b", "r", "q", "k"];
+/** How many looks each piece type has: the Heroes' pawns are a rogue, a ranger or an engineer. */
+const VARIANTS: Record<Color, Partial<Record<PieceSymbol, number>>> = { w: { p: 3 }, b: { p: 2 } };
+const sizeOf = (kind: PieceSymbol): Size => (kind === "r" ? "large" : "medium");
+const rigUrl = (size: Size) => `/armies/rig-${size}.glb`;
+const url = (color: Color, kind: PieceSymbol, variant = 0) => `/armies/${ARMY[color]}-${kind}${variant ? variant + 1 : ""}.glb`;
 
-/** How tall each character stands, in board squares: rank reads as size. */
-const HEIGHT: Record<PieceSymbol, number> = { p: 0.82, n: 1.0, b: 1.08, r: 1.04, q: 1.14, k: 1.24 };
+/** Each character strikes in its own way: daggers stab, bows loose, staffs cast, the scythe spins. */
+const ATTACK: Record<Color, Record<PieceSymbol, string[]>> = {
+  w: {
+    p: ["Melee_1H_Attack_Stab", "Ranged_Bow_Release", "Melee_1H_Attack_Chop"],
+    n: ["Melee_1H_Attack_Slice_Diagonal"],
+    b: ["Ranged_Magic_Shoot"],
+    r: ["Melee_2H_Attack"],
+    q: ["Ranged_Magic_Summon"],
+    k: ["Melee_2H_Attack_Slice"],
+  },
+  b: {
+    p: ["Melee_1H_Attack_Chop"],
+    n: ["Melee_1H_Attack_Slice_Diagonal"],
+    b: ["Ranged_Magic_Shoot"],
+    r: ["Melee_2H_Slam"],
+    q: ["Melee_2H_Attack_Spin"],
+    k: ["Ranged_Magic_Summon"],
+  },
+};
+/** The clip behind each action, by army and skeleton. */
+function clipFor(action: Action, color: Color, kind: PieceSymbol, variant: number): string {
+  const large = sizeOf(kind) === "large";
+  const undead = color === "b" && !large;
+  switch (action) {
+    case "Idle":
+      return undead ? "Skeletons_Idle" : "Idle_A";
+    case "Walking_A":
+      return undead ? "Skeletons_Walking" : "Walking_A";
+    case "Attack": {
+      const options = ATTACK[color][kind];
+      return options[variant % options.length];
+    }
+    case "Taunt":
+      return undead ? "Skeletons_Taunt" : large ? "Idle_B" : "Jump_Full_Short";
+    case "Cheer":
+      return large ? "Idle_B" : "Jump_Full_Short";
+    default:
+      return action;
+  }
+}
+const LOOPED = ["Idle_A", "Idle_B", "Skeletons_Idle", "Walking_A", "Skeletons_Walking"];
+
+/** How tall each character stands, in board squares: rank reads as size, and rooks are the big ones. */
+const HEIGHT: Record<PieceSymbol, number> = { p: 0.82, n: 1.0, b: 1.08, r: 1.2, q: 1.14, k: 1.24 };
 const GEM_RADIUS: Record<PieceSymbol, number> = { p: 0.05, n: 0.07, b: 0.07, r: 0.08, q: 0.095, k: 0.05 };
 /** Height of a character's gem, where a captured stake leaves from and arrives. */
 export const gemY = (kind: PieceSymbol) => HEIGHT[kind] + 0.16;
@@ -35,7 +75,6 @@ export const gemY = (kind: PieceSymbol) => HEIGHT[kind] + 0.16;
 const GEM = new THREE.OctahedronGeometry(1, 0);
 const GOLD = new THREE.MeshBasicMaterial({ color: new THREE.Color("#ffc233").multiplyScalar(2.4), toneMapped: false });
 const PALE = new THREE.MeshBasicMaterial({ color: new THREE.Color("#dfe4ff").multiplyScalar(1.6), toneMapped: false });
-const LOOPED = ["Idle", "Walking_A", "Cheer"];
 
 export interface FigureParts extends PieceParts {
   /** Switch to an animation; repeated calls with the same name do nothing. */
@@ -43,27 +82,33 @@ export interface FigureParts extends PieceParts {
 }
 
 export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol; rise?: boolean; variant?: number }>(function Figure(
-  { color, kind, rise = false, variant = 0 },
+  { color, kind, rise = false, variant: seed = 0 },
   ref
 ) {
-  const { scene } = useGLTF(url(color, kind, variant % (VARIANTS[kind] ?? 1)));
-  const { animations } = useGLTF(rigUrl(color));
+  const variant = seed % (VARIANTS[color][kind] ?? 1);
+  const { scene } = useGLTF(url(color, kind, variant));
+  const { animations } = useGLTF(rigUrl(sizeOf(kind)));
   /** A one-off (rising from the ground) that the board's per-frame requests must not cut short. */
   const lockedUntil = useRef(0);
   const root = useRef<THREE.Group>(null);
   const gem = useRef<THREE.Mesh>(null);
   const current = useRef<string | null>(null);
 
-  // Every piece needs its own skeleton, so clone the scene with its bones.
+  // Every piece needs its own skeleton, so clone the scene with its bones. Height is measured on the
+  // body alone: a raised staff or axe shouldn't make its bearer smaller.
   const { model, scale } = useMemo(() => {
     const model = SkeletonUtils.clone(scene) as THREE.Group;
+    const body = new THREE.Box3();
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) {
         o.castShadow = true;
         o.frustumCulled = false; // skinned bounds are the bind pose; don't let a raised arm vanish
       }
     });
-    const height = new THREE.Box3().setFromObject(scene).getSize(new THREE.Vector3()).y || 1;
+    scene.traverse((o) => {
+      if ((o as THREE.SkinnedMesh).isSkinnedMesh) body.expandByObject(o);
+    });
+    const height = (body.isEmpty() ? new THREE.Box3().setFromObject(scene) : body).getSize(new THREE.Vector3()).y || 1;
     return { model, scale: HEIGHT[kind] / height };
   }, [scene, kind]);
 
@@ -82,24 +127,23 @@ export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol;
   };
   const act = (action: Action) => {
     if (performance.now() < lockedUntil.current && action !== "Death_A") return;
-    if (action === "Attack") return play(ATTACK[color][kind]);
-    if (action === "Taunt") return play(color === "b" ? "Taunt" : "Cheer");
-    play(action);
+    play(clipFor(action, color, kind, variant));
   };
   useEffect(() => {
     // A new game: the Undead claw their way up out of the board; everyone else is already standing.
-    const spawn = actions.Spawn_Ground_Skeletons;
-    if (rise && spawn) {
-      play("Spawn_Ground_Skeletons");
-      spawn.time = Math.random() * 0.4;
-      lockedUntil.current = performance.now() + spawn.getClip().duration * 1000 - 150;
+    const awaken = actions.Skeletons_Awaken_Floor;
+    if (rise && color === "b" && awaken) {
+      play("Skeletons_Awaken_Floor");
+      awaken.time = Math.random() * 0.3;
+      lockedUntil.current = performance.now() + awaken.getClip().duration * 1000 - 150;
       return;
     }
-    const idle = actions.Idle;
+    const clip = clipFor("Idle", color, kind, variant);
+    const idle = actions[clip];
     if (!idle) return;
     idle.play();
     idle.time = Math.random() * idle.getClip().duration; // eight pawns should not breathe in step
-    current.current = "Idle";
+    current.current = clip;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actions]);
 
@@ -171,8 +215,9 @@ export function GlyphDisc({ color, kind }: { color: Color; kind: PieceSymbol }) 
 }
 
 export function preloadArmies() {
+  useGLTF.preload(rigUrl("medium"));
+  useGLTF.preload(rigUrl("large"));
   for (const color of ["w", "b"] as Color[]) {
-    useGLTF.preload(rigUrl(color));
-    for (const kind of KINDS) for (let v = 0; v < (VARIANTS[kind] ?? 1); v++) useGLTF.preload(url(color, kind, v));
+    for (const kind of KINDS) for (let v = 0; v < (VARIANTS[color][kind] ?? 1); v++) useGLTF.preload(url(color, kind, v));
   }
 }

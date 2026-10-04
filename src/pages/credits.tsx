@@ -6,7 +6,7 @@ import { Wordmark } from "../components/Wordmark";
 // Everyone whose work is in DegenChess. Several recordings are licensed on condition of credit.
 
 const ART = [
-  ["Heroes and Undead armies", "Kay Lousberg, KayKit Character Packs: Adventurers and Skeletons", "CC0", "https://kaylousberg.com"],
+  ["Heroes and Undead armies", "Kay Lousberg, KayKit Adventurers 2.0 and Skeletons 1.1 (EXTRA), Character Animations 1.1", "CC0", "https://kaylousberg.com"],
   ["Classic 3D chess set", "Riley Queen, Chess Set, Poly Haven", "CC0", "https://polyhaven.com/a/chess_set"],
   ["Flat chess pieces", "Colin M.L. Burnett (Cburnett), via react-chessboard", "BSD", "https://github.com/Clariity/react-chessboard"],
   ["Voices", "Generated with Kokoro-82M (hexgrad)", "Apache-2.0", "https://huggingface.co/hexgrad/Kokoro-82M"],

@@ -33,7 +33,18 @@ The 3D board (react-three-fiber) floats in a void where other boards drift at th
 
 Motion is designed for the game: a piece hops to its square with squash and stretch, a capture lands on the victim, which shatters while its core flies into the piece that took it, labelled with the amount, a king in check flashes, and a mated king falls over. A HUD floats over the board with both clocks and a live tug-of-war bar showing how the pot is split. Sound is synthesized in the browser.
 
-**The armies.** By default the 3D pieces are two armies of animated characters: Heroes (White) against the Undead (Black), from Kay Lousberg's CC0 KayKit packs, built by `tools/armies/build.mjs` (the Undead's weapons are attached to their hands there). Each character carries its share of the stake as a gold gem over its head and stands on a disc showing its chess piece, so the board reads at a glance. They walk to their squares (a knight leaps) and each strikes in its own way on a capture: blades chop and stab, mages cast, crossbows shoot. The taken piece falls and sinks, the Undead taunt after a kill, they claw their way out of the board when a game starts, and the winning side cheers a checkmate. Pawns alternate between two looks in each army, characters' footsteps are heard as they walk (boots for the Heroes, bony clicks for the Undead), and pieces can be dragged on the 3D board as well as tapped. On phones the board renders close to the screen's real resolution so the characters stay sharp; under load it drops glow and shadows first, then resolution a step at a time. All characters share one rig, so the animations are stored once: the two armies are about 4 MB together, loaded only when the 3D board is shown. A **Classic set** switch in the corner of the 3D board swaps to the Staunton set and is remembered on the device.
+**The armies.** By default the 3D pieces are two armies of animated characters, every piece type its own character, from Kay Lousberg's CC0 KayKit packs (Adventurers 2.0 and Skeletons 1.1 with their EXTRA tiers, and Character Animations 1.1), built by `tools/armies/build.mjs` from the unzipped packs in the project root (gitignored).
+
+| Piece | Heroes (White) | Undead (Black) |
+| --- | --- | --- |
+| Pawn | hooded rogue (dagger), ranger (bow) or engineer (wrench), alternating | minion (blade, or axe and shield) |
+| Knight | knight, sword and shield | warrior, mace and shield |
+| Bishop | mage, staff | skeleton mage, staff |
+| Rook | large barbarian, great axe | skeleton golem, great axe |
+| Queen | druid, staff | hooded rogue, scythe |
+| King | bareheaded knight, two-handed sword | necromancer, crown and staff |
+
+Each character carries its share of the stake as a gold gem over its head and stands on a disc showing its chess piece. They walk to their squares to the sound of their footsteps (a knight leaps) and each strikes in its own way on a capture: daggers stab, bows loose, staffs cast, the scythe spins, the golem slams. The taken piece falls and sinks, the Undead claw out of the board when a game starts and taunt after a kill, and the winners leap for joy at checkmate. Characters use one of two 23-bone skeletons (medium, or large for the rooks), so the animations are stored once per skeleton (`rig-medium.glb`, `rig-large.glb`); both armies are about 7 MB, loaded only when the 3D board is shown. A **Classic set** switch in the corner of the 3D board swaps to the Staunton set and is remembered on the device.
 
 ### Sound: music and voices
 

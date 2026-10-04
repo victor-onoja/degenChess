@@ -5,7 +5,8 @@ import { chromium } from "playwright";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const SHOTS = process.env.SHOTS_DIR;
-const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--enable-gpu", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--autoplay-policy=no-user-gesture-required", "--enable-gpu", "--use-angle=metal", "--ignore-gpu-blocklist"] });
+const errors = []; // any uncaught page error fails the run
 const check = (cond, what) => {
   if (!cond) throw new Error(`FAILED: ${what}`);
   console.log(`  ok: ${what}`);
@@ -14,7 +15,7 @@ const check = (cond, what) => {
 for (const phone of [false, true]) {
   const ctx = await browser.newContext(phone ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true } : { viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  page.on("pageerror", (e) => console.log("[pageerror]", e.message.slice(0, 300)));
+  page.on("pageerror", (e) => errors.push(e.message.slice(0, 300)));
   await page.goto(`${APP}/sandbox`);
   await page.locator('[data-square="e2"]').waitFor({ timeout: 60000 });
   const tap = async (sq) => (phone ? page.locator(`[data-square="${sq}"]`).tap() : page.locator(`[data-square="${sq}"]`).click());
@@ -36,4 +37,5 @@ for (const phone of [false, true]) {
   await ctx.close();
 }
 await browser.close();
+check(errors.length === 0, `no page errors${errors.length ? ": " + errors.join(" / ") : ""}`);
 console.log("SANDBOX OK");

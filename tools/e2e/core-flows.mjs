@@ -9,7 +9,7 @@ import { chromium } from "playwright";
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const RPC = process.env.RPC_URL ?? "http://127.0.0.1:8545";
 const SHOTS = process.env.SHOTS_DIR;
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--autoplay-policy=no-user-gesture-required"] });
 const step = (msg) => console.log("-", msg);
 const shot = (p, name) => (SHOTS ? p.page.screenshot({ path: `${SHOTS}/core-${name}.png` }) : null);
 

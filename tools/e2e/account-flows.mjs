@@ -7,7 +7,7 @@ import { createPublicClient, http, parseAbi } from "viem";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const SHOTS = process.env.SHOTS_DIR;
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--autoplay-policy=no-user-gesture-required"] });
 const check = (cond, what) => {
   if (!cond) throw new Error(`FAILED: ${what}`);
   console.log(`  ok: ${what}`);

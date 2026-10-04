@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 
 const APP = process.env.APP_URL ?? "http://localhost:3000";
 const SHOTS = process.env.SHOTS_DIR;
-const browser = await chromium.launch({ channel: "chrome", headless: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--autoplay-policy=no-user-gesture-required"] });
 const step = (msg) => console.log("-", msg);
 
 async function player(n) {
