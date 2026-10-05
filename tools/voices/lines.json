@@ -1,14 +1,14 @@
 {
   "heroes": {
-    "start": [["am_puck", "To arms!"], ["bf_emma", "For the crown, everyone!"]],
-    "capture": [["am_puck", "Take that!"], ["bf_emma", "For the crown!"], ["am_puck", "Another one falls!"], ["bf_emma", "That's ours now."], ["am_puck", "Pay up!"]],
-    "bigCapture": [["am_puck", "A fortune! Well struck!"], ["bf_emma", "Now that is a prize."]],
-    "check": [["am_puck", "Check!"], ["bf_emma", "Your king trembles."]],
+    "start": [["bf_emma", "To arms!"], ["bf_emma", "For the crown, everyone!"]],
+    "capture": [["bf_emma", "Take that!"], ["bf_emma", "For the crown!"], ["bf_emma", "Another one falls!"], ["bf_emma", "That's ours now."], ["bf_emma", "Pay up!"]],
+    "bigCapture": [["bf_emma", "A fortune! Well struck!"], ["bf_emma", "Now that is a prize."]],
+    "check": [["bf_emma", "Check!"], ["bf_emma", "Your king trembles."]],
     "mate": [["bf_emma", "Checkmate! Victory is ours!"]],
     "promotion": [["bf_emma", "Rise, my queen!"]],
-    "castle": [["am_puck", "Hold the line!"]],
-    "rally": [["am_puck", "Steady! We fight on!"], ["bf_emma", "Chin up. We take it back."]],
-    "lowTime": [["am_puck", "Quickly now!"]]
+    "castle": [["bf_emma", "Hold the line!"]],
+    "rally": [["bf_emma", "Steady! We fight on!"], ["bf_emma", "Chin up. We take it back."]],
+    "lowTime": [["bf_emma", "Quickly now!"]]
   },
   "undead": {
     "start": [["am_onyx", "We rise."], ["bm_lewis", "The dead are hungry."]],
