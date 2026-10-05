@@ -18,7 +18,7 @@ Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3
 
 Deployed on Monad testnet (chain 10143): Away Chess `0xb035514b25f72bc329529551b5177079ea54c4d9`, ChessReferee `0xd34e5e6b1c8d0825a1468713d5764d6070fe5d0d`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
-Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
+Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time), `account-flows.mjs` (usernames, sending money), `community.mjs` (a prize-pot tournament from creation to payout) and `sandbox.mjs`. A manual script with expected payouts for each settlement path is in `docs/TEST-PLAN.md`.
 
 Run the tests with `npm install && npm test` (37 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 

@@ -63,7 +63,9 @@ async function move(p, other, from, to) {
       .getByText(`ply ${ply + 1} `)
       .waitFor({ timeout: 30000 })
       .catch(async () => {
-        if (!(await q.page.getByText("Checkmate").count())) {
+        // The last move ends the game: the ply counter gives way to "Checkmate", or straight to
+        // "Finished" when the referee settles it within a second or two.
+        if (!(await q.page.getByText(/Checkmate|Finished - /).count())) {
           await shot(q, `fail-p${q.n}`);
           throw new Error(`ply ${ply + 1} never appeared for P${q.n} after ${from}-${to}`);
         }
@@ -167,13 +169,15 @@ await move(p2, p1, "e5", "d4"); // Black captures a pawn
 await move(p1, p2, "d1", "h5");
 await move(p2, p1, "g8", "f6");
 await move(p1, p2, "h5", "f7"); // Qxf7#
-await p2.page.getByText("Checkmate - you lost").waitFor({ timeout: 30000 });
-assertEqual(await p2.prompts(), before[1] + 1, "P2 prompts after more moves (unchanged)");
-await shot(p2, "3-checkmate");
+if (process.env.REFEREE !== "1") {
+  await p2.page.getByText("Checkmate - you lost").waitFor({ timeout: 30000 });
+  assertEqual(await p2.prompts(), before[1] + 1, "P2 prompts after more moves (unchanged)");
+  await shot(p2, "3-checkmate");
 
-step("Locking wipes the game key: the board stops accepting moves until unlocked");
-await click(p1, "Lock");
-await p1.page.getByRole("button", { name: "Unlock with passkey to keep playing" }).waitFor();
+  step("Locking wipes the game key: the board stops accepting moves until unlocked");
+  await click(p1, "Lock");
+  await p1.page.getByRole("button", { name: "Unlock with passkey to keep playing" }).waitFor();
+}
 
 if (process.env.REFEREE === "1") {
   // With the Chainlink referee running, checkmate settles itself: nobody has to resign.

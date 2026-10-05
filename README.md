@@ -121,6 +121,7 @@ tools/e2e/core-flows.mjs     cancel, tap-to-move on a phone, promotion, spectati
 tools/e2e/account-flows.mjs  usernames and the wallet
 tools/e2e/sandbox.mjs        the practice board
 tools/e2e/community.mjs      tournaments, audience count, leaderboard
+tools/e2e/voices.mjs         voices speak one at a time, music dips under them
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
@@ -166,6 +167,10 @@ node tools/e2e/voices.mjs         # voices never overlap; the music dips under t
 npm run lint
 npm run build
 ```
+
+Against the live site, with the always-on referee settling the checkmate: `APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`.
+
+The hands-on pass, with the moves to play and the amounts to expect at each step, is in [docs/TEST-PLAN.md](docs/TEST-PLAN.md).
 
 After changing the contract, run `npm run compile` to regenerate `src/contracts/abi.ts`.
 

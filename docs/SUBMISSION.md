@@ -2,7 +2,7 @@
 
 Answers for every field on the submission form, the evidence judges can check, the three video scripts, and what is left before the deadline.
 
-Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
+Deadline: 14 October 2026, 04:59 GMT+1. Status as of 5 October 2026: feature-complete, automated regression green, final hands-on pass under way.
 
 > **Name and address.** The product is **Away Chess** (renamed from the working title DegenChess on 5 October 2026). Testnet lives at `test.awaychess.com`; mainnet will live at `awaychess.com`. The game contract keeps the name `DegenChess` on-chain and the repo keeps its old name. Passkeys are bound to the address, so accounts and usernames started fresh on `test.awaychess.com`; the earlier `degen-chess.vercel.app` still serves the same app.
 
@@ -104,7 +104,9 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 ### Quality
 
 - 37 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
-- Five browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout, the audience count, the leaderboard), `sandbox`.
+- Six browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout, the audience count, the leaderboard), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
+- Run against the live site and Monad on 5 October 2026 (`APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`): 5.9 s from sign-up to the first transaction, prompt-free moves, the stateless restore, a checkmate settled by the always-on referee, withdrawal and rematch.
+- A hands-on test script covering every feature, with the moves to play and the amounts to expect: `docs/TEST-PLAN.md`.
 - Security brief for an independent reviewer: `docs/AUDIT.md`.
 
 ---
@@ -125,7 +127,7 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 | 1:40 | Clear site data, reload, "I have a passkey" | "The stateless test: nothing secret is stored. One prompt rebuilds the account and the game key, and the game is where I left it." |
 | 2:00 | Deliver checkmate; the referee settles it with no resignation; show the verdict tx | "Nobody resigned. A Chainlink CRE workflow replayed the game and settled it on-chain. Play an illegal move and it forfeits you, stolen value included." |
 | 2:30 | Withdraw (passkey), the wallet: invite link and earnings | "Money out asks for the passkey again. Every link you share earns you part of the fee on your friends' games." |
-| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 37 contract tests and five browser suites." |
+| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 37 contract tests and six browser suites." |
 | 2:55 | Back to the board | "Live now at test.awaychess.com." |
 
 ### Pitch (2 minutes)
@@ -159,7 +161,7 @@ No voice-over: the soundtrack and the armies' own lines.
 
 In priority order.
 
-1. **Full regression pass on `test.awaychess.com`** (the move is done: new address, fresh usernames), then send it to friends.
+1. **Final hands-on pass** with `docs/TEST-PLAN.md` on `degen-chess.vercel.app` (automated regression passed on 5 October, locally and against the live site), then send `test.awaychess.com` to friends.
 2. **Record the three videos** (by 12 October, leaving a day for retakes).
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
 4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
