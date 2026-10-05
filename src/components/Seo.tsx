@@ -1,6 +1,6 @@
 import Head from "next/head";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://degen-chess.vercel.app";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://test.awaychess.com";
 const TITLE = "Away Chess - every piece has skin in the game";
 const DESCRIPTION =
   "Chess where each piece carries a share of your stake. Take one, and its share is yours, settled instantly on Monad. One passkey tap to start: no wallet, no seed phrase.";

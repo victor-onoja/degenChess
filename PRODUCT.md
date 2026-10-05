@@ -37,7 +37,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 - Usernames are unique, lowercase, 3 to 16 characters.
 - Testnet only. No real money. Do not claim otherwise.
 - The 3D board's default pieces are two animated armies (Heroes vs Undead, KayKit, CC0); the sculpted CC0 Staunton set is the classic option. The owner called the armies "the missing piece" (3 October 2026).
-- Passkeys are bound to the domain degen-chess.vercel.app.
+- Passkeys are bound to the web address they were created on. Testnet lives at test.awaychess.com (accounts made on the earlier degen-chess.vercel.app do not carry over); mainnet will live at awaychess.com.
 - Next.js pages router, Tailwind, deployed on Vercel.
 
 ## Brand Commitments
@@ -55,7 +55,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 
 ## Evidence on Hand
 
-- Live product: https://degen-chess.vercel.app
+- Live product (testnet): https://test.awaychess.com
 - Real on-chain data available to the page: recent games (players, stake, clock, status, live balances), usernames.
 - A scripted demo game the 3D board can play on its own.
 - Measured: about 5 seconds from "Play now" to a first confirmed transaction; about 0.8 seconds per move.

@@ -1,6 +1,6 @@
 # Away Chess
 
-> Renamed from the working title **DegenChess** on 5 October 2026. The game contract (`contracts/DegenChess.sol`), browser storage keys, the repo and the first web address keep the old name.
+> Renamed from the working title **DegenChess** on 5 October 2026. Testnet: <https://test.awaychess.com> (mainnet will be `awaychess.com`). The game contract (`contracts/DegenChess.sol`), browser storage keys and the repo keep the old name; the first address, `degen-chess.vercel.app`, still serves the same app, but accounts are per address.
 
 Staked chess on-chain. Both players put up the same dollar stake, and **every capture moves that piece's value from the victim to the capturer**. When the game ends, the winner takes the loser's balance except what the loser earned through their own captures, so a loser who fought well still gets paid.
 

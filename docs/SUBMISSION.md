@@ -4,7 +4,7 @@ Answers for every field on the submission form, the evidence judges can check, t
 
 Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 
-> **Name.** The product is **Away Chess** (renamed from the working title DegenChess on 5 October 2026). The game contract keeps the name `DegenChess` on-chain, and the repo and the current web address still carry the old name until the move to `awaychess.gg` (testnet) and `awaychess.com` (mainnet); passkeys are bound to the address, so accounts start fresh on the new one.
+> **Name and address.** The product is **Away Chess** (renamed from the working title DegenChess on 5 October 2026). Testnet lives at `test.awaychess.com`; mainnet will live at `awaychess.com`. The game contract keeps the name `DegenChess` on-chain and the repo keeps its old name. Passkeys are bound to the address, so accounts and usernames started fresh on `test.awaychess.com`; the earlier `degen-chess.vercel.app` still serves the same app.
 
 ---
 
@@ -16,7 +16,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 
 **Repo:** <https://github.com/victor-onoja/degenChess>
 
-**Live app (Monad testnet):** <https://degen-chess.vercel.app>
+**Live app (Monad testnet):** <https://test.awaychess.com>
 
 **Contracts (Monad testnet, chain 10143):**
 
@@ -24,7 +24,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 | --- | --- |
 | Away Chess (games and stakes) | `0xb035514b25f72bc329529551b5177079ea54c4d9` |
 | ChessReferee (Chainlink CRE consumer) | `0xd34e5e6b1c8d0825a1468713d5764d6070fe5d0d` |
-| PlayerNames (usernames) | `0xaf87e4ad92ea3cae05f8696f534d43b19a40a5e6` |
+| PlayerNames (usernames) | `0xeeff1b2601b45472ea746527e9482a882a36f114` |
 | Tournaments (round-robin leagues, optional prize pot) | `0xe7a1bac8f11ae9d36ad462a7d0256f544f4df173` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
@@ -126,7 +126,7 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 | 2:00 | Deliver checkmate; the referee settles it with no resignation; show the verdict tx | "Nobody resigned. A Chainlink CRE workflow replayed the game and settled it on-chain. Play an illegal move and it forfeits you, stolen value included." |
 | 2:30 | Withdraw (passkey), the wallet: invite link and earnings | "Money out asks for the passkey again. Every link you share earns you part of the fee on your friends' games." |
 | 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 37 contract tests and five browser suites." |
-| 2:55 | Back to the board | "Live now at degen-chess.vercel.app." |
+| 2:55 | Back to the board | "Live now at test.awaychess.com." |
 
 ### Pitch (2 minutes)
 
@@ -159,7 +159,7 @@ No voice-over: the soundtrack and the armies' own lines.
 
 In priority order.
 
-1. **Move to the new address.** The name is Away Chess; `awaychess.com` is bought (mainnet), and testnet moves to `test.awaychess.com`. Move the app there before friends test and before recording, since accounts start fresh on a new address.
+1. **Full regression pass on `test.awaychess.com`** (the move is done: new address, fresh usernames), then send it to friends.
 2. **Record the three videos** (by 12 October, leaving a day for retakes).
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
 4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
