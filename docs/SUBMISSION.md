@@ -159,10 +159,10 @@ No voice-over: the soundtrack and the armies' own lines.
 
 In priority order.
 
-1. **Decide the name and domain** (by 8 October), so the videos, logo and links are final. If the domain changes, move the app and passkeys before the launch.
+1. **Move to the new address.** The name is Away Chess; `awaychess.com` is bought (mainnet), and testnet moves to `test.awaychess.com`. Move the app there before friends test and before recording, since accounts start fresh on a new address.
 2. **Record the three videos** (by 12 October, leaving a day for retakes).
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
-4. **Chainlink:** add the CRE API key on the server as soon as one can be created, and deploy to a DON if access is granted; until then the evidence above stands.
+4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
 5. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
 6. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
 7. **Security review:** fold in what the independent reviewer finds and say so here.

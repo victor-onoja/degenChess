@@ -78,6 +78,8 @@ checkmate this way while the CRE API key was pending.
 
 ## Going to production
 
+Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year in October 2026). The hackathon entry runs in simulation, as its rules allow; this is the plan to revisit before mainnet.
+
 1. Request CRE deployment access and `cre workflow deploy referee --target production-settings`.
 2. Point the referee at the production forwarder:
    `ChessReferee.setForwarder(0xF8344CFd5c43616a4366C34E3EEE75af79a74482)` (Monad testnet `KeystoneForwarder`).
