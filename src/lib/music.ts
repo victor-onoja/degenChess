@@ -8,6 +8,8 @@ import { isMuted, onMuteChange } from "./sound";
 // game, starts on the first tap (browsers allow nothing sooner) and follows the mute button.
 
 const VOLUME = 0.22;
+const DUCKED = 0.07; // while a voice line is speaking
+let ducked = false;
 let audio: HTMLAudioElement | null = null;
 let queue: number[] = [];
 let wanted = 0; // how many mounted views want music
@@ -37,7 +39,7 @@ function playNext() {
   } catch {}
   audio?.pause();
   audio = new Audio(`/music/${track.file}`);
-  audio.volume = VOLUME;
+  audio.volume = ducked ? DUCKED : VOLUME;
   audio.onended = playNext;
   audio.onerror = () => setTimeout(playNext, 1000);
   void audio.play().catch(() => undefined);
@@ -78,4 +80,10 @@ export function useMusic(enabled: boolean) {
       if (wanted === 0) audio?.pause();
     };
   }, [enabled]);
+}
+
+/** Lowers the music while a voice line plays, and brings it back after. */
+export function duckMusic(on: boolean) {
+  ducked = on;
+  if (audio) audio.volume = on ? DUCKED : VOLUME;
 }

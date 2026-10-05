@@ -1,35 +1,78 @@
 import { useEffect, useRef } from "react";
 import type { Color, Move } from "chess.js";
 import LINES from "./voiceLines.json";
-import { isMuted } from "./sound";
+import { duckMusic } from "./music";
+import { isMuted, onMuteChange } from "./sound";
 
 // The armies talk: short lines at the moments that matter (a capture, a big capture and the other
 // side rallying, check, promotion, castling, checkmate, the start, a low clock). Generated with
-// Kokoro by tools/voices/build.mjs. Rate-limited so they stay special; the sound button mutes them.
+// Kokoro by tools/voices/build.mjs. One voice speaks at a time, ordinary lines are rate-limited so
+// they stay special, the music dips under a voice, and the sound button mutes them.
 
 type Moment = keyof (typeof LINES)["heroes"];
 const ARMY: Record<Color, keyof typeof LINES> = { w: "heroes", b: "undead" };
-const GAP_MS = 5000;
+const GAP_MS = 5000; // quiet time kept between ordinary lines
+const PAUSE_MS = 350; // breath between two lines spoken back to back
 let lastAt = 0;
+let speaking: HTMLAudioElement | null = null;
+/** Important lines waiting for the current one to finish. Never more than two: older ones are dropped. */
+const waiting: { color: Color; file: string }[] = [];
 
+function speak(color: Color, file: string) {
+  if (isMuted()) return;
+  const audio = new Audio(`/voices/${file}`);
+  if (color === "b") {
+    // The Undead: slower and lower than any living voice.
+    audio.preservesPitch = false;
+    audio.playbackRate = 0.84;
+  }
+  audio.volume = 0.9;
+  const done = () => {
+    if (speaking !== audio) return;
+    speaking = null;
+    lastAt = performance.now();
+    const next = waiting.shift();
+    if (next) setTimeout(() => (speaking ? waiting.unshift(next) : speak(next.color, next.file)), PAUSE_MS);
+    else duckMusic(false);
+  };
+  audio.onended = done;
+  audio.onerror = done;
+  speaking = audio;
+  duckMusic(true); // the music steps back while someone is talking
+  void audio.play().catch(done);
+}
+
+// Muting cuts a line off mid-word and forgets anything waiting.
+if (typeof window !== "undefined") {
+  onMuteChange((muted) => {
+    if (!muted) return;
+    waiting.length = 0;
+    speaking?.pause();
+    speaking = null;
+    duckMusic(false);
+  });
+}
+
+/**
+ * Has an army say a line for a moment. One voice at a time: an ordinary line is skipped if someone
+ * is talking or spoke in the last few seconds; a `force` line (checkmate, a queen taken...) waits its
+ * turn instead, so two lines never talk over each other.
+ */
 export function say(color: Color, moment: Moment, { force = false, delay = 0 } = {}) {
   if (typeof window === "undefined" || isMuted()) return;
-  const at = performance.now() + delay;
-  if (!force && at - lastAt < GAP_MS) return;
   const options = LINES[ARMY[color]][moment];
   if (!options?.length) return;
-  lastAt = at;
   const line = options[Math.floor(Math.random() * options.length)];
   setTimeout(() => {
     if (isMuted()) return;
-    const audio = new Audio(`/voices/${line.file}`);
-    if (color === "b") {
-      // The Undead: slower and lower than any living voice.
-      audio.preservesPitch = false;
-      audio.playbackRate = 0.84;
+    if (speaking) {
+      if (!force) return;
+      if (waiting.length >= 2) waiting.shift();
+      waiting.push({ color, file: line.file });
+      return;
     }
-    audio.volume = 0.9;
-    void audio.play().catch(() => undefined);
+    if (!force && performance.now() - lastAt < GAP_MS) return;
+    speak(color, line.file);
   }, delay);
 }
 
