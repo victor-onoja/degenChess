@@ -90,6 +90,18 @@ contract DegenChess is ReentrancyGuard {
     address public arbiter;
     /// @notice Fees collected at settlement, waiting for the owner to withdraw them.
     uint256 public accruedFees;
+    /// @notice A player's record over every finished game: the leaderboard, kept exactly and forever.
+    struct PlayerStats {
+        uint32 wins;
+        uint32 draws;
+        uint32 losses;
+        int256 net; // payouts minus stakes, after fees
+    }
+
+    mapping(address => PlayerStats) public stats;
+    /// @dev Everyone who has finished a game, in order of first appearance (see `getPlayers`).
+    address[] internal ranked;
+
     /// @notice Who invited each player (set once, by the player). Earns part of the fee on their games.
     mapping(address => address) public referrerOf;
     /// @notice Referral earnings waiting to be withdrawn.
@@ -545,9 +557,41 @@ contract DegenChess is ReentrancyGuard {
         g.whiteBalance = whitePayout;
         g.blackBalance = blackPayout;
         emit GameEnded(_gameId, _result, whitePayout, blackPayout, fee);
+        _record(g.white, _result == Result.Draw ? int8(0) : _result == Result.WhiteWins ? int8(1) : int8(-1), whitePayout, g.stake);
+        _record(g.black, _result == Result.Draw ? int8(0) : _result == Result.BlackWins ? int8(1) : int8(-1), blackPayout, g.stake);
         // Whoever invited each player gets part of that player's half of the fee; the owner keeps the rest.
         uint256 credited = _creditReferral(_gameId, g.white, fee) + _creditReferral(_gameId, g.black, fee);
         accruedFees += fee - credited;
+    }
+
+    /// @dev Adds one finished game to a player's record. `outcome`: 1 won, 0 drew, -1 lost.
+    function _record(address _player, int8 _outcome, uint256 _payout, uint256 _stake) internal {
+        PlayerStats storage p = stats[_player];
+        if (p.wins + p.draws + p.losses == 0) ranked.push(_player);
+        if (_outcome > 0) p.wins++;
+        else if (_outcome < 0) p.losses++;
+        else p.draws++;
+        p.net += int256(_payout) - int256(_stake);
+    }
+
+    function playerCount() external view returns (uint256) {
+        return ranked.length;
+    }
+
+    /// @notice A page of players with their records, for the leaderboard.
+    function getPlayers(uint256 _offset, uint256 _limit)
+        external
+        view
+        returns (address[] memory players, PlayerStats[] memory records)
+    {
+        uint256 end = _offset + _limit > ranked.length ? ranked.length : _offset + _limit;
+        uint256 size = end > _offset ? end - _offset : 0;
+        players = new address[](size);
+        records = new PlayerStats[](size);
+        for (uint256 i = 0; i < size; i++) {
+            players[i] = ranked[_offset + i];
+            records[i] = stats[players[i]];
+        }
     }
 
     function _creditReferral(uint256 _gameId, address _player, uint256 _fee) internal returns (uint256 amount) {

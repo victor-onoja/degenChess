@@ -80,6 +80,34 @@ export interface TournamentRow {
 
 const SCAN = 300; // games looked at from the tournament's first game on
 
+export interface Prize {
+  entryFee: bigint;
+  /** 0 = winner takes all, 1 = top three 50/30/20. */
+  mode: number;
+  deadline: bigint;
+  pot: bigint;
+  settled: boolean;
+  cancelled: boolean;
+  recorded: number;
+  /** What each player was paid, by lower-case address (after the payout). */
+  prizes: Map<string, bigint>;
+}
+
+/** The prize side of a tournament: its pot, deadline, and who was paid what. */
+export function usePrize(t: Tournament | undefined): Prize | undefined {
+  const { data } = useReadContract({
+    ...tournamentsContract,
+    functionName: "getPrize",
+    args: t ? [t.id] : undefined,
+    query: { enabled: !!t && !!TOURNAMENTS_ADDRESS, refetchInterval: POLL_MS },
+  });
+  return useMemo(() => {
+    if (!t || !data) return undefined;
+    const [entryFee, mode, deadline, pot, settled, cancelled, recorded, , prizes] = data;
+    return { entryFee, mode, deadline, pot, settled, cancelled, recorded, prizes: new Map(t.players.map((p, i) => [p.toLowerCase(), prizes[i] ?? 0n])) };
+  }, [t, data]);
+}
+
 /** Every pairing of a started tournament with its game, and the standings those games give. */
 export function useFixtures(t: Tournament | undefined): { fixtures: Fixture[]; standings: TournamentRow[] } {
   const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { enabled: !!t?.started, refetchInterval: POLL_MS } });

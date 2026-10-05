@@ -857,6 +857,57 @@ export const degenChessAbi = [
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "_offset",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPlayers",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "players",
+        "type": "address[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint32",
+            "name": "wins",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "draws",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint32",
+            "name": "losses",
+            "type": "uint32"
+          },
+          {
+            "internalType": "int256",
+            "name": "net",
+            "type": "int256"
+          }
+        ],
+        "internalType": "struct DegenChess.PlayerStats[]",
+        "name": "records",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "_gameId",
         "type": "uint256"
       }
@@ -1003,6 +1054,19 @@ export const degenChessAbi = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "playerCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -1095,6 +1159,40 @@ export const degenChessAbi = [
     "name": "setReferrer",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "stats",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "wins",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "draws",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "losses",
+        "type": "uint32"
+      },
+      {
+        "internalType": "int256",
+        "name": "net",
+        "type": "int256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1252,7 +1350,22 @@ export const tournamentsAbi = [
   },
   {
     "inputs": [],
+    "name": "Closed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "Full",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "GameDoesNotCount",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "HostCannotLeave",
     "type": "error"
   },
   {
@@ -1262,7 +1375,17 @@ export const tournamentsAbi = [
   },
   {
     "inputs": [],
+    "name": "InvalidPrize",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidStake",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NoPrizePool",
     "type": "error"
   },
   {
@@ -1277,8 +1400,52 @@ export const tournamentsAbi = [
   },
   {
     "inputs": [],
+    "name": "NotJoined",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotStarted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "SafeERC20FailedOperation",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "TooEarly",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "UnknownTournament",
     "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "name": "Cancelled",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -1316,6 +1483,43 @@ export const tournamentsAbi = [
       },
       {
         "indexed": true,
+        "internalType": "uint256",
+        "name": "gameId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "white",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "black",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "result",
+        "type": "uint8"
+      }
+    ],
+    "name": "GameRecorded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "player",
         "type": "address"
@@ -1334,14 +1538,77 @@ export const tournamentsAbi = [
         "type": "uint256"
       },
       {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      }
+    ],
+    "name": "Left",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PrizePaid",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "firstGameId",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint64",
+        "name": "deadline",
+        "type": "uint64"
       }
     ],
     "name": "Started",
     "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_DURATION",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [],
@@ -1358,10 +1625,36 @@ export const tournamentsAbi = [
   },
   {
     "inputs": [],
+    "name": "MIN_DURATION",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "cancel",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "chess",
     "outputs": [
       {
-        "internalType": "contract IGameCounter",
+        "internalType": "contract IChess",
         "name": "",
         "type": "address"
       }
@@ -1402,6 +1695,21 @@ export const tournamentsAbi = [
       {
         "internalType": "uint32",
         "name": "_clockIncrement",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_entryFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "_prizeMode",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_duration",
         "type": "uint32"
       }
     ],
@@ -1483,6 +1791,65 @@ export const tournamentsAbi = [
         "type": "uint256"
       }
     ],
+    "name": "getPrize",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "entryFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "prizeMode",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint64",
+        "name": "deadline",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint256",
+        "name": "pot",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "settled",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "cancelled",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint16",
+        "name": "recorded",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16[]",
+        "name": "playerPoints",
+        "type": "uint16[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "prizes",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
     "name": "join",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -1520,9 +1887,143 @@ export const tournamentsAbi = [
         "type": "uint256"
       }
     ],
+    "name": "leave",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "name": "pairRecorded",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "points",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "prizeOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_gameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "record",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "_gameIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "settle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
     "name": "start",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "token",
+    "outputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ] as const;

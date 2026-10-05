@@ -60,8 +60,9 @@ The lobby. Start a board (stake and clock) on the left; on the right, every game
 
 ### Leaderboard, tournaments and the audience
 
-- **Leaderboard** (`/leaderboard`, top five on the landing page): wins, draws, losses and money won, worked out from the finished games on-chain (payouts minus stakes, after fees). No server keeps score.
-- **Tournaments** (`/tournaments`): round-robin leagues of ordinary staked games. Anyone creates one (name, stake per game, clock) for free and shares its link; players join; the host starts it; every pair plays once, with a coin flip for colours. Press **Play** to open your next game and your opponent joins it from the tournament page. Standings (1 point a win, ½ a draw) are read from the games themselves: the `Tournaments` contract only lists the players, the stake and clock, and the first game that counts, holds no money and cannot award a result.
+- **Leaderboard** (`/leaderboard`, top five on the landing page): wins, draws, losses and money won (payouts minus stakes, after fees). The game contract keeps every player's record as games finish (`stats`, `getPlayers`), so the table is exact and permanent however many games are played; no server keeps score.
+- **Tournaments** (`/tournaments`): round-robin leagues of ordinary staked games. Anyone creates one (name, stake per game, clock) for free and shares its link; players join; the host starts it; every pair plays once, with a coin flip for colours. Press **Play** to open your next game and your opponent joins it from the tournament page. Standings (1 point a win, ½ a draw) are read from the games themselves; nobody, not even the host, can award a result.
+  - **The host chooses how it runs.** With no entry fee the `Tournaments` contract is only a register and holds no money. With an entry fee (1, 5 or 10), every player pays it into a prize pot when joining, and the host picks the prizes (winner takes all, or top three 50/30/20) and how long it runs (1, 3 or 7 days). When every game is played, or the time is up, anyone presses **Pay out the prizes**: the contract reads each result from the game contract and pays the pot by points, ties sharing their places. Nobody takes a cut. Before the start a player can leave, or the host can cancel, and entry fees are refunded.
 - **Who's watching:** a live game shows how many people are watching it, to the players and the spectators, and live boards in the Yard show the same number. Each open game page checks in with `/api/watch` every ten seconds; the count lives in the server's memory, so it is a head-count, not a record.
 
 ### Practice board
@@ -105,7 +106,7 @@ test/DegenChess.test.js      contract tests, including random legal games cross-
 scripts/deploy.js            deploy (also deploys MockUSD unless PAYMENT_TOKEN is set)
 scripts/export-abi.js        writes src/contracts/abi.ts from the compiled artifact
 contracts/PlayerNames.sol    usernames
-contracts/Tournaments.sol    register of round-robin leagues (holds no money)
+contracts/Tournaments.sol    round-robin leagues, with an optional prize pot paid out by points
 src/deployments.ts           live contract addresses
 src/components/              AccountBar, Yard (the lobby), GameView, MiniBoard, PieceIcon
 src/components/arena/        the 3D arena, the Staunton set (pieces3d) and the character armies (armies)

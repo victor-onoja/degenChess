@@ -7,7 +7,7 @@ import { useNames } from "../lib/names";
 /** Who has taken the most money off the board. `limit` shows only the top of the table. */
 export function Leaderboard({ limit }: { limit?: number }) {
   const { address } = useDegenAccount();
-  const { standings, games, loading } = useLeaderboard();
+  const { standings, players, loading } = useLeaderboard();
   const rows = limit ? standings.slice(0, limit) : standings;
   const { label } = useNames(rows.map((s) => s.address));
 
@@ -49,7 +49,11 @@ export function Leaderboard({ limit }: { limit?: number }) {
           ))}
         </tbody>
       </table>
-      {!limit && <p className="soft mt-3 text-sm">From the last {games} finished games. Winnings are payouts minus stakes, after fees.</p>}
+      {!limit && (
+        <p className="soft mt-3 text-sm">
+          {players} {players === 1 ? "player" : "players"}, every finished game counted. Winnings are payouts minus stakes, after fees.
+        </p>
+      )}
     </div>
   );
 }

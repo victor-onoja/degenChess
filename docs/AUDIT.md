@@ -9,18 +9,18 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 | Game contract | `contracts/DegenChess.sol` (Solidity 0.8.24, OpenZeppelin 5) | The only contract that holds funds |
 | Referee | `contracts/ChessReferee.sol`, `cre/referee/` | Receives verdicts from a Chainlink CRE workflow and calls `arbitrate` |
 | Usernames | `contracts/PlayerNames.sol` | Holds no funds |
-| Tournaments | `contracts/Tournaments.sol` | Holds no funds and settles nothing: lists players, stake, clock and the first game id that counts. Standings are computed by the client from `DegenChess` games |
+| Tournaments | `contracts/Tournaments.sol` | **Holds funds when a tournament has an entry fee.** Entry fees form a pot; `record` reads finished games from `DegenChess` (stake, both players joined, created after the start, first game per pair); `settle` pays the pot by points (winner takes all, or 50/30/20, ties sharing places) once every pairing is recorded or the deadline passes. No fee, no owner, no admin. `leave` and `cancel` refund before the start |
 | Key handling in the browser | `src/lib/mera.ts`, `src/lib/account.tsx` | Passkey-derived keys, signing sessions |
 | Faucet | `src/pages/api/drip.ts` | Testnet only |
 | Audience count | `src/pages/api/watch.ts` | In-memory head-count of spectators; anyone can inflate it, nothing depends on it |
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): Away Chess `0x17c898b9814323a5bd364c77b6a41b341cdbda51`, ChessReferee `0x2a54f9443c84c472488020c878797a2fead78cdf`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): Away Chess `0xb035514b25f72bc329529551b5177079ea54c4d9`, ChessReferee `0xd34e5e6b1c8d0825a1468713d5764d6070fe5d0d`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
 
-Run the tests with `npm install && npm test` (33 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Run the tests with `npm install && npm test` (37 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 
@@ -61,6 +61,9 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 10. **Keys live in page memory.** Both keys are derived from the passkey in the browser. Any script running on the page could sign with the live game key, which is why that key is scoped by the contract and the money key is wiped after each money action. An XSS or a malicious dependency could still play moves for a user, or capture the money key during a money action.
 
 ## Places we'd like a second pair of eyes
+
+- `Tournaments`: can a pot be drained, double-paid or stuck? `_payOut` (sorting, tie groups, rounding dust to first place), `leave` (swap-and-pop of the players array against `pot`), `cancel` (refund loop), and `_record` (two colluding players can only affect their own pairing's result, by playing it; can a game be counted for two tournaments' pairings in a harmful way, or a pairing recorded with a game from before the start?). After the deadline the pot pays on the results recorded so far, so players who never play can still be ranked level on zero points.
+- `DegenChess._record` / `getPlayers`: the leaderboard counters are informational; check they cannot revert `_finish` (overflow of the `uint32` counters is out of reach).
 
 - `makeMove`: the board update, especially the en passant square, the castling detection (a king moving two files from the e-file) and the promotion checks. Can a crafted `uint16` corrupt the board, capture a piece that isn't there, or make `_transferCaptureValue` move value twice?
 - `_setKey`: the raw `call` that forwards MON to an arbitrary address. Every function that reaches it is `nonReentrant`, but `makeMove` and `offerDraw` are not. Is there a useful re-entry through them?

@@ -1,5 +1,5 @@
-// End-to-end checks for the community features: a tournament from creation to standings, the
-// audience count on a live game, and the leaderboard.
+// End-to-end checks for the community features: a tournament with a prize pot from creation to
+// payout, the audience count on a live game, and the leaderboard.
 //   (app running against a local chain or testnet) node tools/e2e/community.mjs
 import { chromium } from "playwright";
 
@@ -57,18 +57,22 @@ await signUp(b, bob);
 step("Alice creates a tournament; Bob joins from its link; Alice starts it");
 await go(a, "/tournaments");
 await a.getByLabel("Tournament name").fill(`Cup ${stamp}`);
-await a.getByRole("button", { name: "Create tournament" }).click();
+// The host's choices: a 5 tUSD entry fee into a pot, winner takes all (the default split), one day.
+await a.getByRole("group", { name: /Prize pot/ }).getByRole("button", { name: "5", exact: true }).click();
+await a.getByRole("button", { name: "1 day" }).click();
+await a.getByRole("button", { name: "Create and pay 5 tUSD" }).click();
 await a.waitForURL(/tournaments\?t=\d+/, { timeout: 60000 });
 await idle(a);
 const tournamentPath = new URL(a.url()).pathname + new URL(a.url()).search;
 await go(b, tournamentPath);
-await b.getByRole("button", { name: "Join the tournament" }).click();
+await b.getByRole("button", { name: "Join for 5 tUSD" }).click();
 await b.getByText("You're in. Waiting for the host to start.").waitFor({ timeout: 60000 });
 await idle(b);
 await a.getByRole("button", { name: "Start: close entries" }).click();
 await a.getByText("0 of 1 games played").waitFor({ timeout: 60000 });
 await idle(a);
-check(true, "tournament created, joined and started");
+await a.getByText(/Prize pot\s*10 tUSD/).waitFor({ timeout: 30000 });
+check(true, "tournament created with a 5 tUSD entry fee, joined and started: the pot is 10 tUSD");
 
 step("They play their game from the tournament page");
 await a.getByRole("button", { name: "Play", exact: true }).click();
@@ -99,6 +103,11 @@ await go(a, tournamentPath);
 await a.getByText("1 of 1 games played").waitFor({ timeout: 60000 });
 const table = await a.locator("table.ladder").innerText();
 check(new RegExp(`${alice}[\\s\\S]*1 0 0[\\s\\S]*1`).test(table), `standings credit the winner (${table.replace(/\s+/g, " ").slice(0, 90)})`);
+await a.getByRole("button", { name: "Pay out the prizes" }).click();
+await a.getByText("paid out").waitFor({ timeout: 60000 });
+await idle(a);
+const paid = await a.locator("table.ladder").innerText();
+check(/\+10/.test(paid), `the winner is paid the whole pot (${paid.replace(/\s+/g, " ").slice(0, 100)})`);
 if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-tournament.png`, fullPage: true });
 await go(a, "/leaderboard");
 await a.getByText(alice).first().waitFor({ timeout: 60000 });

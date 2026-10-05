@@ -17,12 +17,19 @@ import { formatToken, sameAddress } from "../lib/format";
 import { useNames } from "../lib/names";
 import { shareLink } from "../lib/share";
 import { withApproval } from "../lib/stake";
-import { tournamentsContract, useFixtures, useTournament, useTournaments, type Fixture, type Tournament } from "../lib/tournaments";
+import { tournamentsContract, useFixtures, usePrize, useTournament, useTournaments, type Fixture, type Tournament } from "../lib/tournaments";
 
 // Tournaments: a league where everyone plays everyone once, each game an ordinary staked game.
 // Create one, share the link, start it when the players are in, and the table fills itself in.
 
 const STAKES = ["1", "5", "10"];
+const FEES = ["0", "1", "5", "10"]; // entry fee into the prize pot; 0 = no pot
+const SPLITS = ["Winner takes all", "Top three: 50 / 30 / 20"];
+const LENGTHS = [
+  { label: "1 day", seconds: 86_400 },
+  { label: "3 days", seconds: 259_200 },
+  { label: "7 days", seconds: 604_800 },
+];
 const points = (p: number) => (p % 2 === 0 ? String(p / 2) : `${Math.floor(p / 2)}½`);
 
 function Create({ onCreated }: { onCreated: (id: bigint) => void }) {
@@ -30,12 +37,22 @@ function Create({ onCreated }: { onCreated: (id: bigint) => void }) {
   const [name, setName] = useState("");
   const [stake, setStake] = useState("1");
   const [control, setControl] = useState<(typeof TIME_CONTROLS)[number]>(TIME_CONTROLS[1]);
+  const [fee, setFee] = useState("0");
+  const [split, setSplit] = useState(0);
+  const [length, setLength] = useState(LENGTHS[1]);
   const ready = (address !== null || returning) && name.trim().length >= 3;
+  const pot = fee !== "0";
 
   async function create() {
-    const receipt = await sendMoney(`Create "${name.trim()}"`, () => [
-      { ...tournamentsContract, functionName: "create", args: [name.trim(), parseUnits(stake, TOKEN_DECIMALS), control.base, control.increment] },
-    ]);
+    const entry = parseUnits(fee, TOKEN_DECIMALS);
+    const call = {
+      ...tournamentsContract,
+      functionName: "create" as const,
+      args: [name.trim(), parseUnits(stake, TOKEN_DECIMALS), control.base, control.increment, entry, pot ? split : 0, pot ? length.seconds : 0] as const,
+    };
+    const receipt = await sendMoney(pot ? `Create "${name.trim()}" and pay ${fee} ${TOKEN_SYMBOL}` : `Create "${name.trim()}"`, async (id) =>
+      pot ? withApproval(id.address, entry, call, TOURNAMENTS_ADDRESS) : [call]
+    );
     const created = receipt && parseEventLogs({ abi: tournamentsAbi, logs: receipt.logs, eventName: "Created" })[0];
     if (created) onCreated(created.args.id);
   }
@@ -72,11 +89,47 @@ function Create({ onCreated }: { onCreated: (id: bigint) => void }) {
           </button>
         ))}
       </div>
+
+      <p id="t-fee" className="field-label">
+        Prize pot <span className="soft font-normal">entry fee each player pays in</span>
+      </p>
+      <div className="rank mb-4" role="group" aria-labelledby="t-fee">
+        {FEES.map((f) => (
+          <button key={f} className="rank__square" aria-pressed={fee === f} onClick={() => setFee(f)}>
+            {f === "0" ? "None" : f}
+          </button>
+        ))}
+      </div>
+      {pot && (
+        <>
+          <p id="t-split" className="field-label">
+            Prizes
+          </p>
+          <div className="mb-4 grid gap-1.5" role="group" aria-labelledby="t-split">
+            {SPLITS.map((label, i) => (
+              <button key={label} className="rank__square !min-h-[44px]" aria-pressed={split === i} onClick={() => setSplit(i)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p id="t-length" className="field-label">
+            Runs for <span className="soft font-normal">then the pot pays on the results so far</span>
+          </p>
+          <div className="rank mb-4" role="group" aria-labelledby="t-length">
+            {LENGTHS.map((l) => (
+              <button key={l.label} className="rank__square" aria-pressed={length.label === l.label} onClick={() => setLength(l)}>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <button className="act w-full" disabled={!ready || busy !== null} onClick={create}>
-        {busy ?? "Create tournament"}
+        {busy ?? (address === null && !returning ? "Sign in to create" : pot ? `Create and pay ${fee} ${TOKEN_SYMBOL}` : "Create tournament")}
       </button>
       <p className="soft mt-2 text-sm">
-        Everyone plays everyone once. Creating it is free; each game is staked as usual, and you get a link to invite players.
+        Everyone plays everyone once, each game staked as usual. {pot ? "The whole pot goes to the players: nobody takes a cut, and it is refunded if you cancel before starting." : "Without a pot, creating and joining are free."}
       </p>
     </div>
   );
@@ -112,6 +165,9 @@ function List({ onOpen }: { onOpen: (id: bigint) => void }) {
 function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => void }) {
   const { address, busy, sendMoney, gameKeyTopUp } = useDegenAccount();
   const { fixtures, standings } = useFixtures(t);
+  const prize = usePrize(t);
+  const fee = prize?.entryFee ?? 0n;
+  const [now] = useState(() => Math.floor(Date.now() / 1000));
   const { label, nameOf } = useNames([...t.players, address]);
   const me = address ?? undefined;
   const iAmIn = t.players.some((p) => sameAddress(p, me));
@@ -119,6 +175,9 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
   const total = (t.players.length * (t.players.length - 1)) / 2;
   const done = fixtures.filter((f) => f.game?.status === Status.Finished).length;
   const ref = (address && nameOf(address)) || address || undefined;
+  const finishedIds = fixtures.flatMap((f) => (f.game?.status === Status.Finished ? [f.game.id] : []));
+  const canPayOut = !!prize && fee > 0n && t.started && !prize.settled && (done === total || BigInt(now) >= prize.deadline);
+  const ends = prize && prize.deadline > 0n ? new Date(Number(prize.deadline) * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";
 
   async function play() {
     // A coin flip picks the colours, so nobody can claim White in every game.
@@ -175,18 +234,45 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
         </span>{" "}
         a game · {describeClock(t.clockBase, t.clockIncrement).toLowerCase()} · hosted by {label(t.host)}
       </p>
+      {prize && fee > 0n && (
+        <p className="mt-2">
+          Prize pot{" "}
+          <span className="amount">
+            {formatToken(prize.settled ? fee * BigInt(t.players.length) : prize.pot)} {TOKEN_SYMBOL}
+          </span>{" "}
+          <span className="soft">
+            · {formatToken(fee)} {TOKEN_SYMBOL} to enter · {SPLITS[prize.mode]?.toLowerCase()}
+            {prize.settled ? " · paid out" : t.started ? ` · pays out when every game is played, or after ${ends}` : ""}
+          </span>
+        </p>
+      )}
+      {prize?.cancelled && <p className="mt-2 font-bold">This tournament was cancelled and every entry fee was refunded.</p>}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        {!t.started && !iAmIn && (
+        {!t.started && !iAmIn && !prize?.cancelled && (
           <button
             className="act"
             disabled={!address || busy !== null || t.players.length >= 16}
-            onClick={() => sendMoney(`Join "${t.name}"`, () => [{ ...tournamentsContract, functionName: "join", args: [t.id] }])}
+            onClick={() =>
+              sendMoney(fee > 0n ? `Join "${t.name}" for ${formatToken(fee)} ${TOKEN_SYMBOL}` : `Join "${t.name}"`, async (id) => {
+                const call = { ...tournamentsContract, functionName: "join" as const, args: [t.id] as const };
+                return fee > 0n ? withApproval(id.address, fee, call, TOURNAMENTS_ADDRESS) : [call];
+              })
+            }
           >
-            {address ? "Join the tournament" : "Sign in to join"}
+            {!address ? "Sign in to join" : fee > 0n ? `Join for ${formatToken(fee)} ${TOKEN_SYMBOL}` : "Join the tournament"}
           </button>
         )}
-        {!t.started && isHost && (
+        {canPayOut && (
+          <button
+            className="act"
+            disabled={!address || busy !== null}
+            onClick={() => sendMoney("Pay out the prizes", () => [{ ...tournamentsContract, functionName: "settle", args: [t.id, finishedIds] }])}
+          >
+            Pay out the prizes
+          </button>
+        )}
+        {!t.started && isHost && !prize?.cancelled && (
           <button
             className="act"
             disabled={busy !== null || t.players.length < 2}
@@ -201,8 +287,18 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
         >
           <Icon name="share" size={18} /> {t.started ? "Share" : "Invite players"}
         </button>
+        {!t.started && !prize?.cancelled && iAmIn && !isHost && (
+          <button className="ghost" disabled={busy !== null} onClick={() => sendMoney(`Leave "${t.name}"`, () => [{ ...tournamentsContract, functionName: "leave", args: [t.id] }])}>
+            {fee > 0n ? "Leave and refund" : "Leave"}
+          </button>
+        )}
+        {!t.started && !prize?.cancelled && isHost && (
+          <button className="ghost" disabled={busy !== null} onClick={() => sendMoney(`Cancel "${t.name}"`, () => [{ ...tournamentsContract, functionName: "cancel", args: [t.id] }])}>
+            {fee > 0n ? "Cancel and refund all" : "Cancel"}
+          </button>
+        )}
         <span className="soft text-sm">
-          {t.started ? `${done} of ${total} games played` : iAmIn ? "You're in. Waiting for the host to start." : "Open for entries."}
+          {prize?.cancelled ? "" : t.started ? `${done} of ${total} games played` : iAmIn ? "You're in. Waiting for the host to start." : "Open for entries."}
         </span>
       </div>
 
@@ -222,6 +318,11 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
                 <th scope="col" className="text-right">
                   Points
                 </th>
+                {prize?.settled && (
+                  <th scope="col" className="text-right">
+                    Prize
+                  </th>
+                )}
               </>
             )}
           </tr>
@@ -242,6 +343,9 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
                       {s.wins} {s.draws} {s.losses}
                     </td>
                     <td className="text-right font-bold">{points(s.points)}</td>
+                    {prize?.settled && (
+                      <td className="amount text-right">{(prize.prizes.get(p.toLowerCase()) ?? 0n) > 0n ? `+${formatToken(prize.prizes.get(p.toLowerCase()))}` : ""}</td>
+                    )}
                   </>
                 )}
               </tr>

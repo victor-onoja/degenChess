@@ -176,25 +176,111 @@ describe("DegenChess", () => {
   });
 
   describe("tournaments", () => {
-    it("registers players, starts once, and only counts games from the start", async () => {
-      const f = await loadFixture(activeGameFixture);
+    const DAY = 24 * 60 * 60;
+    async function leagueFixture() {
+      const f = await activeGameFixture();
       const t = await hre.viem.deployContract("Tournaments", [f.chess.address]);
-      await expect(t.write.create(["ab", STAKE, 300, 3], f.as(f.white))).to.be.rejectedWith("InvalidName");
-      await t.write.create(["Friday blitz", STAKE, 300, 3], f.as(f.white));
-      await expect(t.write.join([0n], f.as(f.white))).to.be.rejectedWith("AlreadyJoined");
-      await expect(t.write.start([0n], f.as(f.white))).to.be.rejectedWith("NotEnoughPlayers");
-      await t.write.join([0n], f.as(f.black));
-      await expect(t.write.start([0n], f.as(f.black))).to.be.rejectedWith("NotHost");
-      await t.write.start([0n], f.as(f.white));
-      await expect(t.write.join([0n], f.as(f.stranger))).to.be.rejectedWith("AlreadyStarted");
-      const [host, name, stake, , , , firstGameId, started, players] = await t.read.get([0n]);
+      for (const w of [f.white, f.black, f.stranger]) await f.link.write.approve([t.address, usd(1000)], { account: w.account });
+      const balance = (w) => f.link.read.balanceOf([w.account.address]);
+      // One finished game between two players; `winner` resigns for the other side, or "draw".
+      const play = async (white, black, outcome) => {
+        const id = await f.chess.read.gameCount();
+        await f.chess.write.createGame([STAKE, zeroAddress, 0, 0], f.as(white));
+        await f.chess.write.joinGame([id, zeroAddress], f.as(black));
+        if (outcome === "draw") {
+          await f.chess.write.offerDraw([id], f.as(white));
+          await f.chess.write.acceptDraw([id], f.as(black));
+        } else await f.chess.write.resign([id], f.as(outcome === white ? black : white));
+        return id;
+      };
+      return { ...f, t, balance, play };
+    }
+
+    it("without an entry fee it is only a register and holds no money", async () => {
+      const f = await loadFixture(leagueFixture);
+      await expect(f.t.write.create(["ab", STAKE, 300, 3, 0n, 0, 0], f.as(f.white))).to.be.rejectedWith("InvalidName");
+      await f.t.write.create(["Friday blitz", STAKE, 300, 3, 0n, 0, 0], f.as(f.white));
+      await expect(f.t.write.join([0n], f.as(f.white))).to.be.rejectedWith("AlreadyJoined");
+      await expect(f.t.write.start([0n], f.as(f.white))).to.be.rejectedWith("NotEnoughPlayers");
+      await f.t.write.join([0n], f.as(f.black));
+      await expect(f.t.write.start([0n], f.as(f.black))).to.be.rejectedWith("NotHost");
+      await f.t.write.start([0n], f.as(f.white));
+      await expect(f.t.write.join([0n], f.as(f.stranger))).to.be.rejectedWith("AlreadyStarted");
+      const [host, name, stake, , , , firstGameId, started, players] = await f.t.read.get([0n]);
       expect(host.toLowerCase()).to.equal(f.white.account.address.toLowerCase());
       expect(name).to.equal("Friday blitz");
       expect(stake).to.equal(STAKE);
       expect(started).to.equal(true);
       expect(firstGameId).to.equal(1n); // one game existed before it started
       expect(players.length).to.equal(2);
-      expect(await t.read.count()).to.equal(1n);
+      expect(await f.link.read.balanceOf([f.t.address])).to.equal(0n);
+      await expect(f.t.write.settle([0n, []], f.as(f.white))).to.be.rejectedWith("NoPrizePool");
+    });
+
+    it("pays the pot by points: top three 50/30/20, ties sharing their places", async () => {
+      const f = await loadFixture(leagueFixture);
+      const fee = usd(10);
+      await expect(f.t.write.create(["Cup", STAKE, 0, 0, fee, 1, 60], f.as(f.white))).to.be.rejectedWith("InvalidPrize"); // too short
+      await f.t.write.create(["Cup", STAKE, 0, 0, fee, 1, DAY], f.as(f.white));
+      await f.t.write.join([0n], f.as(f.black));
+      await f.t.write.join([0n], f.as(f.stranger));
+      expect(await f.link.read.balanceOf([f.t.address])).to.equal(fee * 3n);
+      const early = await f.play(f.white, f.black, f.white); // before the start: never counts
+      await f.t.write.start([0n], f.as(f.white));
+      await expect(f.t.write.record([0n, early], f.as(f.white))).to.be.rejectedWith("GameDoesNotCount");
+
+      const g1 = await f.play(f.white, f.black, f.white); // white beats black
+      const g2 = await f.play(f.stranger, f.white, f.white); // white beats stranger
+      await expect(f.t.write.settle([0n, [g1, g2]], f.as(f.black))).to.be.rejectedWith("TooEarly");
+      const g3 = await f.play(f.black, f.stranger, "draw");
+      const again = await f.play(f.black, f.white, f.black); // a second game between a recorded pair
+      await f.t.write.record([0n, g1], f.as(f.stranger)); // anyone may record
+      await expect(f.t.write.record([0n, again], f.as(f.black))).to.be.rejectedWith("GameDoesNotCount");
+
+      const before = [await f.balance(f.white), await f.balance(f.black), await f.balance(f.stranger)];
+      await f.t.write.settle([0n, [g1, g2, g3, again]], f.as(f.black));
+      const pot = fee * 3n;
+      expect((await f.balance(f.white)) - before[0]).to.equal(pot / 2n); // 4 points: first, 50%
+      expect((await f.balance(f.black)) - before[1]).to.equal(pot / 4n); // level on 1 point: (30% + 20%) / 2
+      expect((await f.balance(f.stranger)) - before[2]).to.equal(pot / 4n);
+      expect(await f.link.read.balanceOf([f.t.address])).to.equal(0n);
+      await expect(f.t.write.settle([0n, []], f.as(f.white))).to.be.rejectedWith("Closed");
+      const prize = await f.t.read.getPrize([0n]);
+      expect(prize[4]).to.equal(true); // settled
+      expect(prize[6]).to.equal(3); // every pairing recorded
+    });
+
+    it("winner takes all; after the deadline it pays on the results so far", async () => {
+      const f = await loadFixture(leagueFixture);
+      const fee = usd(5);
+      await f.t.write.create(["Sprint", STAKE, 0, 0, fee, 0, DAY], f.as(f.white));
+      await f.t.write.join([0n], f.as(f.black));
+      await f.t.write.join([0n], f.as(f.stranger));
+      await f.t.write.start([0n], f.as(f.white));
+      const g1 = await f.play(f.black, f.stranger, f.black); // the only game that gets played
+      await expect(f.t.write.settle([0n, [g1]], f.as(f.white))).to.be.rejectedWith("TooEarly");
+      await time.increase(DAY + 1);
+      const before = await f.balance(f.black);
+      await f.t.write.settle([0n, [g1]], f.as(f.white));
+      expect((await f.balance(f.black)) - before).to.equal(fee * 3n);
+    });
+
+    it("leaving or cancelling before the start refunds the entry fee", async () => {
+      const f = await loadFixture(leagueFixture);
+      const fee = usd(5);
+      const start = [await f.balance(f.white), await f.balance(f.black), await f.balance(f.stranger)];
+      await f.t.write.create(["Maybe", STAKE, 0, 0, fee, 0, DAY], f.as(f.white));
+      await f.t.write.join([0n], f.as(f.black));
+      await f.t.write.join([0n], f.as(f.stranger));
+      await expect(f.t.write.leave([0n], f.as(f.white))).to.be.rejectedWith("HostCannotLeave");
+      await f.t.write.leave([0n], f.as(f.black));
+      expect(await f.balance(f.black)).to.equal(start[1]);
+      await expect(f.t.write.cancel([0n], f.as(f.stranger))).to.be.rejectedWith("NotHost");
+      await f.t.write.cancel([0n], f.as(f.white));
+      expect(await f.balance(f.white)).to.equal(start[0]);
+      expect(await f.balance(f.stranger)).to.equal(start[2]);
+      expect(await f.link.read.balanceOf([f.t.address])).to.equal(0n);
+      await expect(f.t.write.join([0n], f.as(f.black))).to.be.rejectedWith("Closed");
     });
   });
 
@@ -283,6 +369,21 @@ describe("DegenChess", () => {
       const g = await gameInfo(f.chess);
       expect(g.result).to.equal(3); // Draw
       expect(g.whiteBalance).to.equal(g.blackBalance);
+    });
+
+    it("keeps each player's record: results and money won, for the leaderboard", async () => {
+      const f = await loadFixture(activeGameFixture);
+      expect(await f.chess.read.playerCount()).to.equal(0n);
+      await f.chess.write.resign([0n], f.as(f.black)); // white wins
+      const g = await gameInfo(f.chess);
+      const [players, records] = await f.chess.read.getPlayers([0n, 10n]);
+      expect(players.map((p) => p.toLowerCase())).to.deep.equal([f.white.account.address, f.black.account.address].map((p) => p.toLowerCase()));
+      expect(records[0].wins).to.equal(1);
+      expect(records[0].net).to.equal(g.whiteBalance - STAKE);
+      expect(records[1].losses).to.equal(1);
+      expect(records[1].net).to.equal(g.blackBalance - STAKE); // negative: the stake lost
+      expect(await f.chess.read.playerCount()).to.equal(2n);
+      expect((await f.chess.read.getPlayers([1n, 10n]))[0].length).to.equal(1); // paging
     });
 
     it("a draw is free: no fee, each side keeps exactly its balance", async () => {
