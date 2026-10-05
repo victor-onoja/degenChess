@@ -52,6 +52,7 @@ Each character carries its share of the stake as a gold gem over its head and st
 
 - **Music:** a shuffled soundtrack under every game: public-domain and CC0 orchestra (Wagner's Ride of the Valkyries, Grieg's In the Hall of the Mountain King, Saint-Saëns' Danse macabre, Holst's Mars) mixed with shakuhachi, erhu, guzheng and koto, Japanese festival drums, West African balafon and djembe. Fetched from Wikimedia Commons by `tools/music/fetch.mjs` into `public/music`; it starts on the first tap and plays quietly.
 - **Voices:** with the armies, the Heroes and the Undead speak at the moments that matter: a capture, a rook or queen taken (and the other side rallying), check, promotion, castling, checkmate, the start of a game, and your clock under ten seconds. Lines are rate-limited so they stay special. They are generated with Kokoro-82M (Apache-2.0) by `tools/voices/build.mjs` from `tools/voices/lines.json`; the Undead are slowed and lowered at playback.
+- `/sounds` is a sound check: every track, voice line and effect with a play button and a note on when the game uses it (unlinked, for reviewing the audio).
 - The sound button mutes everything. Every recording, model and voice is credited on `/credits`.
 
 ### The Yard
