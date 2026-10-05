@@ -119,7 +119,7 @@
     "bigCapture": [
       {
         "file": "undead-bigCapture-0.mp3",
-        "text": "Riches. Delicious."
+        "text": "Such riches. How delicious."
       },
       {
         "file": "undead-bigCapture-1.mp3",
@@ -129,7 +129,7 @@
     "check": [
       {
         "file": "undead-check-0.mp3",
-        "text": "Check, mortal."
+        "text": "Your king is in check, mortal."
       },
       {
         "file": "undead-check-1.mp3",
@@ -139,7 +139,7 @@
     "mate": [
       {
         "file": "undead-mate-0.mp3",
-        "text": "Checkmate. Rest forever."
+        "text": "Checkmate. Now you rest, forever."
       }
     ],
     "promotion": [
