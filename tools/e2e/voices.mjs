@@ -1,4 +1,6 @@
-// Plays a quick queen trade in the sandbox and checks that no two voice lines ever play at once.
+// Checks the voices never talk over each other: plays fast back-to-back big moments in the sandbox
+// and counts how many voice clips are audible at once (must be one), and that the music dips under
+// a voice and comes back.   (app running) node tools/e2e/voices.mjs
 import { chromium } from "playwright";
 const b = await chromium.launch({ channel: "chrome", headless: true, args: ["--autoplay-policy=no-user-gesture-required"] });
 const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
@@ -21,7 +23,7 @@ await p.addInitScript(() => {
     return a;
   };
 });
-await p.goto("http://localhost:3000/sandbox");
+await p.goto(`${process.env.APP_URL ?? "http://localhost:3000"}/sandbox`);
 await p.getByRole("button", { name: "2d", exact: true }).click();
 await p.locator('[data-square="e2"]').waitFor({ timeout: 60000 });
 const tap = async (a, c, wait = 350) => { await p.locator(`[data-square="${a}"]`).click(); await p.locator(`[data-square="${c}"]`).click(); await p.waitForTimeout(wait); };
@@ -35,4 +37,5 @@ const v = await p.evaluate(() => window.__voices);
 const after = await p.evaluate(() => (window.__music ? window.__music.volume : null));
 console.log(`voice lines played: ${v.played}, most at once: ${v.max}, music volume while speaking: ${low}, after: ${after}, page errors: ${errors.length}`);
 await b.close();
-if (v.max > 1 || errors.length) process.exit(1);
+if (v.max > 1 || errors.length || v.played === 0) process.exit(1);
+console.log("VOICES OK");
