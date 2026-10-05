@@ -104,7 +104,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 ### Quality
 
 - 37 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
-- Six browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout, the audience count, the leaderboard), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
+- Six browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout and through the Open / Running / Finished lists, the audience count, the leaderboard, the feedback form), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
 - Run against the live site and Monad on 5 October 2026 (`APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`): 5.9 s from sign-up to the first transaction, prompt-free moves, the stateless restore, a checkmate settled by the always-on referee, withdrawal and rematch.
 - A hands-on test script covering every feature, with the moves to play and the amounts to expect: `docs/TEST-PLAN.md`.
 - Security brief for an independent reviewer: `docs/AUDIT.md`.
@@ -165,7 +165,8 @@ In priority order.
 2. **Record the three videos** (by 12 October, leaving a day for retakes).
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
 4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
-5. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
-6. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
-7. **Security review:** fold in what the independent reviewer finds and say so here.
-8. **Optional:** player profiles; knockout tournaments.
+5. **Discord:** create the server, add the feedback channel's webhook (`DISCORD_FEEDBACK_WEBHOOK`) and the invite link (`NEXT_PUBLIC_DISCORD_URL`) on Vercel, redeploy, and send one test message from the form.
+6. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
+7. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
+8. **Security review:** fold in what the independent reviewer finds and say so here.
+9. **Optional:** player profiles; knockout tournaments.

@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { CONTRACT_ADDRESS } from "../config";
+import { CONTRACT_ADDRESS, DISCORD_URL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { cleanName, NAME_HINT, NAME_RULE, useNames, useNameStatus } from "../lib/names";
 import { NameEditor } from "../components/NameEditor";
@@ -14,6 +14,7 @@ import { GameView } from "../components/GameView";
 import { Seo } from "../components/Seo";
 import { Wordmark } from "../components/Wordmark";
 import { Yard } from "../components/Yard";
+import { FeedbackLink } from "../components/Feedback";
 import { Leaderboard } from "../components/Leaderboard";
 import { TournamentTeaser } from "../components/TournamentTeaser";
 
@@ -206,7 +207,13 @@ const Home: NextPage = () => {
               Running on Monad testnet with test dollars. Nothing here is real money yet.
             </p>
           </div>
-          <nav className="flex gap-6 text-sm" aria-label="Project links">
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Project links">
+            <FeedbackLink />
+            {DISCORD_URL && (
+              <a className="link" href={DISCORD_URL} target="_blank" rel="noreferrer">
+                Discord
+              </a>
+            )}
             <a className="link" href="https://github.com/victor-onoja/degenChess" target="_blank" rel="noreferrer">
               Source
             </a>

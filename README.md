@@ -64,6 +64,7 @@ The lobby. Start a board (stake and clock) on the left; on the right, every game
 - **Leaderboard** (`/leaderboard`, top five on the landing page): wins, draws, losses and money won (payouts minus stakes, after fees). The game contract keeps every player's record as games finish (`stats`, `getPlayers`), so the table is exact and permanent however many games are played; no server keeps score.
 - **Tournaments** (`/tournaments`): round-robin leagues of ordinary staked games. Anyone creates one (name, stake per game, clock) for free and shares its link; players join; the host starts it; every pair plays once, with a coin flip for colours. Press **Play** to open your next game and your opponent joins it from the tournament page. Standings (1 point a win, ½ a draw) are read from the games themselves; nobody, not even the host, can award a result.
   - **The host chooses how it runs.** With no entry fee the `Tournaments` contract is only a register and holds no money. With an entry fee (1, 5 or 10), every player pays it into a prize pot when joining, and the host picks the prizes (winner takes all, or top three 50/30/20) and how long it runs (1, 3 or 7 days). When every game is played, or the time is up, anyone presses **Pay out the prizes**: the contract reads each result from the game contract and pays the pot by points, ties sharing their places. Nobody takes a cut. Before the start a player can leave, or the host can cancel, and entry fees are refunded.
+  - **Open, Running, Finished.** The list is split by state. Open shows the entry fee, the pot so far and the host; Running shows games played and when the pot pays out; Finished shows who won and what first place paid. A pot tournament is finished when its pot is paid; a free one when every pairing has been played.
 - **Who's watching:** a live game shows how many people are watching it, to the players and the spectators, and live boards in the Yard show the same number. Each open game page checks in with `/api/watch` every ten seconds; the count lives in the server's memory, so it is a head-count, not a record.
 
 ### Practice board
@@ -87,6 +88,10 @@ There is no wallet extension and no seed phrase. [Mera](https://mera.category.xy
 Nothing secret is stored. Clear the browser or switch devices mid-game and one passkey prompt rebuilds both keys; the game itself lives on-chain. The game key is wiped when you press Lock, close or reload the tab, or after 30 idle minutes; one passkey tap unlocks it again.
 
 New players get gas (MON) and test dollars from `/api/drip`, a faucet that only sends from its own balance. Set `FAUCET_PRIVATE_KEY` on the server (locally it falls back to the Hardhat account, or `DEPLOYER_PRIVATE_KEY`).
+
+### Feedback and Discord
+
+A **Feedback** link (in the footer and on a finished game) opens a short form: a bug, an idea or something else. `/api/feedback` posts it to a Discord channel with the player's username, the page and the browser type. Set `DISCORD_FEEDBACK_WEBHOOK` on the server (a channel webhook address: treat it as a secret) and `NEXT_PUBLIC_DISCORD_URL` (the public invite link, shown in the footer and the form). Without the webhook the form says feedback is not switched on. Five messages per sender per ten minutes; mentions are disabled, so the form cannot ping the channel.
 
 ### Trust model
 
@@ -120,7 +125,7 @@ tools/e2e/passkey-game.mjs   two-player browser test with simulated passkeys
 tools/e2e/core-flows.mjs     cancel, tap-to-move on a phone, promotion, spectating, draw, win on time
 tools/e2e/account-flows.mjs  usernames and the wallet
 tools/e2e/sandbox.mjs        the practice board
-tools/e2e/community.mjs      tournaments, audience count, leaderboard
+tools/e2e/community.mjs      tournaments, audience count, leaderboard, feedback
 tools/e2e/voices.mjs         voices speak one at a time, music dips under them
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
@@ -162,7 +167,7 @@ node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
 node tools/e2e/sandbox.mjs        # the practice board on desktop and phone
-node tools/e2e/community.mjs      # a tournament end to end, the audience count, the leaderboard
+node tools/e2e/community.mjs      # a tournament end to end, the audience count, the leaderboard, feedback
 node tools/e2e/voices.mjs         # voices never overlap; the music dips under them
 npm run lint
 npm run build

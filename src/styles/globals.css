@@ -82,7 +82,8 @@ a {
   text-decoration-thickness: 1px;
 }
 
-input {
+input,
+textarea {
   font: inherit;
   color: var(--bone);
   background: var(--field-deep);
@@ -91,7 +92,8 @@ input {
   outline-offset: -2px;
   min-width: 0;
 }
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--bone-soft);
 }
 

@@ -25,7 +25,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 - Lobby (the Yard): sign up (one passkey prompt, optional username), create a game (stake and clock), join an open game, watch a live game, review finished games or just your own.
 - Game: play in 2D (tap or drag; the phone default), 3D, or both side by side (the wide-screen default); clocks; a live split of the pot; resign, draw, claim on time, rematch; withdraw. Spectators always watch in 3D.
 - Priority set by the owner (3 October 2026): the 2D board and the core functions must work flawlessly; 3D is for showmanship and memorability.
-- Community: a leaderboard from on-chain results, round-robin tournaments anyone can create and share, and a live count of people watching each game.
+- Community: a leaderboard from on-chain results, round-robin tournaments anyone can create and share, and a live count of people watching each game. Tournaments are listed as Open, Running or Finished, with the winner on finished ones. A feedback form sends bugs and ideas to the team's Discord.
 - Referee: a Chainlink CRE workflow replays every game and settles checkmates, rule draws and illegal moves. It runs on a server; without a CRE API key it delivers the same verdict directly.
 - Runs on Monad testnet with a test dollar (tUSD). Moves confirm in under a second.
 - Used on phones as much as laptops; the owner cares strongly about the mobile experience.

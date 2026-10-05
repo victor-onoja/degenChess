@@ -17,7 +17,7 @@ import { formatToken, sameAddress } from "../lib/format";
 import { useNames } from "../lib/names";
 import { shareLink } from "../lib/share";
 import { withApproval } from "../lib/stake";
-import { tournamentsContract, useFixtures, usePrize, useTournament, useTournaments, type Fixture, type Tournament } from "../lib/tournaments";
+import { tournamentsContract, useFixtures, usePrize, useTournament, useTournamentList, type Fixture, type ListedTournament, type Tournament } from "../lib/tournaments";
 
 // Tournaments: a league where everyone plays everyone once, each game an ordinary staked game.
 // Create one, share the link, start it when the players are in, and the table fills itself in.
@@ -135,30 +135,98 @@ function Create({ onCreated }: { onCreated: (id: bigint) => void }) {
   );
 }
 
+const TABS = [
+  { id: "open", name: "Open", empty: "No tournament is taking entries right now. Start one: it takes a name and a tap." },
+  { id: "running", name: "Running", empty: "No tournament is being played right now." },
+  { id: "finished", name: "Finished", empty: "No tournament has finished yet." },
+] as const;
+const day = (seconds: bigint) => new Date(Number(seconds) * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+
 function List({ onOpen }: { onOpen: (id: bigint) => void }) {
-  const { tournaments, loading } = useTournaments();
-  if (loading) return <p className="soft">Looking for tournaments...</p>;
-  if (tournaments.length === 0) return <p className="soft">No tournaments yet. Start the first one.</p>;
+  const { list, loading } = useTournamentList();
+  const { label } = useNames(list.flatMap((x) => [x.t.host, ...x.winners]));
+  const [picked, setPicked] = useState<(typeof TABS)[number]["id"] | null>(null);
+  if (loading && list.length === 0) return <p className="soft">Looking for tournaments...</p>;
+  if (list.length === 0) return <p className="soft">No tournaments yet. Start the first one.</p>;
+  // Until a tab is chosen, show the first that has anything in it.
+  const tab = picked ?? TABS.find((t) => list.some((x) => x.state === t.id))?.id ?? "open";
+  const shown = list.filter((x) => x.state === tab);
+  const money = (v: bigint) => `${formatToken(v)} ${TOKEN_SYMBOL}`;
+
+  // The second line of a row: what a visitor needs to know about a tournament in that state.
+  const facts = (x: ListedTournament) => {
+    const players = `${x.t.players.length} ${x.t.players.length === 1 ? "player" : "players"}`;
+    if (x.state === "open")
+      return (
+        <>
+          {players} · <span className="amount">{money(x.t.stake)}</span> a game · {describeClock(x.t.clockBase, x.t.clockIncrement).toLowerCase()} ·{" "}
+          {x.entryFee > 0n ? (
+            <>
+              <span className="amount">{money(x.entryFee)}</span> to enter, pot <span className="amount">{money(x.pot)}</span> so far
+            </>
+          ) : (
+            "free to enter"
+          )}{" "}
+          · hosted by {label(x.t.host)}
+        </>
+      );
+    if (x.state === "running")
+      return (
+        <>
+          {x.done} of {x.total} games played · {players}
+          {x.entryFee > 0n && (
+            <>
+              {" "}
+              · pot <span className="amount">{money(x.pot)}</span> · {x.payable ? "ready to pay out" : `pays out by ${day(x.deadline)}`}
+            </>
+          )}
+        </>
+      );
+    if (x.cancelled) return <>Cancelled before it started{x.entryFee > 0n ? ", entry fees refunded" : ""}</>;
+    const who = x.winners.map(label);
+    const names = who.length > 1 ? `${who.slice(0, -1).join(", ")} and ${who[who.length - 1]}` : who[0];
+    return (
+      <>
+        {who.length === 0 ? "No games were played" : who.length > 1 ? `${names} shared first place` : `${names} won`}
+        {x.firstPrize > 0n && (
+          <>
+            {" "}
+            <span className="amount">+{money(x.firstPrize)}</span>
+            {who.length > 1 ? " each" : ""}
+          </>
+        )}{" "}
+        · {players} · {x.done} of {x.total} games played
+      </>
+    );
+  };
+
   return (
-    <ul className="facts">
-      {tournaments.map((t) => (
-        <li key={t.id.toString()}>
-          <button className="flex w-full items-baseline justify-between gap-3 py-3 text-left" onClick={() => onOpen(t.id)}>
-            <span className="min-w-0">
-              <span className="block truncate font-bold">{t.name}</span>
-              <span className="soft text-sm">
-                {t.players.length} {t.players.length === 1 ? "player" : "players"} ·{" "}
-                <span className="amount">
-                  {formatToken(t.stake)} {TOKEN_SYMBOL}
-                </span>{" "}
-                a game · {describeClock(t.clockBase, t.clockIncrement).toLowerCase()}
-              </span>
-            </span>
-            <span className="link shrink-0 text-sm">{t.started ? "Standings" : "Join"}</span>
+    <div>
+      <div className="mb-3 grid grid-flow-col auto-cols-fr gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
+        {TABS.map((t) => (
+          <button key={t.id} className="ghost justify-center !px-2 text-sm sm:!px-4 sm:text-base" aria-pressed={tab === t.id} onClick={() => setPicked(t.id)}>
+            {t.name} <span className={tab === t.id ? "" : "soft"}>{list.filter((x) => x.state === t.id).length}</span>
           </button>
-        </li>
-      ))}
-    </ul>
+        ))}
+      </div>
+      {shown.length === 0 ? (
+        <p className="soft py-3">{TABS.find((t) => t.id === tab)!.empty}</p>
+      ) : (
+        <ul className="facts">
+          {shown.map((x) => (
+            <li key={x.t.id.toString()}>
+              <button className="flex w-full items-baseline justify-between gap-3 py-3 text-left" onClick={() => onOpen(x.t.id)}>
+                <span className="min-w-0">
+                  <span className="block truncate font-bold">{x.t.name}</span>
+                  <span className="soft block text-sm">{facts(x)}</span>
+                </span>
+                <span className="link shrink-0 text-sm">{x.state === "open" ? "Join" : x.state === "running" ? "Standings" : "Results"}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -177,6 +245,12 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
   const ref = (address && nameOf(address)) || address || undefined;
   const finishedIds = fixtures.flatMap((f) => (f.game?.status === Status.Finished ? [f.game.id] : []));
   const canPayOut = !!prize && fee > 0n && t.started && !prize.settled && (done === total || BigInt(now) >= prize.deadline);
+  // Over: the pot is paid, or (with no pot) every game is played. First place is whoever was paid most, or tops the table.
+  const over = !!prize && t.started && !prize.cancelled && (fee > 0n ? prize.settled : total > 0 && done === total);
+  const topPrize = prize ? [...prize.prizes.values()].reduce((max, x) => (x > max ? x : max), 0n) : 0n;
+  const champions = (
+    fee > 0n ? t.players.filter((p) => topPrize > 0n && prize?.prizes.get(p.toLowerCase()) === topPrize) : standings.filter((s) => s.points === standings[0]?.points).map((s) => s.address)
+  ).map(label);
   const ends = prize && prize.deadline > 0n ? new Date(Number(prize.deadline) * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "";
 
   async function play() {
@@ -247,6 +321,11 @@ function Detail({ t, onOpenGame }: { t: Tournament; onOpenGame: (id: bigint) => 
         </p>
       )}
       {prize?.cancelled && <p className="mt-2 font-bold">This tournament was cancelled and every entry fee was refunded.</p>}
+      {over && champions.length > 0 && (
+        <p className="mt-2 font-bold">
+          Finished. {champions.length > 1 ? `${champions.slice(0, -1).join(", ")} and ${champions[champions.length - 1]} shared first place.` : `${champions[0]} won.`}
+        </p>
+      )}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         {!t.started && !iAmIn && !prize?.cancelled && (

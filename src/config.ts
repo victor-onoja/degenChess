@@ -12,6 +12,9 @@ export const TOKEN_ADDRESS = address(process.env.NEXT_PUBLIC_TOKEN_ADDRESS, MONA
 export const NAMES_ADDRESS = address(process.env.NEXT_PUBLIC_NAMES_ADDRESS, MONAD_TESTNET.names);
 export const TOURNAMENTS_ADDRESS = address(process.env.NEXT_PUBLIC_TOURNAMENTS_ADDRESS, MONAD_TESTNET.tournaments);
 
+/** The community's Discord invite, shown in the footer and the feedback form when set. */
+export const DISCORD_URL = /^https:\/\/discord\.(gg|com)\//.test(process.env.NEXT_PUBLIC_DISCORD_URL ?? "") ? process.env.NEXT_PUBLIC_DISCORD_URL! : "";
+
 export const TOKEN_SYMBOL = process.env.NEXT_PUBLIC_TOKEN_SYMBOL ?? "tUSD";
 export const TOKEN_DECIMALS = Number(process.env.NEXT_PUBLIC_TOKEN_DECIMALS ?? 6);
 /** The testnet stake token (MockUSD) lets anyone mint; hide the faucet for a real stablecoin. */

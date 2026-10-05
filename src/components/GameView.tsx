@@ -23,6 +23,7 @@ import { usePieceSet } from "../lib/pieceSet";
 import { say, useVoices } from "../lib/voices";
 import { nextTrack, useMusic } from "../lib/music";
 import { useWatchers } from "../lib/watchers";
+import { FeedbackLink } from "./Feedback";
 import { ShareButton } from "./ShareButton";
 import { MoveList } from "./MoveList";
 import { BOARD_PIECES } from "./boardPieces";
@@ -882,6 +883,7 @@ export function GameView({
                     Rematch ({formatToken(info.stake)} {TOKEN_SYMBOL}, you play {myColor === "w" ? "Black" : "White"})
                   </button>
                 ))}
+              <FeedbackLink className="link mx-auto text-sm">How was that? Send feedback</FeedbackLink>
             </>
           )}
 

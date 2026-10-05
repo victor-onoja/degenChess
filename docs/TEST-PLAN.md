@@ -193,19 +193,22 @@ How to read a move: `e2 → e4` means move the piece on e2 to e4. On a phone tap
 **A tournament with a prize pot (A hosts; B and C play)**
 
 - [ ] 10.2 A opens **Tournaments**, names it `Test Cup`, Stake per game **1**, Clock **5 + 3**, Prize pot **5**, **Top three: 50 / 30 / 20**, Runs for **1 day**. Presses **Create and pay 5 tUSD**, confirms.
+- [ ] 10.2a Go back to **All tournaments**: `Test Cup` is under **Open**, showing "1 player", "5 tUSD to enter, pot 5 tUSD so far" and "hosted by t_alice".
 - [ ] 10.3 The page shows "Prize pot 5 tUSD", A in the player list, and **Invite players**. Share or copy the link.
 - [ ] 10.4 B and C open the link and press **Join for 5 tUSD**. The pot reads **15 tUSD**, 3 players.
 - [ ] 10.5 C presses **Leave and refund**: the pot drops to 10 and C's 5 tUSD is back. C joins again: 15.
 - [ ] 10.6 A presses **Start: close entries**. The page shows Standings and three games: A v B, A v C, B v C, each "To play" or with a **Play** button for the two players.
+- [ ] 10.6a In the list it has moved to **Running**: "0 of 3 games played · 3 players · pot 15 tUSD · pays out by" tomorrow's date.
 - [ ] 10.7 A presses **Play** on A v B and gets a waiting game. B opens the tournament page, presses **Join** on that game, then **Join as Black** on the board. Play one move each, then B resigns. The game list shows "t_alice won", and A has 1 point.
 - [ ] 10.8 Play A v C: C creates with **Play**, A joins, one move each, **agree a draw**. A has 1½, C has ½.
 - [ ] 10.9 Play B v C: one move each, C resigns. B has 1 point.
 - [ ] 10.10 "3 of 3 games played", and a **Pay out the prizes** button appears. Anyone presses it and confirms.
-- [ ] 10.11 It says "paid out" and the table has a Prize column: **A +7.5** (50%), **B +4.5** (30%), **C +3** (20%). Balances rise to match.
+- [ ] 10.11 It says "paid out" and the table has a Prize column: **A +7.5** (50%), **B +4.5** (30%), **C +3** (20%). Balances rise to match. The page says "Finished. t_alice won."
+- [ ] 10.11a In the list it is now under **Finished**: "t_alice won +7.5 tUSD · 3 players · 3 of 3 games played", with a **Results** link.
 
 **A free tournament**
 
-- [ ] 10.12 Create one with Prize pot **None**: creating and joining cost nothing, there is no pot line, and the standings still fill in from games played.
+- [ ] 10.12 Create one with Prize pot **None**: creating and joining cost nothing, there is no pot line, and the standings still fill in from games played. Once every pair has played, it moves to **Finished** with the winner's name.
 
 ## Part 11: The other pages (5 min)
 
@@ -213,7 +216,9 @@ How to read a move: `e2 → e4` means move the piece on e2 to e4. On a phone tap
 - [ ] 11.2 `/sounds`: every music track, voice line and effect plays.
 - [ ] 11.3 `/credits`: music, art and voices are listed with their licences.
 - [ ] 11.4 The speaker button in a game silences music, voices and effects at once, and pressing it again brings them back. Holding it on a phone (right-click on a laptop) skips to the next song.
-- [ ] 11.5 Paste a game link into a chat app: the preview shows the Away Chess image and title.
+- [ ] 11.5 Scroll to the footer and press **Feedback**. Choose **An idea**, type a sentence, press **Send**: "Sent. Every message is read." and the message appears in your Discord channel with your username and the page. (Needs the Discord webhook set on Vercel; without it the form says "Feedback is not switched on yet.")
+- [ ] 11.6 A finished game shows **How was that? Send feedback**, which opens the same form.
+- [ ] 11.7 Paste a game link into a chat app: the preview shows the Away Chess image and title.
 
 ## Part 12: A second phone, if you can (5 min)
 

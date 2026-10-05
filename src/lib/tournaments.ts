@@ -108,6 +108,58 @@ export function usePrize(t: Tournament | undefined): Prize | undefined {
   }, [t, data]);
 }
 
+type Game = GameInfo & { id: bigint };
+const key = (x: string) => x.toLowerCase();
+
+/** The games that came back from a batch of `getGame` reads, with their ids. */
+function readGames(ids: bigint[], data: readonly { status: string; result?: unknown }[] | undefined): Game[] {
+  return ids.flatMap((id, i) => {
+    const r = data?.[i];
+    return r?.status === "success" ? [{ id, ...toGameInfo(r.result as Parameters<typeof toGameInfo>[0]) }] : [];
+  });
+}
+
+/** A tournament's pairings and standings, worked out from the games played since it started. */
+function tableOf(t: Tournament, all: Game[]): { fixtures: Fixture[]; standings: TournamentRow[] } {
+  const inIt = new Set(t.players.map(key));
+  const games = all.filter((g) => g.id >= t.firstGameId && g.stake === t.stake);
+  const fixtures: Fixture[] = [];
+  for (let i = 0; i < t.players.length; i++) {
+    for (let j = i + 1; j < t.players.length; j++) {
+      const [a, b] = [t.players[i], t.players[j]];
+      const pair = new Set([key(a), key(b)]);
+      const game =
+        games.find((g) => (g.status === Status.Active || g.status === Status.Finished) && pair.has(key(g.white)) && pair.has(key(g.black)) && key(g.white) !== key(g.black)) ?? null;
+      const open = game ? null : (games.find((g) => g.status === Status.Open && pair.has(key(g.white))) ?? null);
+      fixtures.push({ a, b, game, open });
+    }
+  }
+
+  const rows = new Map<string, TournamentRow>(t.players.map((p) => [key(p), { address: p, played: 0, wins: 0, draws: 0, losses: 0, points: 0, net: 0n }]));
+  for (const { game } of fixtures) {
+    if (!game || game.status !== Status.Finished || !inIt.has(key(game.white)) || !inIt.has(key(game.black))) continue;
+    const white = rows.get(key(game.white))!;
+    const black = rows.get(key(game.black))!;
+    white.played++;
+    black.played++;
+    white.net += game.whiteBalance - game.stake;
+    black.net += game.blackBalance - game.stake;
+    if (game.result === Result.Draw) {
+      white.draws++;
+      black.draws++;
+      white.points += 1;
+      black.points += 1;
+    } else {
+      const [winner, loser] = game.result === Result.WhiteWins ? [white, black] : [black, white];
+      winner.wins++;
+      winner.points += 2;
+      loser.losses++;
+    }
+  }
+  const standings = [...rows.values()].sort((x, y) => y.points - x.points || (x.net === y.net ? 0 : x.net > y.net ? -1 : 1));
+  return { fixtures, standings };
+}
+
 /** Every pairing of a started tournament with its game, and the standings those games give. */
 export function useFixtures(t: Tournament | undefined): { fixtures: Fixture[]; standings: TournamentRow[] } {
   const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { enabled: !!t?.started, refetchInterval: POLL_MS } });
@@ -120,50 +172,85 @@ export function useFixtures(t: Tournament | undefined): { fixtures: Fixture[]; s
 
   return useMemo(() => {
     if (!t) return { fixtures: [], standings: [] };
-    const key = (x: string) => x.toLowerCase();
-    const inIt = new Set(t.players.map(key));
-    const games = ids.flatMap((id, i) => {
-      const r = data?.[i];
-      if (r?.status !== "success") return [];
-      const g = { id, ...toGameInfo(r.result as Parameters<typeof toGameInfo>[0]) };
-      return g.stake === t.stake ? [g] : [];
-    });
-
-    const fixtures: Fixture[] = [];
-    for (let i = 0; i < t.players.length; i++) {
-      for (let j = i + 1; j < t.players.length; j++) {
-        const [a, b] = [t.players[i], t.players[j]];
-        const pair = new Set([key(a), key(b)]);
-        const game =
-          games.find((g) => (g.status === Status.Active || g.status === Status.Finished) && pair.has(key(g.white)) && pair.has(key(g.black)) && key(g.white) !== key(g.black)) ?? null;
-        const open = game ? null : (games.find((g) => g.status === Status.Open && pair.has(key(g.white))) ?? null);
-        fixtures.push({ a, b, game, open });
-      }
-    }
-
-    const rows = new Map<string, TournamentRow>(t.players.map((p) => [key(p), { address: p, played: 0, wins: 0, draws: 0, losses: 0, points: 0, net: 0n }]));
-    for (const { game } of fixtures) {
-      if (!game || game.status !== Status.Finished || !inIt.has(key(game.white)) || !inIt.has(key(game.black))) continue;
-      const white = rows.get(key(game.white))!;
-      const black = rows.get(key(game.black))!;
-      white.played++;
-      black.played++;
-      white.net += game.whiteBalance - game.stake;
-      black.net += game.blackBalance - game.stake;
-      if (game.result === Result.Draw) {
-        white.draws++;
-        black.draws++;
-        white.points += 1;
-        black.points += 1;
-      } else {
-        const [winner, loser] = game.result === Result.WhiteWins ? [white, black] : [black, white];
-        winner.wins++;
-        winner.points += 2;
-        loser.losses++;
-      }
-    }
-    const standings = [...rows.values()].sort((x, y) => y.points - x.points || (x.net === y.net ? 0 : x.net > y.net ? -1 : 1));
-    return { fixtures, standings };
+    return tableOf(t, readGames(ids, data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, data, ids.length]);
+}
+
+export interface ListedTournament {
+  t: Tournament;
+  /** open: taking entries. running: started, games still to play or a pot still to pay. finished: over. */
+  state: "open" | "running" | "finished";
+  cancelled: boolean;
+  entryFee: bigint;
+  /** Everything paid in: the entry fee times the players (0 without a pot). */
+  pot: bigint;
+  deadline: bigint;
+  /** Games finished, of the games the league needs. */
+  done: number;
+  total: number;
+  /** The pot can be paid now: every game is played, or the deadline has passed. */
+  payable: boolean;
+  /** Who came first once it is over (more than one when they tied), and what first place paid each. */
+  winners: `0x${string}`[];
+  firstPrize: bigint;
+}
+
+const LIST_SCAN = 400; // the most recent games looked at to score the tournaments in a list
+
+/**
+ * The newest tournaments with where each one stands. A pot tournament is over when its pot is paid;
+ * a free one, which the contract never closes, is over when every pairing has a finished game.
+ */
+export function useTournamentList(limit = 30): { list: ListedTournament[]; loading: boolean } {
+  const { tournaments, loading } = useTournaments(limit);
+  const { data: prizes, isLoading: loadingPrizes } = useReadContracts({
+    contracts: tournaments.map((t) => ({ ...tournamentsContract, functionName: "getPrize" as const, args: [t.id] as const })),
+    query: { enabled: tournaments.length > 0, refetchInterval: POLL_MS * 3 },
+  });
+  // Games are only needed for tournaments that have started and whose pot (if any) is not yet paid.
+  const settled = (i: number) => {
+    const p = prizes?.[i]?.result;
+    return !!p && (p[4] || p[5]);
+  };
+  const live = tournaments.filter((t, i) => t.started && !settled(i));
+  const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { enabled: live.length > 0, refetchInterval: POLL_MS * 3 } });
+  const ids: bigint[] = [];
+  if (live.length > 0 && gameCount !== undefined) {
+    let from = live.reduce((min, t) => (t.firstGameId < min ? t.firstGameId : min), gameCount);
+    if (gameCount - from > BigInt(LIST_SCAN)) from = gameCount - BigInt(LIST_SCAN);
+    for (let id = from; id < gameCount; id++) ids.push(id);
+  }
+  const { data: games, isLoading: loadingGames } = useReadContracts({
+    contracts: ids.map((id) => ({ ...chessContract, functionName: "getGame" as const, args: [id] as const })),
+    query: { enabled: ids.length > 0, refetchInterval: POLL_MS * 3 },
+  });
+
+  const list = useMemo(() => {
+    const all = readGames(ids, games);
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    return tournaments.map((t, i): ListedTournament => {
+      const p = prizes?.[i]?.result;
+      const [entryFee, , deadline, , paid, cancelled] = p ?? [0n, 0, 0n, 0n, false, false];
+      const total = (t.players.length * (t.players.length - 1)) / 2;
+      const base = { t, cancelled, entryFee, pot: entryFee * BigInt(t.players.length), deadline, total, done: 0, payable: false, winners: [], firstPrize: 0n };
+      if (cancelled) return { ...base, state: "finished" };
+      if (!t.started) return { ...base, state: "open" };
+      if (paid && p) {
+        const firstPrize = p[8].reduce((max, x) => (x > max ? x : max), 0n);
+        return { ...base, state: "finished", done: p[6], firstPrize, winners: firstPrize > 0n ? t.players.filter((_, j) => p[8][j] === firstPrize) : [] };
+      }
+      const { fixtures, standings } = tableOf(t, all);
+      const done = fixtures.filter((f) => f.game?.status === Status.Finished).length;
+      const allPlayed = total > 0 && done === total;
+      if (entryFee > 0n) return { ...base, state: "running", done, payable: allPlayed || (deadline > 0n && now >= deadline) };
+      const top = standings[0]?.points ?? 0;
+      return allPlayed
+        ? { ...base, state: "finished", done, winners: standings.filter((s) => s.points === top).map((s) => s.address) }
+        : { ...base, state: "running", done };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tournaments, prizes, games, ids.length]);
+
+  return { list, loading: loading || (tournaments.length > 0 && loadingPrizes) || (ids.length > 0 && loadingGames) };
 }

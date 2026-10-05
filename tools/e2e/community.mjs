@@ -1,5 +1,6 @@
 // End-to-end checks for the community features: a tournament with a prize pot from creation to
-// payout, the audience count on a live game, and the leaderboard.
+// payout (and where it sits in the Open / Running / Finished lists), the audience count on a live
+// game, the leaderboard, and the feedback form.
 //   (app running against a local chain or testnet) node tools/e2e/community.mjs
 import { chromium } from "playwright";
 
@@ -64,6 +65,16 @@ await a.getByRole("button", { name: "Create and pay 5 tUSD" }).click();
 await a.waitForURL(/tournaments\?t=\d+/, { timeout: 60000 });
 await idle(a);
 const tournamentPath = new URL(a.url()).pathname + new URL(a.url()).search;
+// The list as a visitor sees it: one row for this cup, under the tab for its state.
+const listed = async (tab) => {
+  await watcher.goto(`${APP}/tournaments`);
+  await watcher.getByRole("button", { name: new RegExp(`^${tab} \\d+$`) }).click();
+  const row = watcher.locator("ul.facts li", { hasText: `Cup ${stamp}` });
+  await row.waitFor({ timeout: 30000 });
+  return (await row.innerText()).replace(/\s+/g, " ");
+};
+let row = await listed("Open");
+check(/1 player/.test(row) && /5 tUSD to enter, pot 5 tUSD so far/.test(row) && row.includes(`hosted by ${alice}`) && /Join$/.test(row), `listed under Open (${row})`);
 await go(b, tournamentPath);
 await b.getByRole("button", { name: "Join for 5 tUSD" }).click();
 await b.getByText("You're in. Waiting for the host to start.").waitFor({ timeout: 60000 });
@@ -73,6 +84,8 @@ await a.getByText("0 of 1 games played").waitFor({ timeout: 60000 });
 await idle(a);
 await a.getByText(/Prize pot\s*10 tUSD/).waitFor({ timeout: 30000 });
 check(true, "tournament created with a 5 tUSD entry fee, joined and started: the pot is 10 tUSD");
+row = await listed("Running");
+check(/0 of 1 games played · 2 players · pot 10 tUSD · pays out by /.test(row) && /Standings$/.test(row), `listed under Running (${row})`);
 
 step("They play their game from the tournament page");
 await a.getByRole("button", { name: "Play", exact: true }).click();
@@ -108,12 +121,32 @@ await a.getByText("paid out").waitFor({ timeout: 60000 });
 await idle(a);
 const paid = await a.locator("table.ladder").innerText();
 check(/\+10/.test(paid), `the winner is paid the whole pot (${paid.replace(/\s+/g, " ").slice(0, 100)})`);
+await a.getByText(`Finished. ${alice} won.`).waitFor({ timeout: 30000 });
+check(true, "the tournament page names the winner");
 if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-tournament.png`, fullPage: true });
+row = await listed("Finished");
+check(row.includes(`${alice} won +10 tUSD`) && /1 of 1 games played/.test(row) && /Results$/.test(row), `listed under Finished (${row})`);
+if (SHOTS) await watcher.screenshot({ path: `${SHOTS}/community-tournament-list.png` });
 await go(a, "/leaderboard");
 await a.getByText(alice).first().waitFor({ timeout: 60000 });
 const ladder = await a.locator("table.ladder").innerText();
 check(ladder.indexOf(alice) < ladder.indexOf(bob) && ladder.indexOf(bob) > 0, "the leaderboard ranks the winner above the loser");
 if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-leaderboard.png` });
+
+step("Feedback: a signed-in player sends a bug report from the footer");
+await go(a, "/");
+await a.getByRole("button", { name: "Feedback", exact: true }).click();
+await a.getByRole("button", { name: "An idea" }).click();
+check(await a.getByRole("button", { name: "Send", exact: true }).isDisabled(), "an empty message cannot be sent");
+await a.getByRole("textbox").last().fill(`Test idea ${stamp}: knockout tournaments @everyone`);
+await a.getByRole("button", { name: "Send", exact: true }).click();
+// Without a webhook configured the form says so; with one, it thanks the player.
+const outcome = await Promise.race([
+  a.getByText("Sent. Every message is read.").waitFor({ timeout: 30000 }).then(() => "sent"),
+  a.getByText("Feedback is not switched on yet.").waitFor({ timeout: 30000 }).then(() => "off"),
+]);
+check(outcome === "sent" || process.env.FEEDBACK !== "1", `feedback ${outcome === "sent" ? "was delivered" : "is not switched on here (set FEEDBACK=1 to require it)"}`);
+if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-feedback.png` });
 
 await browser.close();
 check(errors.length === 0, `no page errors${errors.length ? ": " + errors.join(" / ") : ""}`);
