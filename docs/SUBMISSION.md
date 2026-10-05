@@ -95,8 +95,8 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 | --- | --- |
 | Workflow | `cre/referee/main.ts` (EVM log trigger on `MoveMade`, reads `getGame`/`getMoves`), verdict logic `cre/referee/judge.ts` with unit tests |
 | Consumer contract | `contracts/ChessReferee.sol`: `onReport` → `DegenChess.arbitrate` |
-| Checkmate settled automatically | game 0, verdict tx `0x7cc3e603b7ca850600bd94842a48641893e8427a3f10cb076301e85bbfb76825`: White wins, 1.95 / 0 tUSD |
-| Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0xacfa35cca3578043b1dbdae7c88dbea2e726b6792cac8a239e83d41230cdc24e`); verdict tx `0xd30eae7f681cd4a6361cd0e23f87d28090f0f3e1936194526fa82e9ab41adfe2` forfeited White: 0 / 1.95 tUSD, the stolen queen value included |
+| Checkmate settled automatically | game 0, verdict tx `0x5e6c473075a6de2742320433d03dd083c659100d43a548be2f9f3ffff8df00c2`: White wins, 1.95 / 0 tUSD |
+| Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0xe082f3efe3f5ce69317ed5f13576abbaf2d6abd4405d1d9a7b03833e9ee39c05`); verdict tx `0xadb1201529a700f23897a897070f9b8a9b6a4b4dd5d174595ed960a974f88357` forfeited White: 0 / 1.95 tUSD, the stolen queen value included |
 | Earlier runs | stalemate and rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
 | Running | a Docker service on a server (`deploy/referee`) watches every move. It runs the workflow with the CRE CLI and, until our CRE API key and DON deployment access arrive, delivers the same `judge.ts` verdict through the same forwarder itself |
 | Security | our review found Chainlink's simulation forwarder let anyone deliver a verdict; fixed the same day with a reporter allowlist (`docs/AUDIT.md`) |
