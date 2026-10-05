@@ -51,7 +51,7 @@ Each character carries its share of the stake as a gold gem over its head and st
 ### Sound: music and voices
 
 - **Music:** a shuffled soundtrack under every game: public-domain and CC0 orchestra (Wagner's Ride of the Valkyries, Grieg's In the Hall of the Mountain King, Saint-Saëns' Danse macabre, Holst's Mars) mixed with shakuhachi, erhu, guzheng and koto, Japanese festival drums, West African balafon and djembe. Fetched from Wikimedia Commons by `tools/music/fetch.mjs` into `public/music`; it starts on the first tap and plays quietly.
-- **Voices:** with the armies, the Heroes and the Undead speak at the moments that matter: a capture, a rook or queen taken (and the other side rallying), check, promotion, castling, checkmate, the start of a game, and your clock under ten seconds. Lines are rate-limited so they stay special. They are generated with Kokoro-82M (Apache-2.0) by `tools/voices/build.mjs` from `tools/voices/lines.json`; the Undead are slowed and lowered at playback.
+- **Voices:** with the armies, the Heroes and the Undead speak at the moments that matter: a capture, a rook or queen taken (and the other side rallying), check, promotion, castling, checkmate, the start of a game, and your clock under ten seconds. Only one voice speaks at a time (an important line waits its turn, an ordinary one is skipped), ordinary lines are rate-limited so they stay special, and the music dips while a voice is speaking. They are generated with Kokoro-82M (Apache-2.0) by `tools/voices/build.mjs` from `tools/voices/lines.json`; the Undead are slowed and lowered at playback.
 - `/sounds` is a sound check: every track, voice line and effect with a play button and a note on when the game uses it (unlinked, for reviewing the audio).
 - The sound button mutes everything. Every recording, model and voice is credited on `/credits`.
 
@@ -162,6 +162,7 @@ node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it m
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
 node tools/e2e/sandbox.mjs        # the practice board on desktop and phone
 node tools/e2e/community.mjs      # a tournament end to end, the audience count, the leaderboard
+node tools/e2e/voices.mjs         # voices never overlap; the music dips under them
 npm run lint
 npm run build
 ```
