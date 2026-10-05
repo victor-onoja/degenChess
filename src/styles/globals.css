@@ -521,6 +521,9 @@ input::placeholder {
   gap: 0;
   border-top: 1px solid var(--line);
 }
+.facts > li {
+  border-bottom: 1px solid var(--line);
+}
 .facts > div {
   display: grid;
   grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
@@ -540,9 +543,40 @@ input::placeholder {
   color: var(--bone-soft);
 }
 @media (max-width: 640px) {
-  .facts > div {
+  .facts > li {
+  border-bottom: 1px solid var(--line);
+}
+.facts > div {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* A standings table: one line per player, the viewer's own row marked. */
+.ladder {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.ladder th {
+  padding: 0 8px 8px 0;
+  text-align: left;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--bone-soft);
+}
+.ladder th.text-right {
+  text-align: right;
+}
+.ladder td {
+  padding: 11px 8px 11px 0;
+  border-top: 1px solid var(--line);
+}
+.ladder th:last-child,
+.ladder td:last-child {
+  padding-right: 0;
+}
+.ladder tr[aria-current="true"] td {
+  background: rgba(241, 233, 214, 0.06);
 }
 
 @media (prefers-reduced-motion: reduce) {

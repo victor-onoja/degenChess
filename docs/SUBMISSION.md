@@ -25,6 +25,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 | Away Chess (games and stakes) | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
 | ChessReferee (Chainlink CRE consumer) | `0x2a54f9443c84c472488020c878797a2fead78cdf` |
 | PlayerNames (usernames) | `0xaf87e4ad92ea3cae05f8696f534d43b19a40a5e6` |
+| Tournaments (league register, holds no money) | `0x78de5b86f26afb15234d8dd5e735cbeadddc4b94` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
 **Primary track:** Consumer Products & Payments
@@ -51,7 +52,7 @@ Nothing secret is stored. Clear your browser or pick up another device mid-game 
 
 You play on a clean 2D board (tap or drag; the default on phones), in 3D (the default on bigger screens and for spectators), or both side by side, and a focus mode shows nothing but the board. In 3D the pieces are two armies of animated characters, Heroes against the Undead, every piece type its own character (ranger and engineer pawns, a druid queen, giant barbarian rooks; a necromancer king, a scythe-wielding queen, skeleton golem rooks), on a violet board floating among other boards drifting in the void: the same game in other dimensions. They walk to their squares to the sound of their footsteps, each strikes in its own way on a capture, the taken piece falls while its share of the stake flies to the attacker as a gold gem with the amount on it, the Undead rise from the board at the start, and the winners cheer a checkmate. The armies speak at the big moments ("For the crown!", "Your gold is mine.", "Checkmate. Rest forever.") over a shuffled soundtrack of public-domain orchestra and Asian and African instruments. A classic sculpted Staunton set is one tap away.
 
-The lobby, the Yard, shows every open, live and finished game as a small board at its real position; anyone can sit down or watch. Games have chess clocks (3+2, 5+3, 10+5), you choose White, Black or a coin flip, every move can be replayed, and a rematch is one tap with colours swapped. Players are known by unique usernames, never addresses; they can pay each other by username, and every link they share carries their name, so whoever invited a player earns part of the fee on that player's games.
+The lobby, the Yard, shows every open, live and finished game as a small board at its real position; anyone can sit down or watch. Games have chess clocks (3+2, 5+3, 10+5), you choose White, Black or a coin flip, every move can be replayed, and a rematch is one tap with colours swapped. A leaderboard ranks players by what they have won, anyone can start a round-robin tournament and invite players with a link, and every live game shows how many people are watching. Players are known by unique usernames, never addresses; they can pay each other by username, and every link they share carries their name, so whoever invited a player earns part of the fee on that player's games.
 
 Nobody has to be trusted to call the result. A Chainlink CRE workflow replays every game, pays out checkmates and rule draws automatically, and forfeits anyone who submits an illegal move, including what the illegal move captured.
 
@@ -65,7 +66,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 1. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Every board in the Yard has a share button, a new game leads with *Share invite link*, finished games share with a ready-made line ("alice beat bob for $10 on Away Chess. See how."), and every link pays its sender a share of the fee on the games of the people who join through it.
 2. **Chess streamers and clubs.** Money visibly changing hands on every capture is watchable. Sponsor small stakes for streamer matches and club nights; viewers get a "play the streamer for $1" link.
-3. **Crypto communities.** Community-against-community matches, watched live from the Yard.
+3. **Tournaments and communities.** Anyone can start a league in a minute and share its link: a club night, a Discord's weekly cup, community against community, watched live from the Yard with the audience count on show.
 4. **Low stakes by default.** $1 games make "try it once" an easy ask.
 
 **Business model:** 2.5% of the pot when a game is won; draws are free. 20% of each player's half of the fee goes to whoever invited them.
@@ -102,8 +103,8 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ### Quality
 
-- 32 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
-- Four browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `sandbox`.
+- 33 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
+- Five browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a tournament from creation to standings, the audience count, the leaderboard), `sandbox`.
 - Security brief for an independent reviewer: `docs/AUDIT.md`.
 
 ---
@@ -124,7 +125,7 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 | 1:40 | Clear site data, reload, "I have a passkey" | "The stateless test: nothing secret is stored. One prompt rebuilds the account and the game key, and the game is where I left it." |
 | 2:00 | Deliver checkmate; the referee settles it with no resignation; show the verdict tx | "Nobody resigned. A Chainlink CRE workflow replayed the game and settled it on-chain. Play an illegal move and it forfeits you, stolen value included." |
 | 2:30 | Withdraw (passkey), the wallet: invite link and earnings | "Money out asks for the passkey again. Every link you share earns you part of the fee on your friends' games." |
-| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 32 contract tests and four browser suites." |
+| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 33 contract tests and five browser suites." |
 | 2:55 | Back to the board | "Live now at degen-chess.vercel.app." |
 
 ### Pitch (2 minutes)
@@ -165,4 +166,4 @@ In priority order.
 5. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
 6. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
 7. **Security review:** fold in what the independent reviewer finds and say so here.
-8. **Optional:** a leaderboard and player profiles.
+8. **Optional:** player profiles; knockout tournaments.

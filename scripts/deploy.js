@@ -47,12 +47,16 @@ async function main() {
   // Usernames outlive game redeployments: reuse NAMES_ADDRESS when there is one.
   const names = process.env.NAMES_ADDRESS || (await hre.viem.deployContract("PlayerNames")).address;
   console.log(`PlayerNames at ${names}`);
+  // Tournaments only reads this game contract's game count, so it is redeployed with it.
+  const tournaments = await hre.viem.deployContract("Tournaments", [chess.address]);
+  console.log(`Tournaments deployed to ${tournaments.address}`);
 
   console.log("\nFor localhost, put this in .env.local. For Monad testnet, update src/deployments.ts and cre/referee/config.staging.json:");
   console.log(`NEXT_PUBLIC_CHAIN=${local ? "localhost" : hre.network.name}`);
   console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${chess.address}`);
   console.log(`NEXT_PUBLIC_TOKEN_ADDRESS=${token}`);
   console.log(`NEXT_PUBLIC_NAMES_ADDRESS=${names}`);
+  console.log(`NEXT_PUBLIC_TOURNAMENTS_ADDRESS=${tournaments.address}`);
   if (referee) console.log(`REFEREE_ADDRESS=${referee.address}`);
 }
 

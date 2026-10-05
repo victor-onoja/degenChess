@@ -9,8 +9,10 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 | Game contract | `contracts/DegenChess.sol` (Solidity 0.8.24, OpenZeppelin 5) | The only contract that holds funds |
 | Referee | `contracts/ChessReferee.sol`, `cre/referee/` | Receives verdicts from a Chainlink CRE workflow and calls `arbitrate` |
 | Usernames | `contracts/PlayerNames.sol` | Holds no funds |
+| Tournaments | `contracts/Tournaments.sol` | Holds no funds and settles nothing: lists players, stake, clock and the first game id that counts. Standings are computed by the client from `DegenChess` games |
 | Key handling in the browser | `src/lib/mera.ts`, `src/lib/account.tsx` | Passkey-derived keys, signing sessions |
 | Faucet | `src/pages/api/drip.ts` | Testnet only |
+| Audience count | `src/pages/api/watch.ts` | In-memory head-count of spectators; anyone can inflate it, nothing depends on it |
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
@@ -18,7 +20,7 @@ Deployed on Monad testnet (chain 10143): Away Chess `0x17c898b9814323a5bd364c77b
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
 
-Run the tests with `npm install && npm test` (32 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Run the tests with `npm install && npm test` (33 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 

@@ -50,3 +50,23 @@ export async function shareInvite(ref: string) {
     toast.info(`Your invite link: ${url}`, { autoClose: 8000 });
   }
 }
+
+/** Shares any link of ours: the share sheet on touch devices, a copied link elsewhere. */
+export async function shareLink(path: string, text: string, ref?: string) {
+  const url = `${window.location.origin}${path}${ref ? `${path.includes("?") ? "&" : "?"}ref=${encodeURIComponent(ref)}` : ""}`;
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  if (touch && typeof navigator.share === "function") {
+    try {
+      await navigator.share({ title: "Away Chess", text, url });
+      return;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(`${text} ${url}`);
+    toast.success("Link copied. Paste it anywhere.", { autoClose: 2500 });
+  } catch {
+    toast.info(`Share this link: ${url}`, { autoClose: 8000 });
+  }
+}

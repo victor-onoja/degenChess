@@ -1228,6 +1228,305 @@ export const playerNamesAbi = [
   }
 ] as const;
 
+export const tournamentsAbi = [
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_chess",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "AlreadyJoined",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AlreadyStarted",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "Full",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidName",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidStake",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotEnoughPlayers",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "NotHost",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnknownTournament",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "host",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "Created",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "player",
+        "type": "address"
+      }
+    ],
+    "name": "Joined",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "firstGameId",
+        "type": "uint256"
+      }
+    ],
+    "name": "Started",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_PLAYERS",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "chess",
+    "outputs": [
+      {
+        "internalType": "contract IGameCounter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "count",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_name",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_stake",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_clockBase",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "_clockIncrement",
+        "type": "uint32"
+      }
+    ],
+    "name": "create",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "get",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "host",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "stake",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint32",
+        "name": "clockBase",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "clockIncrement",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint64",
+        "name": "createdAt",
+        "type": "uint64"
+      },
+      {
+        "internalType": "uint256",
+        "name": "firstGameId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "started",
+        "type": "bool"
+      },
+      {
+        "internalType": "address[]",
+        "name": "players",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "join",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "joined",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "start",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
+
 export const erc20Abi = parseAbi([
   "function balanceOf(address) view returns (uint256)",
   "function allowance(address,address) view returns (uint256)",

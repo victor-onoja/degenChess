@@ -47,6 +47,9 @@ Bricolage Grotesque throughout. `.statement` (condensed, heavy, tight) for the o
 - `/sandbox`: the practice board, same components, no chain; header, scoreboard and stake row around the board.
 - Focus mode: the board alone, a clock pill if the game has a clock, and one exit button; nothing else on screen.
 - `MoveList`: one scrolling line of moves under the board; the shown move is bone. Captured pieces sit on small violet squares (`.taken`) so dark pieces read on the dark dock.
+- `.ladder`: a standings table (leaderboard, tournament standings): one line per player, the viewer's own row tinted, winnings in gold.
+- Audience: an eye icon and a number ("3 watching") in the scoreboard's status line and on live boards in the Yard.
+- Landing: after the Yard, one band with the top of the leaderboard and the newest tournaments, each with a link to its page.
 - `NameEditor`: username field that checks availability as you type (gold when free, alert when taken) and claims with one passkey prompt.
 
 ## The 3D board

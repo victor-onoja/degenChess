@@ -9,6 +9,7 @@ import { formatToken, sameAddress } from "../lib/format";
 import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
 import { withApproval } from "../lib/stake";
+import { useWatcherCounts } from "../lib/watchers";
 import { Icon } from "./Icon";
 import { ShareButton } from "./ShareButton";
 import { type Cell, MiniBoard, waitingBoard } from "./MiniBoard";
@@ -167,6 +168,7 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const current = Math.min(page, pages - 1);
   const visible = lists[tab].slice(current * perPage, (current + 1) * perPage);
   const positions = usePositions(visible);
+  const audience = useWatcherCounts(tab === "live" ? visible.map((g) => g.id) : []);
 
   const table = (g: ListedGame) => {
     const isOpen = g.status === Status.Open;
@@ -202,7 +204,14 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
           </span>
           <span className="link shrink-0 text-sm">{action}</span>
         </span>
-        <span className="soft block truncate text-sm">{g.status === Status.Finished ? `${who}, ${result}` : who}</span>
+        <span className="soft flex items-center gap-2 text-sm">
+          <span className="min-w-0 truncate">{g.status === Status.Finished ? `${who}, ${result}` : who}</span>
+          {isLive && (audience[g.id.toString()] ?? 0) > 0 && (
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1" title="People watching">
+              <Icon name="eye" size={14} /> {audience[g.id.toString()]}
+            </span>
+          )}
+        </span>
         {isLive && (
           <span className="split mt-2 block" title="How the pot is split right now">
             <span className="block" style={{ transform: `scaleX(${share / 100})` }} />

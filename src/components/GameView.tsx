@@ -22,6 +22,7 @@ import { PieceIcon } from "./PieceIcon";
 import { usePieceSet } from "../lib/pieceSet";
 import { say, useVoices } from "../lib/voices";
 import { nextTrack, useMusic } from "../lib/music";
+import { useWatchers } from "../lib/watchers";
 import { ShareButton } from "./ShareButton";
 import { MoveList } from "./MoveList";
 import { BOARD_PIECES } from "./boardPieces";
@@ -136,6 +137,9 @@ export function GameView({
   // The armies talk as moves land, and warn you once when your clock is nearly out.
   useVoices(liveHistory, pieceSet === "armies" && !viewing, info?.status === Status.Active);
   useMusic(true);
+  // The audience: spectators are counted, the two players only see the number.
+  const isPlayer = !!info && !!address && (sameAddress(address, info.white) || sameAddress(address, info.black));
+  const watchers = useWatchers(gameId, !isPlayer, !!info && info.status === Status.Active);
   const lowTime = useRef<{ color: "w" | "b" | null; left: number; warned: boolean }>({ color: null, left: Infinity, warned: false });
   useEffect(() => {
     const t = lowTime.current;
@@ -586,6 +590,11 @@ export function GameView({
                     ? " · out of time"
                     : ` · +${clockIncrement}s per move`
                   : ` · ${timeLeft > 0 ? `${formatDuration(timeLeft)} left` : "move timer expired"}`}
+              </span>
+            )}
+            {active && watchers > 0 && (
+              <span className="soft ml-2 inline-flex items-center gap-1 align-middle" title="People watching this game">
+                <Icon name="eye" size={14} /> {watchers} watching
               </span>
             )}
           </p>

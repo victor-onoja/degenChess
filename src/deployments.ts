@@ -7,4 +7,6 @@ export const MONAD_TESTNET = {
   referee: "0x2a54f9443c84c472488020c878797a2fead78cdf",
   /** PlayerNames: usernames, shared across game redeployments. */
   names: "0xaf87e4ad92ea3cae05f8696f534d43b19a40a5e6",
+  /** Tournaments: a register of round-robin leagues (holds no money). */
+  tournaments: "0x78de5b86f26afb15234d8dd5e735cbeadddc4b94",
 } as const;

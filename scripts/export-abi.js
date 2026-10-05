@@ -25,6 +25,8 @@ export const degenChessAbi = ${JSON.stringify(read("DegenChess", "DegenChess.sol
 
 export const playerNamesAbi = ${JSON.stringify(read("PlayerNames", "PlayerNames.sol"), null, 2)} as const;
 
+export const tournamentsAbi = ${JSON.stringify(read("Tournaments", "Tournaments.sol"), null, 2)} as const;
+
 export const erc20Abi = parseAbi(${JSON.stringify(erc20, null, 2)});
 `
 );

@@ -175,6 +175,29 @@ describe("DegenChess", () => {
     });
   });
 
+  describe("tournaments", () => {
+    it("registers players, starts once, and only counts games from the start", async () => {
+      const f = await loadFixture(activeGameFixture);
+      const t = await hre.viem.deployContract("Tournaments", [f.chess.address]);
+      await expect(t.write.create(["ab", STAKE, 300, 3], f.as(f.white))).to.be.rejectedWith("InvalidName");
+      await t.write.create(["Friday blitz", STAKE, 300, 3], f.as(f.white));
+      await expect(t.write.join([0n], f.as(f.white))).to.be.rejectedWith("AlreadyJoined");
+      await expect(t.write.start([0n], f.as(f.white))).to.be.rejectedWith("NotEnoughPlayers");
+      await t.write.join([0n], f.as(f.black));
+      await expect(t.write.start([0n], f.as(f.black))).to.be.rejectedWith("NotHost");
+      await t.write.start([0n], f.as(f.white));
+      await expect(t.write.join([0n], f.as(f.stranger))).to.be.rejectedWith("AlreadyStarted");
+      const [host, name, stake, , , , firstGameId, started, players] = await t.read.get([0n]);
+      expect(host.toLowerCase()).to.equal(f.white.account.address.toLowerCase());
+      expect(name).to.equal("Friday blitz");
+      expect(stake).to.equal(STAKE);
+      expect(started).to.equal(true);
+      expect(firstGameId).to.equal(1n); // one game existed before it started
+      expect(players.length).to.equal(2);
+      expect(await t.read.count()).to.equal(1n);
+    });
+  });
+
   describe("choosing a side", () => {
     async function openAs(f, side) {
       await f.chess.write.createGameAs([STAKE, zeroAddress, 0, 0, side], f.as(f.white));

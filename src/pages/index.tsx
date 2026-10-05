@@ -14,6 +14,8 @@ import { GameView } from "../components/GameView";
 import { Seo } from "../components/Seo";
 import { Wordmark } from "../components/Wordmark";
 import { Yard } from "../components/Yard";
+import { Leaderboard } from "../components/Leaderboard";
+import { TournamentTeaser } from "../components/TournamentTeaser";
 
 const AttractArena = dynamic(() => import("../components/arena/AttractArena"), { ssr: false });
 
@@ -160,6 +162,28 @@ const Home: NextPage = () => {
             ) : (
               <p>No contract configured. Set NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local (see README).</p>
             )}
+          </div>
+        </section>
+
+        {/* Who is winning, and where to play a whole league: each a short list and a way in. */}
+        <section className="grid gap-x-16 gap-y-14 pt-24 lg:grid-cols-2">
+          <div>
+            <div className="mb-5 flex items-baseline justify-between gap-4">
+              <h2 className="heading">Leaderboard</h2>
+              <Link className="link text-sm" href="/leaderboard">
+                Full table
+              </Link>
+            </div>
+            <Leaderboard limit={5} />
+          </div>
+          <div>
+            <div className="mb-5 flex items-baseline justify-between gap-4">
+              <h2 className="heading">Tournaments</h2>
+              <Link className="link text-sm" href="/tournaments">
+                Start or join one
+              </Link>
+            </div>
+            <TournamentTeaser />
           </div>
         </section>
 

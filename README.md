@@ -58,6 +58,12 @@ Each character carries its share of the stake as a gold gem over its head and st
 
 The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review. Every board has a share button in its corner (the phone's share sheet, or the link is copied), a waiting game shows a large *Share invite link*, and live and finished games can be shared from the game screen, each with its own line of text ("alice beat bob for 10 tUSD on Away Chess. See how.").
 
+### Leaderboard, tournaments and the audience
+
+- **Leaderboard** (`/leaderboard`, top five on the landing page): wins, draws, losses and money won, worked out from the finished games on-chain (payouts minus stakes, after fees). No server keeps score.
+- **Tournaments** (`/tournaments`): round-robin leagues of ordinary staked games. Anyone creates one (name, stake per game, clock) for free and shares its link; players join; the host starts it; every pair plays once, with a coin flip for colours. Press **Play** to open your next game and your opponent joins it from the tournament page. Standings (1 point a win, ½ a draw) are read from the games themselves: the `Tournaments` contract only lists the players, the stake and clock, and the first game that counts, holds no money and cannot award a result.
+- **Who's watching:** a live game shows how many people are watching it, to the players and the spectators, and live boards in the Yard show the same number. Each open game page checks in with `/api/watch` every ten seconds; the count lives in the server's memory, so it is a head-count, not a record.
+
 ### Practice board
 
 `/sandbox` is a practice board for demos and quick tests: one person plays both sides with the real 2D, 3D and split views, the armies and the money moving exactly as in a staked game (captures, the pot bar, the payout at checkmate), with nothing staked and nothing on-chain. It is not linked from the site and is marked noindex; set `NEXT_PUBLIC_SANDBOX=off` to turn it off.
@@ -99,6 +105,7 @@ test/DegenChess.test.js      contract tests, including random legal games cross-
 scripts/deploy.js            deploy (also deploys MockUSD unless PAYMENT_TOKEN is set)
 scripts/export-abi.js        writes src/contracts/abi.ts from the compiled artifact
 contracts/PlayerNames.sol    usernames
+contracts/Tournaments.sol    register of round-robin leagues (holds no money)
 src/deployments.ts           live contract addresses
 src/components/              AccountBar, Yard (the lobby), GameView, MiniBoard, PieceIcon
 src/components/arena/        the 3D arena, the Staunton set (pieces3d) and the character armies (armies)
@@ -111,6 +118,7 @@ tools/e2e/passkey-game.mjs   two-player browser test with simulated passkeys
 tools/e2e/core-flows.mjs     cancel, tap-to-move on a phone, promotion, spectating, draw, win on time
 tools/e2e/account-flows.mjs  usernames and the wallet
 tools/e2e/sandbox.mjs        the practice board
+tools/e2e/community.mjs      tournaments, audience count, leaderboard
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
@@ -151,6 +159,7 @@ node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
 node tools/e2e/sandbox.mjs        # the practice board on desktop and phone
+node tools/e2e/community.mjs      # a tournament end to end, the audience count, the leaderboard
 npm run lint
 npm run build
 ```
