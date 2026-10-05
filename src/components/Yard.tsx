@@ -182,13 +182,13 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const loser = g.result === Result.WhiteWins ? g.black : g.white;
     const pitch = isOpen
       ? sameAddress(g.white, me)
-        ? `Play me at chess for ${stake} on DegenChess. Every piece you take pays.`
-        : `${label(g.white)} wants a ${stake} game of chess on DegenChess. Every piece you take pays.`
+        ? `Play me at chess for ${stake} on Away Chess. Every piece you take pays.`
+        : `${label(g.white)} wants a ${stake} game of chess on Away Chess. Every piece you take pays.`
       : isLive
-        ? `${label(g.white)} v ${label(g.black)}, live for ${stake} on DegenChess. Every capture pays.`
+        ? `${label(g.white)} v ${label(g.black)}, live for ${stake} on Away Chess. Every capture pays.`
         : g.result === Result.Draw
-          ? `${label(g.white)} and ${label(g.black)} drew a ${stake} game on DegenChess.`
-          : `${label(winner)} beat ${label(loser)} for ${stake} on DegenChess. See how.`;
+          ? `${label(g.white)} and ${label(g.black)} drew a ${stake} game on Away Chess.`
+          : `${label(winner)} beat ${label(loser)} for ${stake} on Away Chess. See how.`;
     return (
       <div key={g.id.toString()} className="relative">
       <button className="table" onClick={() => onOpenGame(g.id)} aria-label={`${action} board ${g.id}: ${who}`}>

@@ -1,6 +1,6 @@
 # Design
 
-The living board. DegenChess is chess in another dimension, a multiverse of boards, where the pieces are alive and each one carries money. The interface is built out of the board itself: its squares, its two sides, and the gold the pieces hold.
+The living board. Away Chess is chess in another dimension, a multiverse of boards, where the pieces are alive and each one carries money. The interface is built out of the board itself: its squares, its two sides, and the gold the pieces hold.
 
 ## Principles
 

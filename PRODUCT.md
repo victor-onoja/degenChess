@@ -41,8 +41,8 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 
 ## Brand Commitments
 
-- The name is **DegenChess**. This is the only fixed part of the identity.
-- The owner's statement of what the product is (2 October 2026): "DegenChess is for chess lovers and web3 lovers. It's chess, but in a web3 reality or dimension. The pieces are alive and are all valuable; that's why this chess is the way it is. Every piece wants to win for the player. Even if you played chess previously, DegenChess is different, and there's real money involved."
+- The name is **Away Chess** (decided 5 October 2026; the working title was DegenChess, which survives only in the contract name, storage keys, the repo and the first web address).
+- The owner's statement of what the product is (2 October 2026): "DegenChess is for chess lovers and web3 lovers. It's chess, but in a web3 reality or dimension. The pieces are alive and are all valuable; that's why this chess is the way it is. Every piece wants to win for the player. Even if you played chess previously, DegenChess is different, and there's real money involved." (Said before the rename to Away Chess.)
 - The identity must be its own. Directions borrowed from another world (a trading terminal, a newspaper column, a fight poster, a clock) were rejected for "tying to something else".
 - Confirmed: the pieces stay recognisable chess pieces but are alive (breathing, turning towards the play, reactions; the owner rejected stuck-on eyes), and each carries its value visibly. The lobby is "the Yard": every game is a small living board showing its real position.
 - The owner wants a "multiverse, alternate dimension" feel: chess, but in a web3 world (3 October 2026). Expressed today by the drifting boards around the 3D board.
@@ -50,7 +50,7 @@ Every capture is a settled payment, not a point. A chess site cannot copy that w
 - The owner wants the result to read as the work of people with real design ability, "creative and unexpected", with every element looking intentional. Earlier versions were judged "ugly and basic".
 - What would make a polished result feel wrong: a template look (hero followed by rows of cards), and busyness that makes Play or a game hard to find.
 - The 3D mode should become more impressive, not just the pages around it.
-- Long-term the owner plans more staked skill games under the name "Degen Yard"; this is a roadmap line, not something to build now.
+- Long-term the owner plans more staked skill games on the same account and staking layer; this is a roadmap line, not something to build now.
 
 ## Evidence on Hand
 

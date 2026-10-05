@@ -1,16 +1,16 @@
-# DegenChess: submission pack
+# Away Chess: submission pack
 
 Answers for every field on the submission form, the evidence judges can check, the three video scripts, and what is left before the deadline.
 
 Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 
-> **Name.** A rebrand to **Purple Chess** is under consideration (Monad's purple, and the board is already violet). Decide before recording the videos. `purplechess.com` is registered and parked (an aftermarket purchase); `purplechess.gg`, `.xyz`, `.io` and `playpurplechess.com` were unregistered on 3 October. Passkeys are bound to the domain, so a domain move must happen before the public launch (see the README).
+> **Name.** The product is **Away Chess** (renamed from the working title DegenChess on 5 October 2026). The game contract keeps the name `DegenChess` on-chain, and the repo and the current web address still carry the old name until the move to `awaychess.gg` (testnet) and `awaychess.com` (mainnet); passkeys are bound to the address, so accounts start fresh on the new one.
 
 ---
 
 ## Form fields
 
-**Project name:** DegenChess
+**Project name:** Away Chess
 
 **One-line description:** Chess where every piece carries a share of your stake: take a piece and its value is yours, settled on Monad in under a second, with one passkey tap and no wallet.
 
@@ -22,7 +22,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 
 | Contract | Address |
 | --- | --- |
-| DegenChess (games and stakes) | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
+| Away Chess (games and stakes) | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
 | ChessReferee (Chainlink CRE consumer) | `0x2a54f9443c84c472488020c878797a2fead78cdf` |
 | PlayerNames (usernames) | `0xaf87e4ad92ea3cae05f8696f534d43b19a40a5e6` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
@@ -38,7 +38,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 3 October 2026.
 
 ### Description
 
-DegenChess is staked chess for people who have never used crypto.
+Away Chess is staked chess for people who have never used crypto.
 
 Two players put up the same stake. Every piece is worth a fixed share of it: a pawn 1/39, a knight or bishop 3/39, a rook 5/39, a queen 9/39. Capture a piece and its value moves from your opponent's balance to yours, on-chain, in under a second. The winner takes the pot, but the loser keeps whatever they captured, so every move matters and a lost game is not a total loss. A won game pays a 2.5% fee; draws are free.
 
@@ -63,7 +63,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 **Go-to-market:**
 
-1. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Every board in the Yard has a share button, a new game leads with *Share invite link*, finished games share with a ready-made line ("alice beat bob for $10 on DegenChess. See how."), and every link pays its sender a share of the fee on the games of the people who join through it.
+1. **Share links as the growth loop.** A game is a URL that opens straight onto the board with one-tap sign-up. Every board in the Yard has a share button, a new game leads with *Share invite link*, finished games share with a ready-made line ("alice beat bob for $10 on Away Chess. See how."), and every link pays its sender a share of the fee on the games of the people who join through it.
 2. **Chess streamers and clubs.** Money visibly changing hands on every capture is watchable. Sponsor small stakes for streamer matches and club nights; viewers get a "play the streamer for $1" link.
 3. **Crypto communities.** Community-against-community matches, watched live from the Yard.
 4. **Low stakes by default.** $1 games make "try it once" an easy ask.
@@ -72,7 +72,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 **Why they stay:** stakes that move during the game make a losing position worth playing out; rematches are one tap; the armies make every game a small show.
 
-**Beyond chess:** the account layer (one passkey, a scoped game key, stakes that shift during play) is game-agnostic. DegenChess is the first title of a planned "Degen Yard" of staked skill games.
+**Beyond chess:** the account layer (one passkey, a scoped game key, stakes that shift during play) is game-agnostic. Away Chess is the first of a planned family of staked skill games.
 
 ---
 
@@ -116,7 +116,7 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 
 | Time | Show | Say |
 | --- | --- | --- |
-| 0:00 | Landing page, the armies playing in the backdrop | "DegenChess is staked chess on Monad. Every capture moves money. Everything here is live on testnet." |
+| 0:00 | Landing page, the armies playing in the backdrop | "Away Chess is staked chess on Monad. Every capture moves money. Everything here is live on testnet." |
 | 0:15 | Phone: type a username, Play now, Face ID, "You're in" banner | "One passkey prompt. No extension, no seed phrase. That banner is the measured time to my first confirmed transaction." |
 | 0:35 | Create a $1 game as White, Share invite link; second player opens it and joins | "Staking asks for the passkey. Mera derives two keys: a money key, and a game key the contract only lets make chess moves." |
 | 1:00 | Several quick moves, no prompts, one opened on the explorer | "Moves are signed by the game key. No prompts, under a second each, every one a transaction." |
@@ -133,11 +133,11 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 | --- | --- |
 | 0:00 | "Hundreds of millions of people play chess online, and plenty of them bet on it: in clubs, in Discords, on streams. None of that is built into the game, and none of it is safe." |
 | 0:20 | "Crypto could fix that, but crypto games ask you to install a wallet, save a seed phrase and approve a pop-up for every move. Nobody plays chess like that." |
-| 0:40 | "DegenChess is chess where every piece carries part of your stake. Take a piece and its value is yours, right then. Lose the game and you still keep what you captured." (Show a capture.) |
+| 0:40 | "Away Chess is chess where every piece carries part of your stake. Take a piece and its value is yours, right then. Lose the game and you still keep what you captured." (Show a capture.) |
 | 1:00 | "You start with one tap. Face ID, and you're in. Moves never ask for anything; money always asks for your face." |
 | 1:15 | "Nobody calls the result: a Chainlink workflow referees every game, and only Monad confirms a move in under a second for a fraction of a cent." |
-| 1:30 | "Every game is a link, and every link pays the person who shared it. Chess is the first game; the same account and staking layer works for any skill game. That's Degen Yard." |
-| 1:50 | "DegenChess. Play it now on Monad testnet." |
+| 1:30 | "Every game is a link, and every link pays the person who shared it. Chess is the first game; the same account and staking layer works for any skill game. Away Chess is the first of them." |
+| 1:50 | "Away Chess. Play it now on Monad testnet." |
 
 ### Advert (30 seconds)
 
@@ -150,7 +150,7 @@ No voice-over: the soundtrack and the armies' own lines.
 | 0:09 | The gold gem flies to the attacker, "+$0.26", the pot bar swings | "...pays." |
 | 0:14 | Phone: Play now, Face ID, the board | "One tap. No wallet." |
 | 0:20 | Fast cuts: a mage casting, a crossbow, "Checkmate. Rest forever." | "Settled in under a second." |
-| 0:26 | Logo | "DegenChess. Play now on Monad." |
+| 0:26 | Logo | "Away Chess. Play now on Monad." |
 
 ---
 

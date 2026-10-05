@@ -1,11 +1,11 @@
-# DegenChess referee (Chainlink CRE workflow)
+# Away Chess referee (Chainlink CRE workflow)
 
-DegenChess records every chess move on-chain but does not check that moves are legal chess: doing that
+Away Chess records every chess move on-chain but does not check that moves are legal chess: doing that
 in Solidity on every move is expensive. This workflow is the referee instead.
 
 ```text
 MoveMade event ──▶ CRE workflow ──▶ signed verdict ──▶ Chainlink forwarder ──▶ ChessReferee.onReport
- (DegenChess)      read the game        (only when the                          └▶ DegenChess.arbitrate
+ (Away Chess)      read the game        (only when the                          └▶ DegenChess.arbitrate
                    replay with chess.js   game is over)
 ```
 
@@ -31,7 +31,7 @@ nothing), it also requires the transaction to come from an allowed reporter key 
 
 | Contract | Address |
 | --- | --- |
-| DegenChess | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
+| Away Chess | `0x17c898b9814323a5bd364c77b6a41b341cdbda51` |
 | ChessReferee | `0x2a54f9443c84c472488020c878797a2fead78cdf` |
 | Forwarder (simulation `MockKeystoneForwarder`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
 

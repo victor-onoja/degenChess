@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 /*
-  DegenChess: the living board.
+  Away Chess: the living board.
   A near-black field; the colour lives in the board, in Monad's violet. Bone and obsidian are the two sides.
   Gold is light, and light means money: a core, an amount, or the action that stakes. Nothing else is gold.
   Everything sits on the board's square module: controls are squares of a rank.

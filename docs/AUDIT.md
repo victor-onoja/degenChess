@@ -1,4 +1,4 @@
-# DegenChess: security review brief
+# Away Chess: security review brief
 
 Thanks for looking at this. This page tells you what to review, what the contract is meant to guarantee, and what we already know is weak, so you can spend your time on what we don't know.
 
@@ -14,7 +14,7 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): DegenChess `0x17c898b9814323a5bd364c77b6a41b341cdbda51`, ChessReferee `0x2a54f9443c84c472488020c878797a2fead78cdf`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): Away Chess `0x17c898b9814323a5bd364c77b6a41b341cdbda51`, ChessReferee `0x2a54f9443c84c472488020c878797a2fead78cdf`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) and `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time).
 

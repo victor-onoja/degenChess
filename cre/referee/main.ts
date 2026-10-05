@@ -14,9 +14,9 @@ import {
 import { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, toBytes, zeroAddress } from "viem";
 import { judge } from "./judge";
 
-// DegenChess referee.
+// Away Chess referee.
 //
-// Trigger:  every MoveMade event emitted by the DegenChess contract.
+// Trigger:  every MoveMade event emitted by the Away Chess contract.
 // Read:     the game's status and full move list.
 // Compute:  replay the game with a chess engine (judge.ts). Is it checkmate, a draw by rule, or was
 //           a move illegal?
@@ -28,7 +28,7 @@ import { judge } from "./judge";
 
 type Config = {
   chainSelectorName: string;
-  /** DegenChess: emits MoveMade and holds the games. */
+  /** Away Chess: emits MoveMade and holds the games. */
   chessAddress: `0x${string}`;
   /** ChessReferee: the consumer contract that receives verdicts. */
   refereeAddress: `0x${string}`;

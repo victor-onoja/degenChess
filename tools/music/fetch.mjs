@@ -17,7 +17,7 @@ const TRACKS = [
   ["File:Rythmes du balafon traditionnel.ogg", "Rythmes du balafon traditionnel", "KONE IF", "world"],
   ["File:Village Drums of Freedom – Black Africa(djembe mix).ogg", "Village Drums of Freedom (djembe mix)", "Gerald Achee", "world"],
 ];
-const UA = { "User-Agent": "DegenChess soundtrack fetcher (github.com/victor-onoja/degenChess)" };
+const UA = { "User-Agent": "Away Chess soundtrack fetcher (github.com/victor-onoja/degenChess)" };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const out = [];

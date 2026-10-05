@@ -1,4 +1,6 @@
-# DegenChess
+# Away Chess
+
+> Renamed from the working title **DegenChess** on 5 October 2026. The game contract (`contracts/DegenChess.sol`), browser storage keys, the repo and the first web address keep the old name.
 
 Staked chess on-chain. Both players put up the same dollar stake, and **every capture moves that piece's value from the victim to the capturer**. When the game ends, the winner takes the loser's balance except what the loser earned through their own captures, so a loser who fought well still gets paid.
 
@@ -54,7 +56,7 @@ Each character carries its share of the stake as a gold gem over its head and st
 
 ### The Yard
 
-The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review. Every board has a share button in its corner (the phone's share sheet, or the link is copied), a waiting game shows a large *Share invite link*, and live and finished games can be shared from the game screen, each with its own line of text ("alice beat bob for 10 tUSD on DegenChess. See how.").
+The lobby. Start a board (stake and clock) on the left; on the right, every game as a small board at its real position, three at a time (two on phones) under **Waiting**, **Live**, **Finished** and **Yours** (your own finished games). The board is the button: join, watch, resume or review. Every board has a share button in its corner (the phone's share sheet, or the link is copied), a waiting game shows a large *Share invite link*, and live and finished games can be shared from the game screen, each with its own line of text ("alice beat bob for 10 tUSD on Away Chess. See how.").
 
 ### Practice board
 

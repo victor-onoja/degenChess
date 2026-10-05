@@ -163,7 +163,7 @@ export default function Sandbox() {
       <main className="mx-auto max-w-md p-10">
         <p>The practice board is turned off.</p>
         <Link className="link" href="/">
-          Back to DegenChess
+          Back to Away Chess
         </Link>
       </main>
     );
@@ -177,7 +177,7 @@ export default function Sandbox() {
   return (
     <div className="fixed inset-0 flex flex-col bg-[var(--field-deep)]">
       <Head>
-        <title>Practice board | DegenChess</title>
+        <title>Practice board | Away Chess</title>
         <meta name="robots" content="noindex" />
       </Head>
 

@@ -35,9 +35,9 @@ export function Eyes({ size = 30 }: { size?: number }) {
 /** `compact` keeps only the mark on phones, to leave the header room for the account. */
 export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="wordmark" aria-label="DegenChess">
+    <span className="wordmark" aria-label="Away Chess">
       <Eyes />
-      <span className={compact ? "hidden sm:inline" : undefined}>DegenChess</span>
+      <span className={compact ? "hidden sm:inline" : undefined}>Away Chess</span>
     </span>
   );
 }

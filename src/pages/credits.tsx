@@ -3,7 +3,7 @@ import Link from "next/link";
 import MUSIC from "../lib/music.json";
 import { Wordmark } from "../components/Wordmark";
 
-// Everyone whose work is in DegenChess. Several recordings are licensed on condition of credit.
+// Everyone whose work is in Away Chess. Several recordings are licensed on condition of credit.
 
 const ART = [
   ["Heroes and Undead armies", "Kay Lousberg, KayKit Adventurers 2.0 and Skeletons 1.1 (EXTRA), Character Animations 1.1", "CC0", "https://kaylousberg.com"],
@@ -16,9 +16,9 @@ export default function Credits() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-10 sm:px-10">
       <Head>
-        <title>Credits | DegenChess</title>
+        <title>Credits | Away Chess</title>
       </Head>
-      <Link href="/" aria-label="DegenChess home">
+      <Link href="/" aria-label="Away Chess home">
         <Wordmark />
       </Link>
       <h1 className="heading mt-10">Credits</h1>

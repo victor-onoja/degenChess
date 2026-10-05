@@ -1,12 +1,12 @@
 import Head from "next/head";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://degen-chess.vercel.app";
-const TITLE = "DegenChess - every piece has skin in the game";
+const TITLE = "Away Chess - every piece has skin in the game";
 const DESCRIPTION =
   "Chess where each piece carries a share of your stake. Take one, and its share is yours, settled instantly on Monad. One passkey tap to start: no wallet, no seed phrase.";
 
 export function Seo({ title }: { title?: string }) {
-  const fullTitle = title ? `${title} | DegenChess` : TITLE;
+  const fullTitle = title ? `${title} | Away Chess` : TITLE;
   return (
     <Head>
       <title>{fullTitle}</title>
@@ -19,7 +19,7 @@ export function Seo({ title }: { title?: string }) {
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
       <meta property="og:type" content="website" />
-      <meta property="og:site_name" content="DegenChess" />
+      <meta property="og:site_name" content="Away Chess" />
       <meta property="og:url" content={SITE} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={DESCRIPTION} />

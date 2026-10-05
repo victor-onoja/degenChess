@@ -1,4 +1,4 @@
-// Runs the DegenChess referee: watches MoveMade events on Monad testnet and, whenever a game needs a
+// Runs the Away Chess referee: watches MoveMade events on Monad testnet and, whenever a game needs a
 // verdict, executes the Chainlink CRE workflow for that event with `cre workflow simulate --broadcast`.
 // The workflow re-derives the verdict itself and delivers it through the Chainlink forwarder.
 //

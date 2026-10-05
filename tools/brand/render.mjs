@@ -56,7 +56,7 @@ await card(
   `<div style="height:100%;display:flex;align-items:center;gap:56px;padding:0 120px">
     ${EYES(250)}
     <div>
-      <div style="font-weight:800;font-size:150px;letter-spacing:-0.035em;font-variation-settings:'wdth' 80;line-height:1">DegenChess</div>
+      <div style="font-weight:800;font-size:150px;letter-spacing:-0.035em;font-variation-settings:'wdth' 80;line-height:1">Away Chess</div>
       <div style="margin-top:22px;font-size:40px;color:#b5aecd">Every piece has <span style="color:#ffc233;font-weight:700">skin in the game.</span></div>
     </div>
   </div>`

@@ -72,8 +72,8 @@ function writeHint(hint: unknown) {
 /** First visit: one passkey ceremony creates the passkey and both keys. */
 export async function createAccount() {
   const created = await createPasskeyWithPrfOutput({
-    rp: { id: location.hostname, name: "DegenChess" },
-    user: { name: `player-${Date.now().toString(36)}`, displayName: "DegenChess player" },
+    rp: { id: location.hostname, name: "Away Chess" },
+    user: { name: `player-${Date.now().toString(36)}`, displayName: "Away Chess player" },
   });
   writeHint({ credentialId: created.credentialId, transports: created.transports });
   return toSessions(created.prfOutput);

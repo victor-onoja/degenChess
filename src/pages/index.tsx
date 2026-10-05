@@ -179,7 +179,7 @@ const Home: NextPage = () => {
           <div>
             <Wordmark />
             <p className="soft mt-2 max-w-sm text-sm">
-              Running on Monad testnet with test dollars. Nothing here is real money yet. The first game in Degen Yard.
+              Running on Monad testnet with test dollars. Nothing here is real money yet.
             </p>
           </div>
           <nav className="flex gap-6 text-sm" aria-label="Project links">

@@ -6,7 +6,7 @@ export const gameUrl = (id: bigint, ref?: string) =>
 
 /**
  * Shares a game: the share sheet on touch devices, otherwise the link is copied.
- * Every shared game is how DegenChess spreads, so this is never more than one tap away.
+ * Every shared game is how Away Chess spreads, so this is never more than one tap away.
  */
 export async function shareGame(id: bigint, text: string, ref?: string) {
   const url = gameUrl(id, ref);
@@ -14,7 +14,7 @@ export async function shareGame(id: bigint, text: string, ref?: string) {
   const touch = window.matchMedia("(pointer: coarse)").matches;
   if (touch && typeof navigator.share === "function") {
     try {
-      await navigator.share({ title: "DegenChess", text, url });
+      await navigator.share({ title: "Away Chess", text, url });
       return;
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return; // they closed the sheet
@@ -33,11 +33,11 @@ export const inviteUrl = (ref: string) => `${window.location.origin}/?ref=${enco
 
 export async function shareInvite(ref: string) {
   const url = inviteUrl(ref);
-  const text = "Play me at chess on DegenChess: every piece you take pays.";
+  const text = "Play me at chess on Away Chess: every piece you take pays.";
   const touch = window.matchMedia("(pointer: coarse)").matches;
   if (touch && typeof navigator.share === "function") {
     try {
-      await navigator.share({ title: "DegenChess", text, url });
+      await navigator.share({ title: "Away Chess", text, url });
       return;
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;

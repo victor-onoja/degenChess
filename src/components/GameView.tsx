@@ -378,13 +378,13 @@ export function GameView({
   const sharePitch =
     info.status === Status.Open
       ? myColor === "w"
-        ? `Play me at chess for ${stakeText} on DegenChess. Every piece you take pays.`
-        : `${label(info.white)} wants a ${stakeText} game of chess on DegenChess. Every piece you take pays.`
+        ? `Play me at chess for ${stakeText} on Away Chess. Every piece you take pays.`
+        : `${label(info.white)} wants a ${stakeText} game of chess on Away Chess. Every piece you take pays.`
       : info.status === Status.Active
-        ? `${label(info.white)} v ${label(info.black)}, live for ${stakeText} on DegenChess. Every capture pays.`
+        ? `${label(info.white)} v ${label(info.black)}, live for ${stakeText} on Away Chess. Every capture pays.`
         : info.result === Result.Draw
-          ? `${label(info.white)} and ${label(info.black)} drew a ${stakeText} game on DegenChess.`
-          : `${label(info.result === Result.WhiteWins ? info.white : info.black)} beat ${label(info.result === Result.WhiteWins ? info.black : info.white)} for ${stakeText} on DegenChess. See how.`;
+          ? `${label(info.white)} and ${label(info.black)} drew a ${stakeText} game on Away Chess.`
+          : `${label(info.result === Result.WhiteWins ? info.white : info.black)} beat ${label(info.result === Result.WhiteWins ? info.black : info.white)} for ${stakeText} on Away Chess. See how.`;
 
   const resultText =
     info.result === Result.Draw ? "Draw" : info.result === Result.WhiteWins ? "White wins" : "Black wins";
