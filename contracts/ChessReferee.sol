@@ -30,6 +30,7 @@ contract ChessReferee is IReceiver {
 
     IDegenChess public immutable chess;
     address public owner;
+    address public pendingOwner;
     /// @notice The Chainlink forwarder allowed to deliver reports (the mock forwarder during simulation).
     address public forwarder;
     /// @notice If set, only reports from workflows owned by this address are accepted. Leave unset
@@ -47,6 +48,8 @@ contract ChessReferee is IReceiver {
     event ForwarderSet(address indexed forwarder);
     event ExpectedWorkflowOwnerSet(address indexed workflowOwner);
     event ReporterSet(address indexed reporter, bool allowed);
+    event OwnershipTransferStarted(address indexed from, address indexed to);
+    event OwnershipTransferred(address indexed from, address indexed to);
 
     error NotOwner();
     error NotForwarder();
@@ -75,6 +78,20 @@ contract ChessReferee is IReceiver {
         // Reverts unless the game is still active, so a verdict can never be applied twice.
         chess.arbitrate(gameId, result, forfeit);
         emit Verdict(gameId, result, forfeit, ply, reason);
+    }
+
+    /// @notice Hand the referee to a new owner in two steps, so its key can be rotated.
+    function transferOwnership(address _newOwner) external {
+        if (msg.sender != owner) revert NotOwner();
+        pendingOwner = _newOwner;
+        emit OwnershipTransferStarted(owner, _newOwner);
+    }
+
+    function acceptOwnership() external {
+        if (msg.sender != pendingOwner) revert NotOwner();
+        emit OwnershipTransferred(owner, msg.sender);
+        owner = msg.sender;
+        pendingOwner = address(0);
     }
 
     function setForwarder(address _forwarder) external {

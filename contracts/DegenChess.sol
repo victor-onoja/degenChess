@@ -85,7 +85,10 @@ contract DegenChess is ReentrancyGuard {
     uint32 public constant MAX_INCREMENT = 5 minutes;
 
     IERC20 public immutable paymentToken;
-    address public immutable owner;
+    /// @notice Withdraws fees, sets the arbiter and can arbitrate as a fallback. Handed over in two steps
+    ///         (`transferOwnership`, then `acceptOwnership` by the new owner) so the key can be rotated.
+    address public owner;
+    address public pendingOwner;
     /// @notice Optional second arbiter: the Chainlink CRE referee contract that settles games automatically.
     address public arbiter;
     /// @notice Fees collected at settlement, waiting for the owner to withdraw them.
@@ -123,6 +126,8 @@ contract DegenChess is ReentrancyGuard {
     event ArbiterSet(address indexed arbiter);
     event Arbitrated(uint256 indexed gameId, address indexed by, Result result, bool forfeit);
     event ReferrerSet(address indexed player, address indexed referrer);
+    event OwnershipTransferStarted(address indexed from, address indexed to);
+    event OwnershipTransferred(address indexed from, address indexed to);
     event Seated(uint256 indexed gameId, address indexed white, address indexed black);
     event ReferralCredited(uint256 indexed gameId, address indexed referrer, uint256 amount);
 
@@ -141,6 +146,7 @@ contract DegenChess is ReentrancyGuard {
     error ReferrerAlreadySet();
     error InvalidReferrer();
     error InvalidSide();
+    error KeyTaken();
 
     constructor(address _paymentToken, uint256 _moveTimeout) {
         paymentToken = IERC20(_paymentToken);
@@ -226,9 +232,9 @@ contract DegenChess is ReentrancyGuard {
         g.whiteTime = g.clockBase;
         g.blackTime = g.clockBase;
         emit PlayerJoined(_gameId, msg.sender);
-        _setKey(g, _gameId, _gameKey);
 
         // Seat the players: the creator plays black if they asked to, or on a coin flip for random.
+        // (The joiner can predict the flip; it only decides who moves first, never money.)
         bool swap = g.creatorSide == 1
             || (g.creatorSide == 2 && uint256(keccak256(abi.encodePacked(block.prevrandao, _gameId, msg.sender))) & 1 == 1);
         if (swap) {
@@ -236,6 +242,8 @@ contract DegenChess is ReentrancyGuard {
             (g.whiteKey, g.blackKey) = (g.blackKey, g.whiteKey);
         }
         emit Seated(_gameId, g.white, g.black);
+        // Last, because it sends MON to an address the joiner chose: the seats are already final.
+        _setKey(g, _gameId, _gameKey);
     }
 
     /// @return side the side the creator chose: 0 white, 1 black, 2 random.
@@ -254,7 +262,7 @@ contract DegenChess is ReentrancyGuard {
     // ------------------------------------------------------------------ moves
 
     /// @param _move from (0-63) | to << 6 | promotion piece type << 12 (0 when not promoting)
-    function makeMove(uint256 _gameId, uint16 _move) external {
+    function makeMove(uint256 _gameId, uint16 _move) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
         bool whiteToMove = g.moves.length % 2 == 0;
@@ -351,7 +359,7 @@ contract DegenChess is ReentrancyGuard {
         _finish(_gameId, whiteToMove ? Result.BlackWins : Result.WhiteWins, false);
     }
 
-    function offerDraw(uint256 _gameId) external {
+    function offerDraw(uint256 _gameId) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Active) revert WrongStatus();
         address player = _playerFor(g, msg.sender);
@@ -378,6 +386,21 @@ contract DegenChess is ReentrancyGuard {
         if (games[_gameId].status != Status.Active || _result == Result.None) revert WrongStatus();
         emit Arbitrated(_gameId, msg.sender, _result, _forfeit);
         _finish(_gameId, _result, _forfeit);
+    }
+
+    /// @notice Start handing the contract to a new owner (a fresh key or a multisig). Nothing changes
+    ///         until that address calls `acceptOwnership`, so a mistyped address cannot lock it.
+    function transferOwnership(address _newOwner) external {
+        if (msg.sender != owner) revert NotOwner();
+        pendingOwner = _newOwner;
+        emit OwnershipTransferStarted(owner, _newOwner);
+    }
+
+    function acceptOwnership() external {
+        if (msg.sender != pendingOwner) revert NotOwner();
+        emit OwnershipTransferred(owner, msg.sender);
+        owner = msg.sender;
+        pendingOwner = address(0);
     }
 
     function setArbiter(address _arbiter) external {
@@ -501,7 +524,11 @@ contract DegenChess is ReentrancyGuard {
     /// @dev Registers msg.sender's game key and forwards any attached MON to it for gas.
     function _setKey(Game storage g, uint256 _gameId, address _key) internal {
         if (_key == g.white || _key == g.black) _key = address(0); // a player's own address is not a key
-        if (msg.sender == g.white) g.whiteKey = _key;
+        bool isWhite = msg.sender == g.white;
+        // A key answers for one player only. Without this, White could register Black's key (White's is
+        // looked up first) and Black's own moves would be refused.
+        if (_key != address(0) && _key == (isWhite ? g.blackKey : g.whiteKey)) revert KeyTaken();
+        if (isWhite) g.whiteKey = _key;
         else g.blackKey = _key;
         emit GameKeySet(_gameId, msg.sender, _key);
         if (msg.value > 0) {

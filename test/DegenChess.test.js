@@ -524,6 +524,45 @@ describe("DegenChess", () => {
       await f.chess.write.makeMove([0n, e4], f.as(f.stranger));
     });
 
+    it("refuses a key the opponent already uses, so nobody can capture the other side's key", async () => {
+      // White's key is looked up first, so White registering Black's key would make that key act for
+      // White: Black's own moves would be refused and Black would lose on time.
+      const f = await loadFixture(keyedGameFixture);
+      await expect(f.chess.write.setGameKey([0n, f.blackKey.account.address], f.as(f.white))).to.be.rejectedWith("KeyTaken");
+      await expect(f.chess.write.setGameKey([0n, f.whiteKey.account.address], f.as(f.black))).to.be.rejectedWith("KeyTaken");
+      // Re-registering your own key (a top-up) is still fine.
+      await f.chess.write.setGameKey([0n, f.whiteKey.account.address], { ...f.as(f.white), value: 1n });
+      const game = new Chess();
+      for (const san of ["e4", "e5"]) {
+        const m = game.move(san);
+        await f.chess.write.makeMove([0n, encodeMove(m)], f.as(m.color === "w" ? f.whiteKey : f.blackKey));
+      }
+
+      // The same at the table: a joiner who will sit as White cannot bring the creator's key.
+      await f.chess.write.createGameAs([STAKE, f.whiteKey.account.address, 0, 0, 1], f.as(f.white)); // game 1, creator plays Black
+      await expect(f.chess.write.joinGame([1n, f.whiteKey.account.address], f.as(f.black))).to.be.rejectedWith("KeyTaken");
+      await f.chess.write.joinGame([1n, f.blackKey.account.address], f.as(f.black));
+      // Seats swapped, keys followed their players: the joiner's key moves first, as White.
+      await f.chess.write.makeMove([1n, encodeMove({ from: "e2", to: "e4" })], f.as(f.blackKey));
+      await f.chess.write.makeMove([1n, encodeMove({ from: "e7", to: "e5" })], f.as(f.whiteKey));
+    });
+
+    it("a key that calls back while it is being paid can do nothing", async () => {
+      const f = await deployFixture();
+      const key = await hre.viem.deployContract("ReentrantKey", [f.chess.address]);
+      // The creator asked for Black, so the joiner will sit as White and move first.
+      await f.chess.write.createGameAs([STAKE, zeroAddress, 0, 0, 1], f.as(f.white));
+      await key.write.aim([0n, encodeMove({ from: "e2", to: "e4" })]);
+      await f.chess.write.joinGame([0n, key.address], { ...f.as(f.black), value: 1n });
+      expect(await key.read.tried()).to.equal(true);
+      expect(await key.read.movedDuringCall()).to.equal(false);
+      expect(await key.read.offeredDuringCall()).to.equal(false);
+      const g = await gameInfo(f.chess);
+      expect(g.moveCount).to.equal(0n);
+      expect(g.drawOfferedBy).to.equal(zeroAddress);
+      expect(g.white).to.equal(getAddress(f.black.account.address)); // seated before the key was paid
+    });
+
     it("ignores a key that is one of the players", async () => {
       const f = await deployFixture();
       await f.chess.write.createGame([STAKE, zeroAddress, 0, 0], f.as(f.white));
@@ -532,6 +571,29 @@ describe("DegenChess", () => {
       expect(bk).to.equal(zeroAddress);
     });
   });
+  describe("ownership", () => {
+    it("is handed over in two steps, and the old owner loses every power", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await expect(f.chess.write.transferOwnership([f.stranger.account.address], f.as(f.white))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.transferOwnership([f.stranger.account.address]);
+      // Nothing changes until the new owner accepts.
+      expect(await f.chess.read.owner()).to.equal(getAddress(f.owner.account.address));
+      await expect(f.chess.write.acceptOwnership(f.as(f.white))).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.arbitrate([0n, 1, false], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.acceptOwnership(f.as(f.stranger));
+      expect(await f.chess.read.owner()).to.equal(getAddress(f.stranger.account.address));
+      expect(await f.chess.read.pendingOwner()).to.equal(zeroAddress);
+      await expect(f.chess.write.arbitrate([0n, 1, false])).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.setArbiter([f.owner.account.address])).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.withdrawFees()).to.be.rejectedWith("NotOwner");
+      // Fees follow the owner.
+      await f.chess.write.arbitrate([0n, 1, false], f.as(f.stranger));
+      const before = await f.link.read.balanceOf([f.stranger.account.address]);
+      await f.chess.write.withdrawFees(f.as(f.stranger));
+      expect((await f.link.read.balanceOf([f.stranger.account.address])) - before).to.equal(usd(0.5));
+    });
+  });
+
   describe("referee (Chainlink CRE consumer)", () => {
     const { encodeAbiParameters } = require("viem");
     const report = (gameId, result, forfeit, ply, reason) =>

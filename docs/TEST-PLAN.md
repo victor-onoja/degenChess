@@ -4,7 +4,7 @@ One pass through everything the product does, with the exact moves to play and w
 
 **Time:** about 60 to 75 minutes. Part 7 has a 3-minute wait.
 
-**Already checked by the automated tests (5 October 2026):** 37 contract tests, 7 referee tests, six browser suites on a local chain, and a full two-player game on the live site against Monad (sign-up in 5.9 s, the referee settling a checkmate, withdrawals, rematch). This script is the human pass: real phones, real eyes and ears.
+**Already checked by the automated tests (5 October 2026):** 37 contract tests (40 since the review of 9 October), 7 referee tests, six browser suites on a local chain, and a full two-player game on the live site against Monad (sign-up in 5.9 s, the referee settling a checkmate, withdrawals, rematch). This script is the human pass: real phones, real eyes and ears.
 
 ## Before you start
 

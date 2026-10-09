@@ -50,6 +50,11 @@ export const degenChessAbi = [
   },
   {
     "inputs": [],
+    "name": "KeyTaken",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NoDrawOffer",
     "type": "error"
   },
@@ -314,6 +319,44 @@ export const degenChessAbi = [
     "inputs": [
       {
         "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferStarted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "from",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "to",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "uint256",
         "name": "gameId",
         "type": "uint256"
@@ -509,6 +552,13 @@ export const degenChessAbi = [
       }
     ],
     "name": "acceptDraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "acceptOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1030,6 +1080,19 @@ export const degenChessAbi = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "pendingOwner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -1193,6 +1256,19 @@ export const degenChessAbi = [
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
