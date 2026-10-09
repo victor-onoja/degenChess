@@ -25,7 +25,7 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 5 October 2026: feature-com
 | Away Chess (games and stakes) | `0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00` |
 | ChessReferee (Chainlink CRE consumer) | `0xba90386c49ebdbe1f4ae572e5081421a909f8617` |
 | PlayerNames (usernames) | `0xeeff1b2601b45472ea746527e9482a882a36f114` |
-| Tournaments (round-robin leagues, optional prize pot) | `0xef52a4b35ed7401a532569dd1d290c68df600e31` |
+| Tournaments (round-robin leagues, optional prize pot) | `0x5b311b1e143f44404077e4521279148b4a2e8cfa` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
 **Primary track:** Consumer Products & Payments

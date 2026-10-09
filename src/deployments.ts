@@ -8,5 +8,5 @@ export const MONAD_TESTNET = {
   /** PlayerNames: usernames, shared across game redeployments. */
   names: "0xeeff1b2601b45472ea746527e9482a882a36f114",
   /** Tournaments: a register of round-robin leagues (holds no money). */
-  tournaments: "0xef52a4b35ed7401a532569dd1d290c68df600e31",
+  tournaments: "0x5b311b1e143f44404077e4521279148b4a2e8cfa",
 } as const;
