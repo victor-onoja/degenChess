@@ -9,7 +9,7 @@ export function TournamentTeaser() {
   const { list, loading } = useTournamentList(3);
   const { label } = useNames(list.flatMap((x) => x.winners));
   if (!TOURNAMENTS_ADDRESS) return <p className="soft">Coming to this network soon.</p>;
-  if (loading && list.length === 0) return <p className="soft">Looking for tournaments...</p>;
+  if (loading) return <p className="soft">Looking for tournaments...</p>;
   if (list.length === 0)
     return (
       <p className="soft">

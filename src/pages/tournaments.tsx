@@ -146,7 +146,7 @@ function List({ onOpen }: { onOpen: (id: bigint) => void }) {
   const { list, loading } = useTournamentList();
   const { label } = useNames(list.flatMap((x) => [x.t.host, ...x.winners]));
   const [picked, setPicked] = useState<(typeof TABS)[number]["id"] | null>(null);
-  if (loading && list.length === 0) return <p className="soft">Looking for tournaments...</p>;
+  if (loading) return <p className="soft">Looking for tournaments...</p>;
   if (list.length === 0) return <p className="soft">No tournaments yet. Start the first one.</p>;
   // Until a tab is chosen, show the first that has anything in it.
   const tab = picked ?? TABS.find((t) => list.some((x) => x.state === t.id))?.id ?? "open";

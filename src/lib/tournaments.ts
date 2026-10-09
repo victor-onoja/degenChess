@@ -252,5 +252,7 @@ export function useTournamentList(limit = 30): { list: ListedTournament[]; loadi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournaments, prizes, games, ids.length]);
 
-  return { list, loading: loading || (tournaments.length > 0 && loadingPrizes) || (ids.length > 0 && loadingGames) };
+  // Nothing is listed until its prize side and games have arrived: a row is never shown half-known.
+  const waiting = loading || (tournaments.length > 0 && (loadingPrizes || !prizes)) || (live.length > 0 && gameCount === undefined) || (ids.length > 0 && (loadingGames || !games));
+  return { list: waiting ? [] : list, loading: waiting };
 }

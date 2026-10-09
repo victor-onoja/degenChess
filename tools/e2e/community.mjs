@@ -66,14 +66,15 @@ await a.waitForURL(/tournaments\?t=\d+/, { timeout: 60000 });
 await idle(a);
 const tournamentPath = new URL(a.url()).pathname + new URL(a.url()).search;
 // The list as a visitor sees it: one row for this cup, under the tab for its state.
-const listed = async (tab) => {
+// (Waits for `settled` text, since usernames arrive a moment after the row on a real network.)
+const listed = async (tab, settled) => {
   await watcher.goto(`${APP}/tournaments`);
   await watcher.getByRole("button", { name: new RegExp(`^${tab} \\d+$`) }).click();
   const row = watcher.locator("ul.facts li", { hasText: `Cup ${stamp}` });
-  await row.waitFor({ timeout: 30000 });
+  await row.filter({ hasText: settled }).waitFor({ timeout: 30000 }).catch(() => {});
   return (await row.innerText()).replace(/\s+/g, " ");
 };
-let row = await listed("Open");
+let row = await listed("Open", `hosted by ${alice}`);
 check(/1 player/.test(row) && /5 tUSD to enter, pot 5 tUSD so far/.test(row) && row.includes(`hosted by ${alice}`) && /Join$/.test(row), `listed under Open (${row})`);
 await go(b, tournamentPath);
 await b.getByRole("button", { name: "Join for 5 tUSD" }).click();
@@ -84,7 +85,7 @@ await a.getByText("0 of 1 games played").waitFor({ timeout: 60000 });
 await idle(a);
 await a.getByText(/Prize pot\s*10 tUSD/).waitFor({ timeout: 30000 });
 check(true, "tournament created with a 5 tUSD entry fee, joined and started: the pot is 10 tUSD");
-row = await listed("Running");
+row = await listed("Running", "games played");
 check(/0 of 1 games played · 2 players · pot 10 tUSD · pays out by /.test(row) && /Standings$/.test(row), `listed under Running (${row})`);
 
 step("They play their game from the tournament page");
@@ -124,7 +125,7 @@ check(/\+10/.test(paid), `the winner is paid the whole pot (${paid.replace(/\s+/
 await a.getByText(`Finished. ${alice} won.`).waitFor({ timeout: 30000 });
 check(true, "the tournament page names the winner");
 if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-tournament.png`, fullPage: true });
-row = await listed("Finished");
+row = await listed("Finished", `${alice} won`);
 check(row.includes(`${alice} won +10 tUSD`) && /1 of 1 games played/.test(row) && /Results$/.test(row), `listed under Finished (${row})`);
 if (SHOTS) await watcher.screenshot({ path: `${SHOTS}/community-tournament-list.png` });
 await go(a, "/leaderboard");

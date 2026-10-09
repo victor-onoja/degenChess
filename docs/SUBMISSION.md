@@ -95,9 +95,10 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 | --- | --- |
 | Workflow | `cre/referee/main.ts` (EVM log trigger on `MoveMade`, reads `getGame`/`getMoves`), verdict logic `cre/referee/judge.ts` with unit tests |
 | Consumer contract | `contracts/ChessReferee.sol`: `onReport` → `DegenChess.arbitrate` |
-| Checkmate settled automatically | game 0, verdict tx `0x5e6c473075a6de2742320433d03dd083c659100d43a548be2f9f3ffff8df00c2`: White wins, 1.95 / 0 tUSD |
-| Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0xe082f3efe3f5ce69317ed5f13576abbaf2d6abd4405d1d9a7b03833e9ee39c05`); verdict tx `0xadb1201529a700f23897a897070f9b8a9b6a4b4dd5d174595ed960a974f88357` forfeited White: 0 / 1.95 tUSD, the stolen queen value included |
-| Earlier runs | stalemate and rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
+| Checkmate settled automatically | game 0, verdict tx `0x4cc67cfdf2b0ca06e5bc979a8d74d29d8f94b6ab0060b676535c5019175567e0`: White wins, 1.95 / 0 tUSD |
+| Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0x59fe9580c7b9a0d3bb481efbb89eace6b479d7dfb2c32bd76beec89216751383`); verdict tx `0x524e5e611ad8bb5a14810b47396bfcb2afcfc7cec4c76f7c5357b65112913a1c` forfeited White: 0 / 1.95 tUSD |
+| Stalemate settled as a draw | game 2 (Sam Loyd's ten-move stalemate), verdict tx `0xa48944409db882101ff134bc90536efd832f4d2cfb493ea69403056433249eca`: no fee, each side keeps its balance (1.2564 / 0.7436 tUSD) |
+| Earlier runs | rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
 | Running | a Docker service on a server (`deploy/referee`) watches every move. It runs the workflow with the CRE CLI and, until our CRE API key and DON deployment access arrive, delivers the same `judge.ts` verdict through the same forwarder itself |
 | Security | our review found Chainlink's simulation forwarder let anyone deliver a verdict; fixed the same day with a reporter allowlist (`docs/AUDIT.md`) |
 
