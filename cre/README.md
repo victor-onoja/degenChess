@@ -31,8 +31,8 @@ nothing), it also requires the transaction to come from an allowed reporter key 
 
 | Contract | Address |
 | --- | --- |
-| Away Chess | `0xb035514b25f72bc329529551b5177079ea54c4d9` |
-| ChessReferee | `0xd34e5e6b1c8d0825a1468713d5764d6070fe5d0d` |
+| Away Chess | `0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00` |
+| ChessReferee | `0xba90386c49ebdbe1f4ae572e5081421a909f8617` |
 | Forwarder (simulation `MockKeystoneForwarder`) | `0xB9F79d863261869B234c481D1f9A7af84AeAd192` |
 
 ## Run it

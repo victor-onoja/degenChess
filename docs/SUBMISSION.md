@@ -22,10 +22,10 @@ Deadline: 14 October 2026, 04:59 GMT+1. Status as of 5 October 2026: feature-com
 
 | Contract | Address |
 | --- | --- |
-| Away Chess (games and stakes) | `0xb035514b25f72bc329529551b5177079ea54c4d9` |
-| ChessReferee (Chainlink CRE consumer) | `0xd34e5e6b1c8d0825a1468713d5764d6070fe5d0d` |
+| Away Chess (games and stakes) | `0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00` |
+| ChessReferee (Chainlink CRE consumer) | `0xba90386c49ebdbe1f4ae572e5081421a909f8617` |
 | PlayerNames (usernames) | `0xeeff1b2601b45472ea746527e9482a882a36f114` |
-| Tournaments (round-robin leagues, optional prize pot) | `0xe7a1bac8f11ae9d36ad462a7d0256f544f4df173` |
+| Tournaments (round-robin leagues, optional prize pot) | `0xef52a4b35ed7401a532569dd1d290c68df600e31` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
 **Primary track:** Consumer Products & Payments
