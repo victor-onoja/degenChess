@@ -75,7 +75,8 @@ const Home: NextPage = () => {
         <div className="stage__ground" />
 
         <header className="absolute inset-x-0 top-0 z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-5 py-4 sm:px-10 sm:py-6">
-          <Wordmark compact={hasAccount} />
+          {/* The name gives way to the account only once there is one to show (an unlocked account on a phone). */}
+          <Wordmark compact={unlocked} />
           {hasAccount ? (
             <AccountBar />
           ) : (

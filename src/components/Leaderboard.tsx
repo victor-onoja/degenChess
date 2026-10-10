@@ -42,7 +42,8 @@ export function Leaderboard({ limit }: { limit?: number }) {
                 {s.wins} {s.draws} {s.losses}
               </td>
               <td className="text-right font-bold" style={{ color: s.net > 0n ? "var(--gold)" : s.net < 0n ? "var(--bone-soft)" : undefined }}>
-                {s.net > 0n ? "+" : s.net < 0n ? "-" : ""}
+                {/* No sign on an amount too small to show, so it never reads "-0". */}
+                {formatToken(s.net < 0n ? -s.net : s.net) === "0" ? "" : s.net > 0n ? "+" : "-"}
                 {formatToken(s.net < 0n ? -s.net : s.net)}
               </td>
             </tr>

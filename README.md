@@ -127,6 +127,7 @@ tools/e2e/account-flows.mjs  usernames and the wallet
 tools/e2e/sandbox.mjs        the practice board
 tools/e2e/community.mjs      tournaments, audience count, leaderboard, feedback
 tools/e2e/voices.mjs         voices speak one at a time, music dips under them
+tools/e2e/test-plan.mjs      walks docs/TEST-PLAN.md step by step on a phone and a laptop
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
@@ -169,13 +170,14 @@ node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money b
 node tools/e2e/sandbox.mjs        # the practice board on desktop and phone
 node tools/e2e/community.mjs      # a tournament end to end, the audience count, the leaderboard, feedback
 node tools/e2e/voices.mjs         # voices never overlap; the music dips under them
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x... node tools/e2e/test-plan.mjs   # every step of the hands-on plan; local chain only
 npm run lint
 npm run build
 ```
 
 Against the live site, with the always-on referee settling the checkmate: `APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`.
 
-The hands-on pass, with the moves to play and the amounts to expect at each step, is in [docs/TEST-PLAN.md](docs/TEST-PLAN.md).
+The hands-on pass, with the moves to play and the amounts to expect at each step, is in [docs/TEST-PLAN.md](docs/TEST-PLAN.md). `tools/e2e/test-plan.mjs` walks the same steps (Player A on a phone-sized browser, Player B on a laptop-sized one) and checks the wording, buttons and amounts the plan quotes, so the plan cannot drift from the app.
 
 After changing the contract, run `npm run compile` to regenerate `src/contracts/abi.ts`.
 

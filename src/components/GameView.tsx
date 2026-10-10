@@ -70,7 +70,18 @@ export function GameView({
   const { data: moveTimeout } = useReadContract({ ...chessContract, functionName: "moveTimeout" });
   // The side the creator chose (0 white, 1 black, 2 random); it only matters until someone joins.
   const { data: creatorSide } = useReadContract({ ...chessContract, functionName: "getCreatorSide", args: [gameId] });
-  const { data: gameKeys } = useReadContract({ ...chessContract, functionName: "getGameKeys", args: [gameId] });
+  // Re-read as the game goes on: when someone joins, the seats (and the keys with them) can swap, and a
+  // creator who chose Black or a coin flip must see their key under their new colour without reloading.
+  const { data: gameKeys, refetch: refetchKeys } = useReadContract({
+    ...chessContract,
+    functionName: "getGameKeys",
+    args: [gameId],
+    query: { refetchInterval: POLL_MS },
+  });
+  // And at once when the seats are known, so whoever was just seated as White can move straight away.
+  useEffect(() => {
+    void refetchKeys();
+  }, [info?.status, info?.white, info?.black, refetchKeys]);
   // When a referee (the Chainlink CRE workflow's contract) is registered, finished games settle themselves.
   const { data: arbiter } = useReadContract({ ...chessContract, functionName: "arbiter" });
   const { data: clock } = useReadContract({

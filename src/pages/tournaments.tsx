@@ -30,7 +30,7 @@ const LENGTHS = [
   { label: "3 days", seconds: 259_200 },
   { label: "7 days", seconds: 604_800 },
 ];
-const points = (p: number) => (p % 2 === 0 ? String(p / 2) : `${Math.floor(p / 2)}½`);
+const points = (p: number) => (p % 2 === 0 ? String(p / 2) : `${Math.floor(p / 2) || ""}½`);
 
 function Create({ onCreated }: { onCreated: (id: bigint) => void }) {
   const { address, returning, busy, sendMoney } = useDegenAccount();
