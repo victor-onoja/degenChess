@@ -407,6 +407,27 @@ textarea::placeholder {
   mask: var(--mark) center / contain no-repeat;
   vertical-align: -0.2em;
 }
+/* A verified chess.com rating after a name: quiet violet light, never gold (gold is money). */
+.rated {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  margin-left: 0.45em;
+  padding: 0 0.4em;
+  border: 1px solid rgba(133, 115, 238, 0.7);
+  border-radius: 3px;
+  color: var(--bone);
+  font-weight: 700;
+  font-size: 0.86em;
+  line-height: 1.45;
+  white-space: nowrap;
+  vertical-align: baseline;
+  box-shadow: 0 0 10px rgba(133, 115, 238, 0.55), inset 0 0 6px rgba(133, 115, 238, 0.25);
+}
+.rated .mark {
+  vertical-align: 0;
+}
+
 .builton {
   display: flex;
   flex-wrap: wrap;

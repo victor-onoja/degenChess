@@ -1,11 +1,14 @@
 import {
   bytesToHex,
+  consensusIdenticalAggregation,
+  cre,
   encodeCallMsg,
   EVMClient,
   type EVMLog,
   getNetwork,
   handler,
   hexToBase64,
+  type HTTPSendRequester,
   LATEST_BLOCK_NUMBER,
   Runner,
   type Runtime,
@@ -22,6 +25,8 @@ import { judge } from "./judge";
 //           a move illegal?
 // Write:    if so, a DON-signed verdict goes through the Chainlink forwarder to ChessReferee, which
 //           settles the game by calling DegenChess.arbitrate.
+// Tell:     the result is then reported to the team's Discord through the app's announce endpoint
+//           (an HTTP call), so every game the referee ends shows up where people are watching.
 //
 // The contract deliberately does not validate chess legality (too expensive per move); this workflow
 // is what makes cheating unprofitable and ends finished games without waiting on the loser.
@@ -33,7 +38,13 @@ type Config = {
   /** ChessReferee: the consumer contract that receives verdicts. */
   refereeAddress: `0x${string}`;
   gasLimit: string;
+  /** Where to report a settled game (the app's /api/announce). Optional: no report when unset. */
+  announceUrl?: string;
 };
+
+/** Asks the app to report a game. Each node asks; the status they get back must agree. */
+const announce = (sendRequester: HTTPSendRequester, url: string, gameId: string): number =>
+  sendRequester.sendRequest({ url: `${url}?game=${gameId}`, method: "GET" }).result().statusCode;
 
 const chessAbi = parseAbi([
   "function getMoves(uint256 gameId) view returns (uint16[])",
@@ -103,6 +114,18 @@ const onMoveMade = (runtime: Runtime<Config>, log: EVMLog): string => {
   if (written.txStatus !== TxStatus.SUCCESS) throw new Error(`Verdict transaction failed: ${written.txStatus}`);
   const txHash = bytesToHex(written.txHash ?? new Uint8Array(32));
   runtime.log(`Game ${gameId}: verdict delivered in ${txHash}`);
+
+  // The game is settled whatever happens next: a failed report is logged, never thrown.
+  if (config.announceUrl) {
+    try {
+      const status = new cre.capabilities.HTTPClient()
+        .sendRequest(runtime, announce, consensusIdenticalAggregation<number>())(config.announceUrl, gameId.toString())
+        .result();
+      runtime.log(`Game ${gameId}: result reported to the team channel (HTTP ${status})`);
+    } catch (e) {
+      runtime.log(`Game ${gameId}: could not report the result: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
   return txHash;
 };
 

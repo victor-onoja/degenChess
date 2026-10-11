@@ -73,7 +73,7 @@ export function RatingLink() {
         </>
       ) : (
         <>
-          <p className="soft text-sm">Show opponents your real strength. Link your chess.com account and your rating appears next to your name.</p>
+          <p className="soft text-sm">Show opponents your real strength. Link your chess.com account and your rating glows next to your name on every board you open, so people know who they are sitting down with.</p>
           <ol className="mt-3 grid gap-2 text-sm">
             <li>
               <span className="font-bold">1.</span> On chess.com, open your profile settings and put this code in <span className="font-bold">Location</span>:

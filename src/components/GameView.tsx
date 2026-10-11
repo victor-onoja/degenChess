@@ -24,6 +24,7 @@ import { say, useVoices } from "../lib/voices";
 import { nextTrack, useMusic } from "../lib/music";
 import { tournamentSeat, useTournamentList } from "../lib/tournaments";
 import { useRatings } from "../lib/ratings";
+import { Rated } from "./Rated";
 import { useWatchers } from "../lib/watchers";
 import { FeedbackLink } from "./Feedback";
 import { ShareButton } from "./ShareButton";
@@ -83,6 +84,17 @@ export function GameView({
     args: [gameId],
     query: { refetchInterval: POLL_MS },
   });
+  // When a game this player is in ends while they are here, the result is reported to the team's
+  // channel (the server reads the game itself; this only says which one). Failure is silent.
+  const statusBefore = useRef<Status | null>(null);
+  useEffect(() => {
+    const before = statusBefore.current;
+    statusBefore.current = info?.status ?? null;
+    const mine = !!address && !!info && (sameAddress(address, info.white) || sameAddress(address, info.black));
+    if (before === Status.Active && info?.status === Status.Finished && mine) {
+      void fetch("/api/announce", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ game: gameId.toString() }) }).catch(() => undefined);
+    }
+  }, [info?.status, info, address, gameId]);
   // And at once when the seats are known, so whoever was just seated as White can move straight away.
   useEffect(() => {
     void refetchKeys();
@@ -104,7 +116,7 @@ export function GameView({
   const { label } = useNames([info?.white, info?.black, ...(seat?.awaited ?? [])]);
   const seatNames = (seat?.awaited ?? []).map(label).join(" or ");
   // chess.com ratings the players have verified, shown after their names.
-  const { rated } = useRatings([info?.white, info?.black]);
+  const { ratingOf } = useRatings([info?.white, info?.black]);
 
   // Rematch: look at the games created after this one for an open game from the opponent at the same stake.
   const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { refetchInterval: POLL_MS } });
@@ -455,7 +467,7 @@ export function GameView({
           <div className="soft truncate text-xs">
             {bull ? "White" : "Black"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
             {myColor === color ? " (you)" : ""}
-            {addr !== ZERO_ADDRESS && rated(addr) && <span title="Verified chess.com rating">{rated(addr)}</span>}
+            {addr !== ZERO_ADDRESS && <Rated rating={ratingOf(addr)} />}
           </div>
           <div className="amount text-lg leading-tight">
             {formatToken(balance)} <span className="text-xs font-medium">{TOKEN_SYMBOL}</span>

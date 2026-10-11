@@ -2,6 +2,7 @@ import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { formatToken, sameAddress } from "../lib/format";
 import { useRatings } from "../lib/ratings";
+import { Rated } from "./Rated";
 import { useLeaderboard } from "../lib/leaderboard";
 import { useNames } from "../lib/names";
 
@@ -11,7 +12,7 @@ export function Leaderboard({ limit }: { limit?: number }) {
   const { standings, players, loading } = useLeaderboard();
   const rows = limit ? standings.slice(0, limit) : standings;
   const { label } = useNames(rows.map((s) => s.address));
-  const { rated } = useRatings(rows.map((s) => s.address));
+  const { ratingOf } = useRatings(rows.map((s) => s.address));
 
   if (loading) return <p className="soft">Reading the games...</p>;
   if (rows.length === 0) return <p className="soft">No finished games yet. Win one and this table starts with you.</p>;
@@ -39,7 +40,7 @@ export function Leaderboard({ limit }: { limit?: number }) {
               <td className="max-w-0 truncate font-bold">
                 {label(s.address)}
                 {sameAddress(s.address, address ?? undefined) && <span className="soft font-normal"> (you)</span>}
-                {rated(s.address) && <span className="soft font-normal" title="Verified chess.com rating">{rated(s.address)}</span>}
+                <Rated rating={ratingOf(s.address)} />
               </td>
               <td className="whitespace-nowrap text-right">
                 {s.wins} {s.draws} {s.losses}

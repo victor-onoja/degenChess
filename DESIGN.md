@@ -5,7 +5,7 @@ The living board. Away Chess is chess in another dimension, a multiverse of boar
 ## Principles
 
 1. The pieces are the characters. They stay recognisable chess pieces, with breath and reactions; there are no faces. Nothing else on a screen competes with them.
-2. Gold means money and only money: piece cores, amounts, the action that stakes. It is never decoration.
+2. Gold means money and only money: piece cores, amounts, the action that stakes. It is never decoration. A verified chess.com rating is a badge with a soft violet glow after a player's name (`.rated`), deliberately not gold. The coordinates carved into the 3D board's rim are the one warm light that is not money: they are part of the board, like its squares.
 3. Everything sits on the board's grid. Controls are flat, outlined squares of one look; the chosen one turns bone. No cards, no glass, no gradients on text.
 5. The 2D board and the game itself come first. 3D is the show: it never blocks playing.
 4. Real data only. Every small board in the Yard is a real game at its real position.

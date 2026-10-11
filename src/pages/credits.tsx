@@ -13,6 +13,7 @@ const ART = [
   ["Board coordinates typeface", "Uncial Antiqua, Astigmatic, via Google Fonts", "SIL Open Font License", "https://fonts.google.com/specimen/Uncial+Antiqua"],
   ["Interface typeface", "Bricolage Grotesque, Mathieu Triay, via Google Fonts", "SIL Open Font License", "https://fonts.google.com/specimen/Bricolage+Grotesque"],
   ["Monad logo", "Monad Foundation. Shown to say what the game is built on; not an endorsement", "Trademark of its owner", "https://www.monad.xyz"],
+  ["Chess.com mark and player ratings", "Chess.com, mark via Simple Icons; ratings read from its public data API when a player links their account. Not an endorsement", "Trademark and data of their owner", "https://www.chess.com"],
   ["Chainlink mark", "Chainlink, via Simple Icons. Shown to say what referees the games; not an endorsement", "Trademark of its owner", "https://chain.link"],
 ] as const;
 

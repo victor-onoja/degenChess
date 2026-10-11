@@ -217,6 +217,13 @@ const Home: NextPage = () => {
                 Chainlink CRE
               </a>
             </span>
+            <span>
+              Ratings from{" "}
+              <a href="https://www.chess.com" target="_blank" rel="noreferrer" aria-label="Chess.com">
+                <span className="mark" style={{ ["--mark" as string]: "url(/brand/chesscom-mark.svg)", width: "1.15em" }} />
+                Chess.com
+              </a>
+            </span>
           </p>
         </section>
 

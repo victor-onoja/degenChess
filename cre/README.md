@@ -15,6 +15,7 @@ MoveMade event ──▶ CRE workflow ──▶ signed verdict ──▶ Chainli
 | Read | `getGame` and `getMoves` for that game | `referee/main.ts` |
 | Decide | Replay the moves with chess.js | `referee/judge.ts` |
 | Write | DON-signed report → forwarder → `ChessReferee` → `arbitrate` | `contracts/ChessReferee.sol` |
+| Tell | HTTP call to the app's `/api/announce`, which posts the result to the team's Discord. A failed call is logged and never undoes a verdict | `referee/main.ts` (`announceUrl` in the config) |
 
 Verdicts:
 

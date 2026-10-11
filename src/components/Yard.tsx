@@ -9,6 +9,7 @@ import { formatToken, sameAddress } from "../lib/format";
 import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
 import { useRatings } from "../lib/ratings";
+import { Rated } from "./Rated";
 import { withApproval } from "../lib/stake";
 import { tournamentSeat, useTournamentList } from "../lib/tournaments";
 import { useWatcherCounts } from "../lib/watchers";
@@ -150,7 +151,7 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const { list: tournaments } = useTournamentList(12);
   const { label } = useNames(games.flatMap((g) => [g.white, g.black]));
   // Whoever is waiting shows their verified chess.com rating, so you know who you are sitting down with.
-  const { rated } = useRatings(games.filter((g) => g.status === Status.Open).map((g) => g.white));
+  const { ratingOf } = useRatings(games.filter((g) => g.status === Status.Open).map((g) => g.white));
   const narrow = useNarrow();
   const [picked, setPicked] = useState<Tab | null>(null);
   const [page, setPage] = useState(0);
@@ -188,7 +189,7 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
     const action = isOpen ? (sameAddress(g.white, me) ? "View" : "Join") : isLive ? (mine(g) ? "Resume" : "Watch") : "Review";
     const result = g.result === Result.Draw ? "drawn" : g.result === Result.WhiteWins ? "White won" : "Black won";
     const seat = ["plays White", "plays Black", "side by coin flip"][g.creatorSide] ?? "plays White";
-    const who = isOpen ? `${label(g.white)}${rated(g.white)} is waiting, ${seat}` : `${label(g.white)} v ${label(g.black)}`;
+    const who = isOpen ? `${label(g.white)} is waiting, ${seat}` : `${label(g.white)} v ${label(g.black)}`;
     const stake = `${formatToken(g.stake)} ${TOKEN_SYMBOL}`;
     const winner = g.result === Result.WhiteWins ? g.white : g.black;
     const loser = g.result === Result.WhiteWins ? g.black : g.white;
@@ -215,7 +216,18 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
           <span className="link shrink-0 text-sm">{action}</span>
         </span>
         <span className="soft flex items-center gap-2 text-sm">
-          <span className="min-w-0 truncate">{g.status === Status.Finished ? `${who}, ${result}` : who}</span>
+          <span className="min-w-0 truncate">
+            {isOpen ? (
+              <>
+                {label(g.white)}
+                <Rated rating={ratingOf(g.white)} /> is waiting, {seat}
+              </>
+            ) : g.status === Status.Finished ? (
+              `${who}, ${result}`
+            ) : (
+              who
+            )}
+          </span>
           {isLive && (audience[g.id.toString()] ?? 0) > 0 && (
             <span className="ml-auto inline-flex shrink-0 items-center gap-1" title="People watching">
               <Icon name="eye" size={14} /> {audience[g.id.toString()]}

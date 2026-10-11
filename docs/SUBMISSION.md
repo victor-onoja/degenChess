@@ -46,8 +46,8 @@ Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submissi
 | Bounty | Fit | Notes |
 | --- | --- | --- |
 | Best Mera-Powered UX on Monad | Strong | Mera is the whole account layer; one ceremony; the measured time to first transaction is shown to the user; money actions re-prompt, moves never do, scoped by the contract; lock, reload and 30 idle minutes end the session; the stateless test is automated. |
-| Best workflow with CRE | Strong | Two workflows. The referee settles every game (Monad in, chess engine, Monad out). The rating workflow joins Monad to an external API: it reads a player's public chess.com profile and ratings, checks they own the account, and writes the rating on-chain. Both are demonstrated by CLI simulation with broadcast. |
-| Mera: One Passkey, Many Keys | Weak as it stands | The bounty is for PRF-derived keys doing work that is **not** signing transactions. Both of our keys (money and game) sign transactions; the game key is a capability key, which is the closest we come. |
+| Best workflow with CRE | Strong | Two workflows. The referee settles every game (Monad in, chess engine, Monad out). The rating workflow joins Monad to an external API: it reads a player's public chess.com profile and ratings, checks they own the account, and writes the rating on-chain. After settling a game the referee also reports the result to the team's Discord through an HTTP call. All of it is demonstrated by CLI simulation with broadcast. |
+| Mera: One Passkey, Many Keys | **Not entered** (decided 11 October) | The bounty is for passkey-derived keys doing work that is not signing transactions; both of ours sign transactions. Remove it from the project's selections on the form. |
 
 ---
 
@@ -79,7 +79,7 @@ Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submissi
 **Sponsor bounties:**
 
 - **Best Mera-Powered UX on Monad.** Mera is the whole account layer: one passkey, no wallet, a money key that always asks and a game key that never does.
-- **Best workflow with CRE (Chainlink).** A CRE workflow is the game's referee: it fires on every move, replays the game with a chess engine and settles checkmates, rule draws and illegal moves on-chain.
+- **Best workflow with CRE (Chainlink).** Two CRE workflows. One is the game's referee: it fires on every move, replays the game with a chess engine, settles checkmates, rule draws and illegal moves on-chain, and reports the result to Discord. The other brings a player's chess.com rating on-chain from chess.com's public API, after checking they own the account.
 
 **Images:** logo `public/brand/logo-mark.png` (1024×1024) and `public/brand/logo-wide.png` (1600×480); share image `public/og.png`; video title card `public/brand/title-card.png`; story poster `public/brand/poster.png`. All rendered from the live app by `tools/brand/render.mjs`.
 
@@ -141,7 +141,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ### Chainlink CRE (the referee)
 
-**Asked at submission: how CRE is the orchestration layer.** CRE does the two jobs the contracts cannot do for themselves. **Ratings (`cre/rating/main.ts`):** a player asks on-chain to link a chess.com account; the workflow is triggered by that event, calls chess.com's public API for the profile and ratings (each node asks, and the answers must agree), checks the profile carries a code derived from the player's address, and writes the verified ratings to `ChessRatings` on Monad. Opponents then see a rating the player could not have typed in, which answers the first worry about staked chess: who am I really playing? **Refereeing (`cre/referee/main.ts`):** the workflow is what ends games. It is triggered by the game contract's `MoveMade` event, reads the game and its full move list from Monad, replays it with a chess engine (`judge.ts`), and, when the game is over or a move was illegal, writes a signed report through Chainlink's forwarder to `ChessReferee`, which settles the stakes. Without it a checkmate would need the loser to resign. Demonstrated with `cre workflow simulate referee --broadcast` against Monad testnet (commands in `cre/README.md`; verdict transactions in the table below).
+**Asked at submission: how CRE is the orchestration layer.** CRE does the two jobs the contracts cannot do for themselves. **Ratings (`cre/rating/main.ts`):** a player asks on-chain to link a chess.com account; the workflow is triggered by that event, calls chess.com's public API for the profile and ratings (each node asks, and the answers must agree), checks the profile carries a code derived from the player's address, and writes the verified ratings to `ChessRatings` on Monad. Opponents then see a rating the player could not have typed in, which answers the first worry about staked chess: who am I really playing? **Refereeing (`cre/referee/main.ts`):** the workflow is what ends games. It is triggered by the game contract's `MoveMade` event, reads the game and its full move list from Monad, replays it with a chess engine (`judge.ts`), and, when the game is over or a move was illegal, writes a signed report through Chainlink's forwarder to `ChessReferee`, which settles the stakes. Without it a checkmate would need the loser to resign. After settling, it calls the app's announce endpoint over HTTP, which posts the result (players, stake, payouts) to the team's Discord. Demonstrated with `cre workflow simulate referee --broadcast` against Monad testnet (commands in `cre/README.md`; verdict transactions in the table below).
 
 
 | Item | Where |
@@ -196,7 +196,8 @@ Record the terminal and the app side by side. It must show a successful simulati
 | 0:30 | Terminal: `node tools/request-rating.mjs <your username>`, then `cre workflow simulate rating ... --broadcast` | "The request is an event on Monad. The workflow picks it up, calls chess.com's API, checks the code, and writes a signed report back to Monad." |
 | 0:55 | The simulation's log lines (profile, ratings, outcome 1) and the transaction on the explorer | "Each node fetches the profile and they must agree. Outcome one: verified." |
 | 1:10 | Terminal: `node tools/play-test-game.mjs mate`, then `cre workflow simulate referee ... --broadcast` | "The second workflow is the referee. It fires on every move, replays the game with a chess engine, and settles checkmates, draws and illegal moves." |
-| 1:40 | The verdict transaction; the game showing Finished with nobody resigning | "Nobody resigned. CRE is what ends games here, and what tells you who you're playing." |
+| 1:35 | The simulation's last log line ("result reported to the team channel") and the message arriving in Discord | "Then it tells the community: an HTTP call that posts the result to our Discord." |
+| 1:45 | The verdict transaction; the game showing Finished with nobody resigning | "Nobody resigned. CRE is what ends games here, and what tells you who you're playing." |
 
 ### Pitch (2 minutes)
 
@@ -234,7 +235,7 @@ In priority order.
 2. **Record the demo video** (required, at most 3 minutes, public link) and, if time allows, the pitch and the advert.
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
 4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
-5. **Done:** Discord server, feedback webhook and invite link are live.
+5. **Done:** Discord server, feedback webhook and invite link are live. Every finished game is also reported there ("alice beat bob", stake, payouts). To send those to their own channel, add `DISCORD_RESULTS_WEBHOOK` on Vercel; otherwise they share the feedback channel.
 6. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
 7. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
 8. **Done:** the independent review of 9 October is folded in (`docs/AUDIT.md`).

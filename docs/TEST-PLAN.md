@@ -32,7 +32,7 @@ Phone (Player A), signed out
 
 - [ ] 1.1 The page loads with the Heroes and the Undead playing a game by themselves behind the headline "Every piece has skin in the game." Top left: the eyes logo and the words **Away Chess**. (Once you are signed in, a phone shows only the eyes, to leave room for your name and balance.)
 - [ ] 1.2 **(by eye)** The characters look sharp, not blurry. The page scrolls smoothly.
-- [ ] 1.3 Scroll down: **Start a board** with a list of boards under tabs **Waiting**, **Live** and **Finished**; then **Leaderboard**, **Tournaments** and **How it runs**; a line reading "Built on Monad" and "Refereed by Chainlink CRE" with their logos; and a footer with Feedback, Discord, Source, Contract and Credits.
+- [ ] 1.3 Scroll down: **Start a board** with a list of boards under tabs **Waiting**, **Live** and **Finished**; then **Leaderboard**, **Tournaments** and **How it runs**; a line reading "Built on Monad", "Refereed by Chainlink CRE" and "Ratings from Chess.com" with their logos; and a footer with Feedback, Discord, Source, Contract and Credits.
 - [ ] 1.4 In the name box type `t_alice`. Under it: "Available. It's yours if you want it."
 - [ ] 1.5 Tap **Play now**. One Face ID or fingerprint prompt (some phones ask a second time, straight after). No wallet app, no seed phrase.
 - [ ] 1.6 A message appears: "You're in. 1 passkey tap, N s to your first transaction on Monad." Note the number of seconds: ______
@@ -75,6 +75,7 @@ Laptop (B)
 - [ ] 2.12 Phone (A): tap **Withdraw 1.95 tUSD**, confirm with the passkey. The button becomes "Withdrawn". Back on the home page the header balance is **100.95 tUSD**.
 - [ ] 2.13 On the finished game the move list reads `1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7#`. Tap `Bc4`: the board goes back to that position. Use the arrows to step to the end.
 - [ ] 2.14 Under the buttons: **How was that? Send feedback**.
+- [ ] 2.15 Your Discord channel has a new message: "Game #N: t_alice beat t_bob", with the stake, what each side was paid and a link to the game. Every finished game in this plan posts one.
 
 ## Part 3: Game 2, captures both ways, resignation, the loser keeps what they took (8 min)
 
@@ -199,7 +200,7 @@ Chess.com rating (needs a chess.com account; skip if you have none)
 - [ ] 9.8 In **Your money**, under **Chess.com rating**, there is a code like `away-1a2b3c` with a **Copy code** button, and a box for your chess.com username.
 - [ ] 9.9 Type your chess.com username and press **Link** without touching chess.com, confirm with the passkey. After a few seconds: "Your code was not on that chess.com profile. Put it in Location, save, and try again."
 - [ ] 9.10 On chess.com open Settings → Profile, paste the code into **Location**, save. Back in the wallet press **I've added it. Check again** (wait 15 seconds after the first try). It shows "chess.com/yourname · verified" with your Rapid, Blitz and Bullet ratings.
-- [ ] 9.11 Create a game: your name on the board is followed by your rating in brackets, and on the other device your waiting board reads "t_alice (1450) is waiting". The leaderboard shows it too. You can now take the code off your chess.com profile.
+- [ ] 9.11 Create a game: your name on the board is followed by a small glowing badge with the chess.com pawn and your rating, and on the other device your waiting board shows the same badge after your name. The leaderboard shows it too. The number is your rapid rating (blitz if you have no rapid, bullet if neither); hover to see all three. You can now take the code off your chess.com profile.
 
 ## Part 10: Leaderboard and tournaments (12 min)
 

@@ -27,12 +27,13 @@ Tech stack: Next.js, Mera passkey accounts, viem/wagmi, react-chessboard, chess.
  reads with wagmi/viem  ◄── polling ────     Tournaments.sol (leagues, pots)      └────────── game with chess.js)
                                              ChessRatings.sol ◄── report ── CRE workflow (cre/rating) ◄── chess.com API
  /api/drip (faucet), /api/watch,             PlayerNames.sol (usernames)
- /api/feedback (to Discord)                  tUSD (test dollar)
+ /api/feedback, /api/announce (to Discord),  tUSD (test dollar)
+ /api/rating (answers a rating request)
 ```
 
 - **Money key and game key.** One passkey derives both. The money key signs staking, resigning and withdrawing and asks for the passkey each time. The game key lives in page memory, is registered per game in the contract, and can only move pieces, offer or accept draws and claim timeouts.
 - **The contract is the game server.** It records every move, moves a captured piece's share of the stake at once, runs the clocks and pays out. It does not check full chess legality: the referee does, off-chain, and settles checkmates and rule draws or forfeits an illegal move through `ChessReferee`.
-- **No backend state.** The app reads everything from the chain. The three small API routes are a testnet faucet, a live head-count of spectators and the feedback form.
+- **No backend state.** The app reads everything from the chain. The small API routes are a testnet faucet, a live head-count of spectators, the feedback form, game reports to Discord, and the answer to a rating request; none of them holds game state.
 
 ## Game rules
 
@@ -119,11 +120,13 @@ New players get gas (MON) and test dollars from `/api/drip`, a faucet that only 
 
 ### Chess.com ratings
 
-In **Your money** a player can link their chess.com account. They put a short code (derived from their address) in their chess.com profile's Location and type their username; a Chainlink CRE workflow fetches the public profile and ratings from chess.com, checks the code, and writes the rapid, blitz and bullet ratings to `ChessRatings` on Monad. The rating then shows after their name on their waiting boards, in their games and on the leaderboard, so nobody sits down against a master without knowing. One chess.com account can be linked by one player. See [cre/README.md](cre/README.md).
+In **Your money** a player can link their chess.com account. They put a short code (derived from their address) in their chess.com profile's Location and type their username; a Chainlink CRE workflow fetches the public profile and ratings from chess.com, checks the code, and writes the rapid, blitz and bullet ratings to `ChessRatings` on Monad. The rating then glows after their name (a small chess.com pawn and the number) on their waiting boards, in their games and on the leaderboard, so nobody sits down against a master without knowing. The number shown is their rapid rating, or blitz if they have no rapid rating, or bullet if they have neither; hovering shows all three. One chess.com account can be linked by one player. See [cre/README.md](cre/README.md).
 
 ### Feedback and Discord
 
 A **Feedback** link (in the footer and on a finished game) opens a short form: a bug, an idea or something else. `/api/feedback` posts it to a Discord channel with the player's username, the page and the browser type. Set `DISCORD_FEEDBACK_WEBHOOK` on the server (a channel webhook address: treat it as a secret) and `NEXT_PUBLIC_DISCORD_URL` (the public invite link, shown in the footer and the form). Without the webhook the form says feedback is not switched on. Five messages per sender per ten minutes; mentions are disabled, so the form cannot ping the channel.
+
+**Game reports.** Every finished game is posted to Discord too: who beat whom (or drew), the stake, what each side was paid and a link to the game. `/api/announce` is called by the referee workflow after it settles a game and by a player's browser when a game ends another way; the caller only names the game, and the message is built from the chain. Reports go to `DISCORD_RESULTS_WEBHOOK` if set, otherwise to the feedback channel.
 
 ### Trust model
 
@@ -239,7 +242,7 @@ The project's own code is MIT ([LICENSE](LICENSE)). It builds on:
 | Music (11 recordings) | Wikimedia Commons, each credited on `/credits` | public domain, CC0, CC BY 3.0/4.0 or CC BY-SA 3.0, per track |
 | Voices | generated with Kokoro-82M | Apache-2.0 |
 | Typefaces | Bricolage Grotesque, Uncial Antiqua (Google Fonts) | SIL OFL |
-| Monad logo, Chainlink mark | their owners; used only to say what the game is built on and refereed by | trademarks |
+| Monad logo, Chainlink mark, Chess.com mark | their owners; used only to say what the game is built on, refereed by and takes ratings from | trademarks |
 
 Every asset is also credited in the app at `/credits`.
 

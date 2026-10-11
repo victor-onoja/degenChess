@@ -87,11 +87,12 @@ try {
   await p.getByRole("button", { name: "Create Game", exact: true }).click();
   await p.waitForURL(/game=\d+/, { timeout: 60000 });
   await p.getByText("Waiting for an opponent").waitFor({ timeout: 30000 });
-  await p.getByText(`White · ${name} (you) (1450)`).first().waitFor({ timeout: 30000 });
+  await p.locator(".rated", { hasText: "1450" }).first().waitFor({ timeout: 30000 });
   check(true, "the game shows the rating after the player's name");
   const visitor = await page(false);
   await visitor.getByRole("button", { name: /^Waiting \d+$/ }).click();
-  await visitor.getByText(`${name} (1450) is waiting, plays White`).waitFor({ timeout: 60000 });
+  await visitor.locator("#yard .table", { hasText: `${name}` }).locator(".rated", { hasText: "1450" }).waitFor({ timeout: 60000 });
+  check(/is waiting, plays White/.test(await visitor.locator("#yard .table", { hasText: name }).innerText()), "and the caption still reads as a sentence");
   check(true, "a visitor sees the rating on the waiting board");
   if (SHOTS) await visitor.screenshot({ path: `${SHOTS}/rating-yard.png` });
 
