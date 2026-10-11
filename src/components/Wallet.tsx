@@ -9,6 +9,7 @@ import { chessContract, tokenContract, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress } from "../lib/format";
 import { cleanName, NAME_RULE, namesContract, useNames } from "../lib/names";
 import { Icon } from "./Icon";
+import { RatingLink } from "./RatingLink";
 import { inviteUrl, shareInvite } from "../lib/share";
 
 /**
@@ -167,6 +168,8 @@ export function Wallet({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </section>
+
+        <RatingLink />
 
         <section className="mt-6">
           <h3 className="field-label">Send</h3>

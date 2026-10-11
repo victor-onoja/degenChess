@@ -51,6 +51,16 @@ async function main() {
   const tournaments = await hre.viem.deployContract("Tournaments", [chess.address]);
   console.log(`Tournaments deployed to ${tournaments.address}`);
 
+  // The chess.com ratings register is independent of the game: deployed here only for local runs.
+  let ratings = null;
+  let ratingsForwarder = null;
+  if (local) {
+    ratingsForwarder = await hre.viem.deployContract("OpenForwarder");
+    ratings = await hre.viem.deployContract("ChessRatings", [ratingsForwarder.address]);
+    const [deployer] = await hre.viem.getWalletClients();
+    await ratings.write.setReporter([deployer.account.address, true]);
+  }
+
   console.log("\nFor localhost, put this in .env.local. For Monad testnet, update src/deployments.ts and cre/referee/config.staging.json:");
   console.log(`NEXT_PUBLIC_CHAIN=${local ? "localhost" : hre.network.name}`);
   console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${chess.address}`);
@@ -58,6 +68,10 @@ async function main() {
   console.log(`NEXT_PUBLIC_NAMES_ADDRESS=${names}`);
   console.log(`NEXT_PUBLIC_TOURNAMENTS_ADDRESS=${tournaments.address}`);
   if (referee) console.log(`REFEREE_ADDRESS=${referee.address}`);
+  if (ratings) {
+    console.log(`NEXT_PUBLIC_RATINGS_ADDRESS=${ratings.address}`);
+    console.log(`RATINGS_FORWARDER=${ratingsForwarder.address}`);
+  }
 }
 
 main().catch((e) => {

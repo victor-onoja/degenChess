@@ -25,6 +25,7 @@ Tech stack: Next.js, Mera passkey accounts, viem/wagmi, react-chessboard, chess.
  2D board (react-chessboard)                 stakes, captures, clocks,            │       Chainlink CRE workflow
  3D board (react-three-fiber)                payouts, stats, referrals     MoveMade events   (cre/referee: replays every
  reads with wagmi/viem  ◄── polling ────     Tournaments.sol (leagues, pots)      └────────── game with chess.js)
+                                             ChessRatings.sol ◄── report ── CRE workflow (cre/rating) ◄── chess.com API
  /api/drip (faucet), /api/watch,             PlayerNames.sol (usernames)
  /api/feedback (to Discord)                  tUSD (test dollar)
 ```
@@ -56,7 +57,7 @@ A side's 15 non-king pieces add up to exactly its stake (8 + 6 + 6 + 10 + 9 = 39
 
 ### The board: 2D first, 3D for the show
 
-Every game can be played on a flat 2D board, in 3D, or with both side by side. By default you play in 2D on a phone and in 3D on anything bigger, and you watch other people's games in 3D; switch any time, and your choice is remembered (separately for playing and watching). **Focus** (the corner button) hides everything but the board, with only the clocks and an exit button, and leaves by itself when something needs the player. Every move is listed in a scrolling line under the board during play and after; tap one, or step with the arrows, to see the board as it was. Phones open games in 2D, wide screens in split view, and a saved choice wins. The 2D board takes a drag or a tap (tap a piece, then a highlighted square; gold dots mark legal moves and rings mark captures), and promotion is a tap. 
+Every game can be played on a flat 2D board, in 3D, or with both side by side. By default you play in 2D on a phone and in 3D on anything bigger, and you watch other people's games in 3D; switch any time, and your choice is remembered (separately for playing and watching). **Focus** (the corner button) hides everything but the board, with only the clocks and an exit button, and leaves by itself when something needs the player. Every move is listed in a scrolling line under the board during play and after; tap one, or step with the arrows, to see the board as it was. Phones open games in 2D, wide screens in split view, and a saved choice wins. The 2D board takes a drag or a tap (tap a piece, then a highlighted square; gold dots mark legal moves and rings mark captures), and promotion is a tap.
 
 The 3D board (react-three-fiber) floats in a void where other boards drift at their own angles, the same game being played in other dimensions. The pieces are a sculpted Staunton set (Poly Haven's CC0 "Chess Set" by Riley Queen, trimmed to about 450 KB by `tools/build-chess-set.py`) in polished bone and obsidian on a violet board. Every piece is alive: it breathes, turns towards the play, trembles when it is attacked, and carries a glowing gold core sized to its share of the stake.
 
@@ -116,6 +117,10 @@ Nothing secret is stored. Clear the browser or switch devices mid-game and one p
 
 New players get gas (MON) and test dollars from `/api/drip`, a faucet that only sends from its own balance. Set `FAUCET_PRIVATE_KEY` on the server (locally it falls back to the Hardhat account, or `DEPLOYER_PRIVATE_KEY`).
 
+### Chess.com ratings
+
+In **Your money** a player can link their chess.com account. They put a short code (derived from their address) in their chess.com profile's Location and type their username; a Chainlink CRE workflow fetches the public profile and ratings from chess.com, checks the code, and writes the rapid, blitz and bullet ratings to `ChessRatings` on Monad. The rating then shows after their name on their waiting boards, in their games and on the leaderboard, so nobody sits down against a master without knowing. One chess.com account can be linked by one player. See [cre/README.md](cre/README.md).
+
 ### Feedback and Discord
 
 A **Feedback** link (in the footer and on a finished game) opens a short form: a bug, an idea or something else. `/api/feedback` posts it to a Discord channel with the player's username, the page and the browser type. Set `DISCORD_FEEDBACK_WEBHOOK` on the server (a channel webhook address: treat it as a secret) and `NEXT_PUBLIC_DISCORD_URL` (the public invite link, shown in the footer and the form). Without the webhook the form says feedback is not switched on. Five messages per sender per ten minutes; mentions are disabled, so the form cannot ping the channel.
@@ -133,6 +138,7 @@ Until the workflow runs on a Chainlink DON, its reports arrive through Chainlink
 ```text
 contracts/DegenChess.sol     game contract
 contracts/ChessReferee.sol   receives Chainlink CRE verdicts and settles games
+contracts/ChessRatings.sol   chess.com ratings, written by the rating workflow
 cre/                         the referee workflow (Chainlink CRE)
 contracts/test/MockUSD.sol   mintable test dollar (tUSD) for testnet, local dev and tests
 test/DegenChess.test.js      contract tests, including random legal games cross-checked against chess.js
@@ -156,6 +162,8 @@ tools/e2e/sandbox.mjs        the practice board
 tools/e2e/community.mjs      tournaments, audience count, leaderboard, feedback
 tools/e2e/voices.mjs         voices speak one at a time, music dips under them
 tools/e2e/test-plan.mjs      walks docs/TEST-PLAN.md step by step on a phone and a laptop
+tools/e2e/rating.mjs         linking a chess.com account (a stand-in plays chess.com)
+tools/request-rating.mjs     makes a link request to feed the rating workflow
 tools/e2e/review-shots.mjs   desktop and phone screenshots for design review
 tools/referee-watch.mjs      runs the referee for live games (npm run referee)
 tools/build-chess-set.py     trims the CC0 Staunton set for the 3D board
@@ -192,6 +200,7 @@ Press **Play now** and create a passkey (passkeys work on `localhost`). For a se
 ```bash
 npm test          # contract tests
 (cd cre/referee && node --test judge.test.ts)   # the referee's judging logic
+(cd cre/rating && node --test assess.test.ts)   # the rating workflow's decision
 node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL, default localhost:3000)
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
@@ -222,7 +231,8 @@ The project's own code is MIT ([LICENSE](LICENSE)). It builds on:
 | 2D board and its piece images (Cburnett set) | react-chessboard | MIT (pieces BSD) |
 | 3D | three.js, @react-three/fiber, drei, postprocessing | MIT |
 | Contracts | OpenZeppelin Contracts (SafeERC20, ReentrancyGuard), Hardhat | MIT |
-| Referee workflow | Chainlink CRE SDK and CLI | see package |
+| Referee and rating workflows | Chainlink CRE SDK and CLI | see package |
+| Player ratings | chess.com Published-Data API (public profiles and ratings, read on the player's request) | chess.com's terms |
 | Tests | Playwright, Mocha/Chai | Apache-2.0 / MIT |
 | Heroes and Undead characters and animations | KayKit by Kay Lousberg | CC0 |
 | Classic 3D chess set | Poly Haven (Riley Queen) | CC0 |

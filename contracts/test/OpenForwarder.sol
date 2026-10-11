@@ -10,4 +10,10 @@ contract OpenForwarder {
     function relay(address receiver, bytes calldata metadata, bytes calldata report) external {
         IReportReceiver(receiver).onReport(metadata, report);
     }
+
+    /// @dev The same entry point as Chainlink's forwarder: a raw report is a 109-byte header (whose
+    ///      last 64 bytes are the workflow metadata) followed by the workflow's payload.
+    function report(address receiver, bytes calldata rawReport, bytes calldata, bytes[] calldata) external {
+        IReportReceiver(receiver).onReport(rawReport[45:109], rawReport[109:]);
+    }
 }

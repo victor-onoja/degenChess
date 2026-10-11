@@ -1,0 +1,6 @@
+{
+  "chainSelectorName": "monad-testnet",
+  "ratingsAddress": "0xd06d7d6c4de3aedd13c781e1fb3580464c863c60",
+  "apiBase": "https://api.chess.com/pub/player",
+  "gasLimit": "400000"
+}

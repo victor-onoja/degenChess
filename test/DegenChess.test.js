@@ -746,6 +746,82 @@ describe("DegenChess", () => {
     });
   });
 
+  describe("chess.com ratings (Chainlink CRE consumer)", () => {
+    const { encodeAbiParameters } = require("viem");
+    const report = (player, handle, rapid, blitz, bullet, outcome) =>
+      encodeAbiParameters(
+        [{ type: "address" }, { type: "string" }, { type: "uint16" }, { type: "uint16" }, { type: "uint16" }, { type: "uint8" }],
+        [player, handle, rapid, blitz, bullet, outcome]
+      );
+    async function ratingsFixture() {
+      const f = await deployFixture();
+      const open = await hre.viem.deployContract("OpenForwarder");
+      const ratings = await hre.viem.deployContract("ChessRatings", [open.address]);
+      await ratings.write.setReporter([f.stranger.account.address, true]);
+      const deliver = (r, from = f.stranger) => open.write.relay([ratings.address, "0x", r], f.as(from));
+      return { ...f, open, ratings, deliver };
+    }
+
+    it("links a verified account and shows its ratings; only a reporter can deliver", async () => {
+      const f = await loadFixture(ratingsFixture);
+      const alice = f.white.account.address;
+      await expect(f.ratings.write.requestLink(["Alice"], f.as(f.white))).to.be.rejectedWith("InvalidHandle");
+      await expect(f.ratings.write.requestLink(["al"], f.as(f.white))).to.be.rejectedWith("InvalidHandle");
+      await f.ratings.write.requestLink(["alice_w"], f.as(f.white));
+      expect(await f.ratings.read.pending([alice])).to.equal("alice_w");
+      // The player cannot report on themselves through the forwarder that checks nothing.
+      await expect(f.deliver(report(alice, "alice_w", 2800, 2800, 2800, 1), f.white)).to.be.rejectedWith("NotReporter");
+      await expect(f.ratings.write.onReport(["0x", report(alice, "alice_w", 1, 1, 1, 1)], f.as(f.stranger))).to.be.rejectedWith("NotForwarder");
+      await f.deliver(report(alice, "alice_w", 1450, 1380, 0, 1));
+      const r = await f.ratings.read.ratingOf([alice]);
+      expect([r.handle, r.rapid, r.blitz, r.bullet]).to.deep.equal(["alice_w", 1450, 1380, 0]);
+      expect(await f.ratings.read.pending([alice])).to.equal("");
+      const [first, second] = await f.ratings.read.getRatings([[alice, f.black.account.address]]);
+      expect(first.rapid).to.equal(1450);
+      expect(second.handle).to.equal("");
+    });
+
+    it("records a failed check, ignores stale reports, and keeps one account to one player", async () => {
+      const f = await loadFixture(ratingsFixture);
+      const [alice, bob] = [f.white.account.address, f.black.account.address];
+      await f.ratings.write.requestLink(["alice_w"], f.as(f.white));
+      await f.deliver(report(alice, "alice_w", 0, 0, 0, 2)); // code not on the profile
+      expect(await f.ratings.read.lastFailure([alice])).to.equal(2);
+      expect((await f.ratings.read.ratingOf([alice])).handle).to.equal("");
+      // A report for a request the player has since replaced changes nothing.
+      await f.ratings.write.requestLink(["alice_2"], f.as(f.white));
+      await f.deliver(report(alice, "alice_w", 1500, 1500, 1500, 1));
+      expect((await f.ratings.read.ratingOf([alice])).handle).to.equal("");
+      await f.deliver(report(alice, "alice_2", 1500, 1400, 1300, 1));
+      expect((await f.ratings.read.ratingOf([alice])).handle).to.equal("alice_2");
+
+      // Bob cannot take the account Alice holds, even with a "verified" report.
+      await f.ratings.write.requestLink(["alice_2"], f.as(f.black));
+      await f.deliver(report(bob, "alice_2", 1500, 1400, 1300, 1));
+      expect(await f.ratings.read.lastFailure([bob])).to.equal(4);
+      expect((await f.ratings.read.ratingOf([bob])).handle).to.equal("");
+      // Alice refreshes hers, then unlinks: the account is free again.
+      await f.ratings.write.requestLink(["alice_2"], f.as(f.white));
+      await f.deliver(report(alice, "alice_2", 1600, 1400, 1300, 1));
+      expect((await f.ratings.read.ratingOf([alice])).rapid).to.equal(1600);
+      await f.ratings.write.unlink(f.as(f.white));
+      expect((await f.ratings.read.ratingOf([alice])).handle).to.equal("");
+      await f.ratings.write.requestLink(["alice_2"], f.as(f.black));
+      await f.deliver(report(bob, "alice_2", 1500, 1400, 1300, 1));
+      expect((await f.ratings.read.ratingOf([bob])).handle).to.equal("alice_2");
+    });
+
+    it("accepts Chainlink's raw report format through the forwarder", async () => {
+      const f = await loadFixture(ratingsFixture);
+      const { concat, pad, toHex } = require("viem");
+      const alice = f.white.account.address;
+      await f.ratings.write.requestLink(["alice_w"], f.as(f.white));
+      const header = concat([toHex(1, { size: 1 }), pad("0x01", { size: 32 }), toHex(0, { size: 4 }), toHex(0, { size: 4 }), toHex(0, { size: 4 }), pad("0x", { size: 32 }), pad(toHex("rating"), { size: 10, dir: "right" }), f.stranger.account.address, "0x0001"]);
+      await f.open.write.report([f.ratings.address, concat([header, report(alice, "alice_w", 1234, 0, 0, 1)]), "0x", []], f.as(f.stranger));
+      expect((await f.ratings.read.ratingOf([alice])).rapid).to.equal(1234);
+    });
+  });
+
   describe("player names", () => {
     it("claims unique lowercase names and lets a player rename", async () => {
       const [, alice, bob] = await hre.viem.getWalletClients();

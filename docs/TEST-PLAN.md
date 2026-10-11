@@ -194,6 +194,13 @@ Invite earnings (Player C: a brand-new account in the private window)
 - [ ] 9.6 B creates a game (1 tUSD), C joins, one move each, then C presses **Resign**. B withdraws.
 - [ ] 9.7 A's wallet now shows **Earned 0.005 tUSD** (20% of C's half of the 0.05 fee) with a **Withdraw** button. Press it and confirm.
 
+Chess.com rating (needs a chess.com account; skip if you have none)
+
+- [ ] 9.8 In **Your money**, under **Chess.com rating**, there is a code like `away-1a2b3c` with a **Copy code** button, and a box for your chess.com username.
+- [ ] 9.9 Type your chess.com username and press **Link** without touching chess.com, confirm with the passkey. After a few seconds: "Your code was not on that chess.com profile. Put it in Location, save, and try again."
+- [ ] 9.10 On chess.com open Settings → Profile, paste the code into **Location**, save. Back in the wallet press **I've added it. Check again** (wait 15 seconds after the first try). It shows "chess.com/yourname · verified" with your Rapid, Blitz and Bullet ratings.
+- [ ] 9.11 Create a game: your name on the board is followed by your rating in brackets, and on the other device your waiting board reads "t_alice (1450) is waiting". The leaderboard shows it too. You can now take the code off your chess.com profile.
+
 ## Part 10: Leaderboard and tournaments (12 min)
 
 - [ ] 10.1 Open **Leaderboard**: A, B and C are listed (among the test players) with W D L and a **Won (tUSD)** column. Your own row is marked "(you)". The order is by winnings (payouts minus stakes, after fees). Only players who are ahead show an amount, with a plus; everyone else shows a dash, never a loss.

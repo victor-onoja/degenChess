@@ -20,7 +20,7 @@ Deployed on Monad testnet (chain 10143): Away Chess `0x2e44f61ea3616a1b1ff5393dd
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time), `account-flows.mjs` (usernames, sending money), `community.mjs` (a prize-pot tournament from creation to payout), `sandbox.mjs` and `test-plan.mjs` (every step of the manual script, including creator-plays-Black and coin-flip seating with game keys). A manual script with expected payouts for each settlement path is in `docs/TEST-PLAN.md`.
 
-Run the tests with `npm install && npm test` (40 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
+Run the tests with `npm install && npm test` (43 contract tests, including random legal games cross-checked against chess.js) and `cd cre/referee && bun install && node --test judge.test.ts` (the referee's judging logic).
 
 ## What the contract does
 
@@ -78,6 +78,17 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 
 - **Tournament games are seated by the app, not the contract.** A tournament game is an ordinary open game, and `joinGame` lets anyone join an open game. From 11 October the app recognises a tournament game (a coin-flip game from a player of a running tournament, at its stake and clock, while that player still has someone to play) and offers the seat only to that player's remaining opponents; everyone else is told whose game it is and can watch. Someone calling the contract directly can still join it. The damage is bounded: they play an ordinary staked game against the creator, it does not count for the tournament (`Tournaments._record` only accepts a game between two of its players, once per pairing), and the pairing can be played again. Enforcing it on-chain would need an "invited opponent" on `createGame`; that is on the mainnet list.
 - **Owner fees.** `scripts/withdraw-fees.js` reads `accruedFees` and, with `WITHDRAW=1`, calls `withdrawFees` as the owner.
+
+## ChessRatings (added 11 October 2026)
+
+`contracts/ChessRatings.sol` stores chess.com ratings written by a second CRE workflow (`cre/rating`). It holds no money and no other contract reads it, so the worst outcome of a flaw is a wrong number next to a name.
+
+- **Who can write.** Same model as `ChessReferee`: only the forwarder, and behind Chainlink's mock forwarder only a transaction originated by an allowed reporter. The reporters are the owner and the key `/api/rating` sends with (the faucet key). That key is a reporter on this contract only: it cannot settle games.
+- **Proof of ownership.** The player's code is `away-` plus the last six hex characters of their address, and must appear in the chess.com profile's Location or Name. The code is public and cheap to guess, but it only helps the address it was derived from. Two addresses share a code with probability 1 in 16.7 million; a player could grind an address to match a strong player's profile only if that player had put the matching code there.
+- **One account, one player** (`holderOf`). A second player reporting the same username is recorded as `HANDLE_TAKEN`.
+- **Stale reports.** A report is applied only if it is for the request the player currently has open (`pending`), so an old report cannot overwrite a newer request. `onReport` never reverts on the content of a report.
+- **What a rating does not prove.** It proves the address controlled that chess.com account when it was linked, and what chess.com said then. It can be out of date, and someone can link a weak second account. It is information, not a rule; nothing is gated on it.
+- **The route.** `/api/rating` only checks a request that is already on-chain for that player, with a 15-second cooldown per player, so a caller cannot make it report anything the player did not ask for.
 
 ## External review, 9 October 2026
 

@@ -9,4 +9,6 @@ export const MONAD_TESTNET = {
   names: "0xeeff1b2601b45472ea746527e9482a882a36f114",
   /** Tournaments: a register of round-robin leagues (holds no money). */
   tournaments: "0x5b311b1e143f44404077e4521279148b4a2e8cfa",
+  /** ChessRatings: chess.com ratings brought on-chain by the rating workflow (Chainlink CRE). */
+  ratings: "0xd06d7d6c4de3aedd13c781e1fb3580464c863c60",
 } as const;

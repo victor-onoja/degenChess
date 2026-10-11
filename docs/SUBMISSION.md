@@ -46,7 +46,7 @@ Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submissi
 | Bounty | Fit | Notes |
 | --- | --- | --- |
 | Best Mera-Powered UX on Monad | Strong | Mera is the whole account layer; one ceremony; the measured time to first transaction is shown to the user; money actions re-prompt, moves never do, scoped by the contract; lock, reload and 30 idle minutes end the session; the stateless test is automated. |
-| Best workflow with CRE | Good, one point to check | The workflow is the referee and is demonstrated by CLI simulation with broadcast. The bounty also asks to "integrate at least one blockchain with an external API, system, data source, LLM or AI agent": today the workflow reads Monad, runs a chess engine and writes to Monad, with no external service. |
+| Best workflow with CRE | Strong | Two workflows. The referee settles every game (Monad in, chess engine, Monad out). The rating workflow joins Monad to an external API: it reads a player's public chess.com profile and ratings, checks they own the account, and writes the rating on-chain. Both are demonstrated by CLI simulation with broadcast. |
 | Mera: One Passkey, Many Keys | Weak as it stands | The bounty is for PRF-derived keys doing work that is **not** signing transactions. Both of our keys (money and game) sign transactions; the game key is a capability key, which is the closest we come. |
 
 ---
@@ -71,6 +71,7 @@ Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submissi
 | ChessReferee (Chainlink CRE consumer) | `0xba90386c49ebdbe1f4ae572e5081421a909f8617` |
 | PlayerNames (usernames) | `0xeeff1b2601b45472ea746527e9482a882a36f114` |
 | Tournaments (round-robin leagues, optional prize pot) | `0x5b311b1e143f44404077e4521279148b4a2e8cfa` |
+| ChessRatings (chess.com ratings, Chainlink CRE consumer) | `0xd06d7d6c4de3aedd13c781e1fb3580464c863c60` |
 | tUSD (test dollar) | `0xfbf011ba1f7d08651181b5eebabb7048596de9de` |
 
 **Primary track:** Consumer Products & Payments
@@ -140,7 +141,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 ### Chainlink CRE (the referee)
 
-**Asked at submission: how CRE is the orchestration layer.** The workflow (`cre/referee/main.ts`) is what ends games. It is triggered by the game contract's `MoveMade` event, reads the game and its full move list from Monad, replays it with a chess engine (`judge.ts`), and, when the game is over or a move was illegal, writes a signed report through Chainlink's forwarder to `ChessReferee`, which settles the stakes. Without it a checkmate would need the loser to resign. Demonstrated with `cre workflow simulate referee --broadcast` against Monad testnet (commands in `cre/README.md`; verdict transactions in the table below).
+**Asked at submission: how CRE is the orchestration layer.** CRE does the two jobs the contracts cannot do for themselves. **Ratings (`cre/rating/main.ts`):** a player asks on-chain to link a chess.com account; the workflow is triggered by that event, calls chess.com's public API for the profile and ratings (each node asks, and the answers must agree), checks the profile carries a code derived from the player's address, and writes the verified ratings to `ChessRatings` on Monad. Opponents then see a rating the player could not have typed in, which answers the first worry about staked chess: who am I really playing? **Refereeing (`cre/referee/main.ts`):** the workflow is what ends games. It is triggered by the game contract's `MoveMade` event, reads the game and its full move list from Monad, replays it with a chess engine (`judge.ts`), and, when the game is over or a move was illegal, writes a signed report through Chainlink's forwarder to `ChessReferee`, which settles the stakes. Without it a checkmate would need the loser to resign. Demonstrated with `cre workflow simulate referee --broadcast` against Monad testnet (commands in `cre/README.md`; verdict transactions in the table below).
 
 
 | Item | Where |
@@ -150,14 +151,15 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 | Checkmate settled automatically | game 0, verdict tx `0x4cc67cfdf2b0ca06e5bc979a8d74d29d8f94b6ab0060b676535c5019175567e0`: White wins, 1.95 / 0 tUSD |
 | Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0x59fe9580c7b9a0d3bb481efbb89eace6b479d7dfb2c32bd76beec89216751383`); verdict tx `0x524e5e611ad8bb5a14810b47396bfcb2afcfc7cec4c76f7c5357b65112913a1c` forfeited White: 0 / 1.95 tUSD |
 | Stalemate settled as a draw | game 2 (Sam Loyd's ten-move stalemate), verdict tx `0xa48944409db882101ff134bc90536efd832f4d2cfb493ea69403056433249eca`: no fee, each side keeps its balance (1.2564 / 0.7436 tUSD) |
+| Rating workflow (external API) | request tx `0x8cee2566249b5d660177a9b69c8879f183065d7b8db33f7392f73c9e0d2df58b` (link chess.com/hikaru to the deployer); the workflow fetched the profile (location "Florida", rapid 2838) and, finding no code, delivered a refusal in `0x39fe7e8a2b558dcff3e6d9332a6cdf8aed725bfc1b9c734ed4d3ed0c911eb2df`. A successful link needs the code on the profile: shown in the bounty video with the author's own chess.com account |
 | Earlier runs | rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
 | Running | a Docker service on a server (`deploy/referee`) watches every move. It runs the workflow with the CRE CLI and, until our CRE API key and DON deployment access arrive, delivers the same `judge.ts` verdict through the same forwarder itself |
 | Security | our review found Chainlink's simulation forwarder let anyone deliver a verdict; fixed the same day with a reporter allowlist (`docs/AUDIT.md`) |
 
 ### Quality
 
-- 40 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
-- Seven browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout and through the Open / Running / Finished lists, the audience count, the leaderboard, the feedback form), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
+- 43 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
+- Eight browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout and through the Open / Running / Finished lists, the audience count, the leaderboard, the feedback form), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
 - Run against the live site and Monad on 5 October 2026 (`APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`): 5.9 s from sign-up to the first transaction, prompt-free moves, the stateless restore, a checkmate settled by the always-on referee, withdrawal and rematch.
 - A hands-on test script covering every feature, with the moves to play and the amounts to expect: `docs/TEST-PLAN.md`. The seventh suite, `test-plan`, walks that script on a phone-sized and a laptop-sized browser (about 145 checks: ten games, a three-player prize tournament, a free one, the wallet, invites, the leaderboard, the sandbox and feedback). Writing it found and fixed a real bug: a creator who chose Black or a coin flip was asked to enable prompt-free moves again after their opponent joined.
 - Security brief for an independent reviewer: `docs/AUDIT.md`. An independent review on 9 October 2026 led to three contract changes (a game-key check, re-entry hardening, two-step ownership), each with a test; the brief records what was raised and what was done.
@@ -180,8 +182,21 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 | 1:40 | Clear site data, reload, "I have a passkey" | "The stateless test: nothing secret is stored. One prompt rebuilds the account and the game key, and the game is where I left it." |
 | 2:00 | Deliver checkmate; the referee settles it with no resignation; show the verdict tx | "Nobody resigned. A Chainlink CRE workflow replayed the game and settled it on-chain. Play an illegal move and it forfeits you, stolen value included." |
 | 2:30 | Withdraw (passkey), the wallet: invite link and earnings | "Money out asks for the passkey again. Every link you share earns you part of the fee on your friends' games." |
-| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 40 contract tests and seven browser suites." |
+| 2:45 | Contract scoping code and the test run | "The scoping is enforced by the contract. 43 contract tests and eight browser suites." |
 | 2:55 | Back to the board | "Live now at test.awaychess.com." |
+
+### Chainlink CRE bounty video (at most 2 minutes)
+
+Record the terminal and the app side by side. It must show a successful simulation through the CRE CLI.
+
+| Time | Show | Say |
+| --- | --- | --- |
+| 0:00 | The app: a waiting board with "(1450)" after a name | "In staked chess the first question is who you're really playing. That rating came from chess.com, through a Chainlink CRE workflow." |
+| 0:10 | Wallet → Chess.com rating: the code; chess.com profile settings with the code pasted in Location | "I prove the account is mine by putting this code, derived from my address, on my chess.com profile." |
+| 0:30 | Terminal: `node tools/request-rating.mjs <your username>`, then `cre workflow simulate rating ... --broadcast` | "The request is an event on Monad. The workflow picks it up, calls chess.com's API, checks the code, and writes a signed report back to Monad." |
+| 0:55 | The simulation's log lines (profile, ratings, outcome 1) and the transaction on the explorer | "Each node fetches the profile and they must agree. Outcome one: verified." |
+| 1:10 | Terminal: `node tools/play-test-game.mjs mate`, then `cre workflow simulate referee ... --broadcast` | "The second workflow is the referee. It fires on every move, replays the game with a chess engine, and settles checkmates, draws and illegal moves." |
+| 1:40 | The verdict transaction; the game showing Finished with nobody resigning | "Nobody resigned. CRE is what ends games here, and what tells you who you're playing." |
 
 ### Pitch (2 minutes)
 

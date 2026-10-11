@@ -11,6 +11,7 @@ export const CONTRACT_ADDRESS = address(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
 export const TOKEN_ADDRESS = address(process.env.NEXT_PUBLIC_TOKEN_ADDRESS, MONAD_TESTNET.token);
 export const NAMES_ADDRESS = address(process.env.NEXT_PUBLIC_NAMES_ADDRESS, MONAD_TESTNET.names);
 export const TOURNAMENTS_ADDRESS = address(process.env.NEXT_PUBLIC_TOURNAMENTS_ADDRESS, MONAD_TESTNET.tournaments);
+export const RATINGS_ADDRESS = address(process.env.NEXT_PUBLIC_RATINGS_ADDRESS, MONAD_TESTNET.ratings);
 
 /** The community's Discord invite, shown in the footer and the feedback form when set. */
 export const DISCORD_URL = /^https:\/\/discord\.(gg|com)\//.test(process.env.NEXT_PUBLIC_DISCORD_URL ?? "") ? process.env.NEXT_PUBLIC_DISCORD_URL! : "";

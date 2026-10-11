@@ -60,6 +60,44 @@ npm run referee
 `--broadcast` sends the verdict as a real transaction on Monad testnet. Without it the workflow runs
 as a dry run.
 
+## The second workflow: chess.com ratings (`cre/rating`)
+
+A player can link their chess.com account so opponents see a real rating next to their name. The chain
+cannot read chess.com, and chess.com knows nothing about Monad addresses; this workflow connects them.
+
+```text
+LinkRequested event ──▶ CRE workflow ──▶ chess.com public API ──▶ signed report ──▶ forwarder ──▶ ChessRatings.onReport
+ (ChessRatings)         player, username   profile + ratings        ratings, or why not
+```
+
+| Step | What happens | Where |
+| --- | --- | --- |
+| Trigger | EVM log trigger on `LinkRequested(player, handle)` | `rating/main.ts` |
+| Fetch | HTTP capability: `GET api.chess.com/pub/player/{handle}` and `/stats`; the nodes' answers must agree | `rating/main.ts` |
+| Decide | The account is the player's if its Location (or Name) shows the code derived from their address (`away-` + the last six characters) | `src/lib/rating.ts` (`assess`) |
+| Write | Signed report → forwarder → `ChessRatings`: rapid, blitz and bullet ratings, or the reason for refusal | `contracts/ChessRatings.sol` |
+
+`ChessRatings` (Monad testnet): `0xd06d7d6c4de3aedd13c781e1fb3580464c863c60`. It holds no money and the game
+contract does not consult it: a rating is information for choosing an opponent.
+
+```bash
+cd cre/rating && bun install && node --test assess.test.ts && cd ../..
+
+# ask to link a chess.com username for the deployer's address (prints the code and the transaction)
+node tools/request-rating.mjs hikaru
+cd cre && cre workflow simulate rating --non-interactive --trigger-index 0 \
+  --evm-tx-hash <hash printed above> --evm-event-index 0 --broadcast --target staging-settings
+```
+
+A run on 11 October 2026: request `0x8cee2566249b5d660177a9b69c8879f183065d7b8db33f7392f73c9e0d2df58b`; the workflow read
+chess.com/hikaru (location "Florida", rapid 2838, blitz 3482, bullet 3403), found no code, and delivered a
+refusal in `0x39fe7e8a2b558dcff3e6d9332a6cdf8aed725bfc1b9c734ed4d3ed0c911eb2df`. To see a link succeed, put the printed
+code in your own chess.com profile's Location and run the two commands with your username.
+
+In the app, a request is answered by `/api/rating`, which runs the same `assess` function and sends the
+same report through the same forwarder. Like the referee's direct mode, it stands in until the workflow
+runs on Chainlink's network.
+
 ## Keeping it running on a server
 
 Until the workflow is deployed to a DON, something has to run `npm run referee`. It runs as a Docker

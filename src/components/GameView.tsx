@@ -23,6 +23,7 @@ import { usePieceSet } from "../lib/pieceSet";
 import { say, useVoices } from "../lib/voices";
 import { nextTrack, useMusic } from "../lib/music";
 import { tournamentSeat, useTournamentList } from "../lib/tournaments";
+import { useRatings } from "../lib/ratings";
 import { useWatchers } from "../lib/watchers";
 import { FeedbackLink } from "./Feedback";
 import { ShareButton } from "./ShareButton";
@@ -102,6 +103,8 @@ export function GameView({
       : null;
   const { label } = useNames([info?.white, info?.black, ...(seat?.awaited ?? [])]);
   const seatNames = (seat?.awaited ?? []).map(label).join(" or ");
+  // chess.com ratings the players have verified, shown after their names.
+  const { rated } = useRatings([info?.white, info?.black]);
 
   // Rematch: look at the games created after this one for an open game from the opponent at the same stake.
   const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { refetchInterval: POLL_MS } });
@@ -452,6 +455,7 @@ export function GameView({
           <div className="soft truncate text-xs">
             {bull ? "White" : "Black"} &middot; {addr === ZERO_ADDRESS ? "waiting..." : label(addr)}
             {myColor === color ? " (you)" : ""}
+            {addr !== ZERO_ADDRESS && rated(addr) && <span title="Verified chess.com rating">{rated(addr)}</span>}
           </div>
           <div className="amount text-lg leading-tight">
             {formatToken(balance)} <span className="text-xs font-medium">{TOKEN_SYMBOL}</span>
