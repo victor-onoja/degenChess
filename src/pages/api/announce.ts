@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { createPublicClient, formatUnits, http, zeroAddress } from "viem";
 import { CHAIN, CONTRACT_ADDRESS, IS_LOCAL, NAMES_ADDRESS, TOKEN_DECIMALS, TOKEN_SYMBOL } from "../../config";
 import { degenChessAbi, playerNamesAbi } from "../../contracts/abi";
+import { alertIfLow } from "../../lib/alerts";
 
 // Reports a finished game to the team's Discord: who played, how it ended, what was paid. It is
 // called by the referee workflow after it settles a game (cre/referee/main.ts) and by a player's
@@ -78,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }),
     });
     if (!sent.ok) throw new Error(`Discord answered ${sent.status}`);
+    await alertIfLow(); // every finished game is a chance to notice the referee's wallet running down
     return res.status(200).json({ reported: true });
   } catch (e) {
     reported.delete(raw);

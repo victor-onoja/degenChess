@@ -128,6 +128,8 @@ A **Feedback** link (in the footer and on a finished game) opens a short form: a
 
 **Game reports.** Every finished game is posted to Discord too: who beat whom (or drew), the stake, what each side was paid and a link to the game. `/api/announce` is called by the referee workflow after it settles a game and by a player's browser when a game ends another way; the caller only names the game, and the message is built from the chain. Reports go to `DISCORD_RESULTS_WEBHOOK` if set, otherwise to the feedback channel.
 
+**Low-balance alerts.** Two wallets keep the game running: the faucet (each new player's first gas) and the referee (each verdict). When the faucet drops under 10 MON or the referee under 0.5 MON, a message goes to Discord with the address to top up (`DISCORD_ALERTS_WEBHOOK` if set, otherwise the feedback channel), at most once every six hours per wallet. The check runs on every sign-up and every reported game, and `/api/health` shows both balances at any time.
+
 ### Trust model
 
 Every move is recorded on-chain, and turn order is enforced. That's also how the two browsers stay in sync, with no backend. The contract keeps the board (one `uint256`, 4 bits per square) so it can do capture accounting itself, including en passant, castling and promotion.

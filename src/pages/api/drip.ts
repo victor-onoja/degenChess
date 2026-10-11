@@ -3,6 +3,7 @@ import { createPublicClient, createWalletClient, http, isAddress, parseEther, pa
 import { privateKeyToAccount } from "viem/accounts";
 import { CHAIN, IS_LOCAL, TOKEN_ADDRESS, TOKEN_DECIMALS } from "../../config";
 import { erc20Abi } from "../../contracts/abi";
+import { alertIfLow } from "../../lib/alerts";
 
 // Testnet faucet: tops a player up with gas (MON) and test dollars. It never holds user keys or
 // funds - it only sends from its own balance, and only to addresses that are running low.
@@ -94,8 +95,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   const result = queue.then(run, run);
   queue = result.catch(() => undefined);
   try {
-    res.status(200).json(await result);
+    const outcome = await result;
+    await alertIfLow(); // every sign-up is a chance to notice the faucet running down
+    res.status(200).json(outcome);
   } catch (e) {
+    await alertIfLow();
     lastDrip.delete(key);
     console.error("drip failed", e);
     res.status(500).json({ error: "faucet transaction failed" });

@@ -32,7 +32,7 @@ chmod 600 .env
 It remembers the last block it handled in a Docker volume, so moves made while it was down are
 judged when it comes back. After a contract redeploy, run `./update.sh`: the state resets for the new contract.
 
-Keep the `CRE_ETH_PRIVATE_KEY` wallet funded. Use a wallet that holds nothing else: it does not need
+Keep the `CRE_ETH_PRIVATE_KEY` wallet funded: the app posts to Discord when it drops under 0.5 MON, and `/api/health` shows its balance. Use a wallet that holds nothing else: it does not need
 to be the contract owner, but the owner must allow it as a reporter:
 `ChessReferee.setReporter(<its address>, true)` (`scripts/deploy-referee.js` does this through
 `REFEREE_REPORTERS`). The live server's key, `0xC25D50Ed673B3fC347ae00d1288213F8F3C7eA5C`, is allowed.
