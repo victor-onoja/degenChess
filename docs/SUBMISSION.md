@@ -2,9 +2,38 @@
 
 Answers for every field on the submission form, the evidence judges can check, the three video scripts, and what is left before the deadline.
 
-Deadline: 14 October 2026, 04:59 GMT+1. Status as of 10 October 2026: feature-complete, contracts reviewed and redeployed, automated regression green, final hands-on pass under way.
+Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submission can be edited until then; the version at the deadline is the one judged. Status as of 11 October 2026: feature-complete, contracts reviewed and redeployed, hands-on pass done by the author, automated regression green, submission being filed.
 
 > **Name and address.** The product is **Away Chess** (renamed from the working title DegenChess on 5 October 2026). Testnet lives at `test.awaychess.com`; mainnet will live at `awaychess.com`. The game contract keeps the name `DegenChess` on-chain and the repo keeps its old name. Passkeys are bound to the address, so accounts and usernames started fresh on `test.awaychess.com`; the earlier `degen-chess.vercel.app` still serves the same app.
+
+---
+
+## Rules checklist (Metropolis Hackathon terms, version 3.0)
+
+| Requirement (section) | Where it is met |
+| --- | --- |
+| Public GitHub repo with complete source (4.1.1) | <https://github.com/victor-onoja/degenChess>, public, branch `master` |
+| README with setup instructions (4.1.1, 4.1.5) | `README.md`: "Run locally", "Tests", "Deploy to Monad testnet" |
+| Open source licence (4.1.1, 7.2) | MIT, `LICENSE` |
+| Attribution of external code and assets (4.1.1, 7.3) | `README.md` "Credits and licences"; in the app at `/credits` |
+| Commit history covering the build window (4.1.1) | 60+ commits from 27 September to 13 October 2026 |
+| Demo video, at most 3 minutes, public, product in operation, Monad interactions shown (4.1.2, 9.4) | the "Technical demo" script below: **to record and link here** |
+| Monad integration explained, contract addresses, deployed on testnet (4.1.3, 9.2) | "Contracts" and "Evidence for judges" below; `README.md` "Why Monad" |
+| Majority of the work built in the window; pre-existing work identified (4.1.4) | `README.md` "Hackathon notes": a 20-file 2024 prototype existed; none of its code is in use |
+| AI coding tools disclosed (4.1.4) | `README.md` "Hackathon notes": built with Claude Code; voices generated with Kokoro-82M |
+| Description, architecture, stack, setup (4.1.5) | `README.md`: opening, "Architecture in one page", "Project layout", "Run locally" |
+| One project, one track (2.5, 3.3) | Track 02, Consumer Products & Payments |
+| No secrets or personal data in the submission (5.3) | checked on 11 October: no keys or tokens in the tree or its history; `.env.local` is ignored |
+| Working prototype a third party can run (9.1) | live at `test.awaychess.com`; runs locally from the README |
+| No token (9.3) | none; stakes are in a test dollar (tUSD) |
+
+**How it answers the judging criteria (20% each).**
+
+- **Product quality and completeness:** a finished loop a stranger can use: sign up in one tap, stake, play, get paid, rematch, share, tournaments, a leaderboard, a practice board, feedback. Seven browser suites and a hands-on script check it end to end.
+- **Technical excellence:** moves, captures, clocks and payouts live in the contract (40 tests, including random games cross-checked against chess.js); a Chainlink CRE workflow referees; an independent review was acted on and written up in `docs/AUDIT.md`.
+- **Monad integration:** every move is a transaction (median 0.8 s to receipt, about 0.007 MON), signed by a prompt-free session key; the code handles Monad specifics (gas billed on the limit, the reserve-balance rule, lagged balance checks).
+- **Track fit:** a consumer product whose user need not know crypto: no wallet, no seed phrase, usernames instead of addresses, dollars instead of tokens. The core value is a money experience: your stake is in play on every capture.
+- **Innovation and impact:** captures that pay, with a loser who keeps what they took; one passkey split into a money key and a contract-scoped game key; a referee nobody runs by hand.
 
 ---
 
@@ -107,7 +136,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 - 40 contract tests (`npm test`), including random legal games cross-checked against chess.js and every settlement path.
 - Seven browser suites with simulated passkeys: `passkey-game` (sign-up, staking, prompt-free moves, the stateless restore, lock, resign, withdraw, rematch), `core-flows` (cancel and refund, tap-to-move on a phone, promotion, spectating, draw, win on time, move replay, choosing a side), `account-flows` (usernames, invites, sending money by username), `community` (a prize-pot tournament from creation to payout and through the Open / Running / Finished lists, the audience count, the leaderboard, the feedback form), `sandbox`, `voices` (voices never overlap; the music dips under them). Every suite fails on any page error.
 - Run against the live site and Monad on 5 October 2026 (`APP_URL=https://test.awaychess.com REFEREE=1 node tools/e2e/passkey-game.mjs`): 5.9 s from sign-up to the first transaction, prompt-free moves, the stateless restore, a checkmate settled by the always-on referee, withdrawal and rematch.
-- A hands-on test script covering every feature, with the moves to play and the amounts to expect: `docs/TEST-PLAN.md`. The seventh suite, `test-plan`, walks that script on a phone-sized and a laptop-sized browser (134 checks: ten games, a three-player prize tournament, a free one, the wallet, invites, the leaderboard, the sandbox and feedback). Writing it found and fixed a real bug: a creator who chose Black or a coin flip was asked to enable prompt-free moves again after their opponent joined.
+- A hands-on test script covering every feature, with the moves to play and the amounts to expect: `docs/TEST-PLAN.md`. The seventh suite, `test-plan`, walks that script on a phone-sized and a laptop-sized browser (about 145 checks: ten games, a three-player prize tournament, a free one, the wallet, invites, the leaderboard, the sandbox and feedback). Writing it found and fixed a real bug: a creator who chose Black or a coin flip was asked to enable prompt-free moves again after their opponent joined.
 - Security brief for an independent reviewer: `docs/AUDIT.md`. An independent review on 9 October 2026 led to three contract changes (a game-key check, re-entry hardening, two-step ownership), each with a test; the brief records what was raised and what was done.
 
 ---
@@ -162,12 +191,13 @@ No voice-over: the soundtrack and the armies' own lines.
 
 In priority order.
 
-1. **Final hands-on pass** with `docs/TEST-PLAN.md` on `degen-chess.vercel.app` (automated regression passed on 5 October, locally and against the live site), then send `test.awaychess.com` to friends.
-2. **Record the three videos** (by 12 October, leaving a day for retakes).
+1. **Done:** the author's hands-on pass with `docs/TEST-PLAN.md` (10 to 11 October); the improvements it suggested are in. Next: send `test.awaychess.com` to friends.
+   - **Still to do on the form:** paste the demo video link, and tick that AI tools were used if the form asks.
+2. **Record the demo video** (required, at most 3 minutes, public link) and, if time allows, the pitch and the advert.
 3. **Real-phone pass** on one iPhone and one Android: sign-up, a full game in 2D and 3D, focus mode, sound, dragging, sharing.
 4. **Chainlink:** decided on 5 October: the hackathon entry runs the workflow in simulation, which the rules allow. Deploying to Chainlink's network is a commercial service (quoted at roughly $7,200 a year), to be revisited before mainnet. Add the CRE API key on the server if one can be created, so the always-on referee runs the workflow itself rather than the direct fallback.
-5. **Discord:** create the server, add the feedback channel's webhook (`DISCORD_FEEDBACK_WEBHOOK`) and the invite link (`NEXT_PUBLIC_DISCORD_URL`) on Vercel, redeploy, and send one test message from the form.
+5. **Done:** Discord server, feedback webhook and invite link are live.
 6. **Faucet:** a per-IP limit, and keep the faucet wallet at 30+ MON through judging; keep the referee wallet funded.
 7. **Seed the Yard:** have a few live and finished games on the board when judging starts, so it never looks empty.
-8. **Security review:** fold in what the independent reviewer finds and say so here.
+8. **Done:** the independent review of 9 October is folded in (`docs/AUDIT.md`).
 9. **Optional:** player profiles; knockout tournaments.

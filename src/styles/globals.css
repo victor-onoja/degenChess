@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Uncial+Antiqua&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -365,8 +365,71 @@ textarea::placeholder {
 .arena-loading {
   font-family: var(--display);
   font-weight: 700;
-  color: var(--bone-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone);
   white-space: nowrap;
+  padding: 0.55rem 0.95rem;
+  background: rgba(13, 11, 20, 0.78);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  animation: arena-loading 1.4s ease-in-out infinite;
+}
+@keyframes arena-loading {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-loading {
+    animation: none;
+  }
+}
+
+/* The game's top bar holds eight controls; on a phone they sit closer so all of them fit. */
+@media (max-width: 480px) {
+  .topbar {
+    gap: 4px;
+  }
+  .topbar .ghost {
+    min-width: 38px;
+    padding-inline: 0;
+  }
+}
+
+/* Partner marks: drawn in the text colour from the official logo files. */
+.mark {
+  display: inline-block;
+  height: 1.15em;
+  background: currentColor;
+  -webkit-mask: var(--mark) center / contain no-repeat;
+  mask: var(--mark) center / contain no-repeat;
+  vertical-align: -0.2em;
+}
+.builton {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2.5rem;
+  align-items: center;
+  margin-top: 2.5rem;
+  color: var(--bone-soft);
+}
+.builton > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.builton a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--bone);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.builton a:hover {
+  color: #fff;
 }
 
 /* ---------------------------------------------------------------- the stage (first viewport) */

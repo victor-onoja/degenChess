@@ -4,7 +4,7 @@ One pass through everything the product does, with the exact moves to play and w
 
 **Time:** about 60 to 75 minutes. Part 7 has a 3-minute wait.
 
-**How this plan is kept honest.** A script, `tools/e2e/test-plan.mjs`, walks these same steps on a phone-sized and a laptop-sized browser and checks the wording, buttons and amounts quoted here, step by step. It last passed on 10 October 2026, after the contract redeploy of 9 October. What it cannot check is marked **(by eye)** or **(by ear)**: that is your part.
+**How this plan is kept honest.** A script, `tools/e2e/test-plan.mjs`, walks these same steps on a phone-sized and a laptop-sized browser and checks the wording, buttons and amounts quoted here, step by step. It last passed on 11 October 2026, after the improvements from the first hands-on pass. What it cannot check is marked **(by eye)** or **(by ear)**: that is your part.
 
 ## Before you start
 
@@ -20,7 +20,9 @@ One pass through everything the product does, with the exact moves to play and w
 
 How to read a move: `e2 → e4` means move the piece on e2 to e4. On a phone tap the piece, then the square. On a laptop drag it, or click then click.
 
-**The phone's bottom panel.** During a game it is one line: a back arrow, a status ("Your move"), a forward arrow and a **...** button. **Offer draw**, **Resign**, the move list and the pieces taken are behind the **...** button. A small arrow at the top of the open panel shrinks it again. It opens by itself when something needs you (a draw offer, time running out, the game ending).
+**The bottom panel.** During a game it is one line, on a phone and on a laptop: a back arrow, a status ("Your move"), a forward arrow and a **...** button. **Offer draw**, **Resign**, the move list and the pieces taken are behind the **...** button. A small arrow at the top of the open panel shrinks it again. It opens by itself when something needs you (a draw offer, time running out, the game ending). Wherever a step below says to press Offer draw or Resign, press **...** first.
+
+**Sound.** The top bar has two sound buttons: a **music note** (music only) and a **speaker** (everything: music, voices and effects). Music plays while you wait for an opponent and stops when the game starts; the note turns it back on, and your choice is remembered.
 
 ---
 
@@ -30,7 +32,7 @@ Phone (Player A), signed out
 
 - [ ] 1.1 The page loads with the Heroes and the Undead playing a game by themselves behind the headline "Every piece has skin in the game." Top left: the eyes logo and the words **Away Chess**. (Once you are signed in, a phone shows only the eyes, to leave room for your name and balance.)
 - [ ] 1.2 **(by eye)** The characters look sharp, not blurry. The page scrolls smoothly.
-- [ ] 1.3 Scroll down: **Start a board** with a list of boards under tabs **Waiting**, **Live** and **Finished**; then **Leaderboard**, **Tournaments** and **How it runs**; and a footer with Feedback, Discord, Source, Contract and Credits.
+- [ ] 1.3 Scroll down: **Start a board** with a list of boards under tabs **Waiting**, **Live** and **Finished**; then **Leaderboard**, **Tournaments** and **How it runs**; a line reading "Built on Monad" and "Refereed by Chainlink CRE" with their logos; and a footer with Feedback, Discord, Source, Contract and Credits.
 - [ ] 1.4 In the name box type `t_alice`. Under it: "Available. It's yours if you want it."
 - [ ] 1.5 Tap **Play now**. One Face ID or fingerprint prompt (some phones ask a second time, straight after). No wallet app, no seed phrase.
 - [ ] 1.6 A message appears: "You're in. 1 passkey tap, N s to your first transaction on Monad." Note the number of seconds: ______
@@ -47,14 +49,14 @@ Laptop (Player B), signed out
 Phone (A)
 
 - [ ] 2.1 In **Start a board**: Stake **1**, Clock **5 + 3**, Play as **White**. Tap **Create Game**, confirm with the passkey.
-- [ ] 2.2 You land on the board. Phones open in **2D**. The panel says "Waiting for an opponent" with a big **Share invite link** and a **Cancel & Refund** button.
+- [ ] 2.2 You land on the board. Phones open in **2D**. The panel says "Waiting for an opponent" with a big **Share invite link** and a **Cancel & Refund** button. **(by ear)** After your first tap, music plays while you wait.
 - [ ] 2.3 Tap **Share invite link**: the phone's share sheet opens. Send the link to yourself, or just close it.
 
 Laptop (B)
 
 - [ ] 2.4 On the home page, under **Waiting**, there is a board with White's pieces set up and the caption "t_alice is waiting, plays White", with a share button in its corner.
-- [ ] 2.5 Click the board, then **Join as Black (1 tUSD)**, confirm with the passkey. Laptops open in **3D**. **(by eye)** Heroes on one side, Undead on the other, and the Undead climb out of the board.
-- [ ] 2.6 **(by ear)** Music starts after your first click, and each army calls out once.
+- [ ] 2.5 Click the board, then **Join as Black (1 tUSD)**, confirm with the passkey. Laptops open in **3D**. **(by eye)** You look well down onto the board. Heroes on one side, Undead on the other, and the Undead climb out of the board. The letters a to h and numbers 1 to 8 glow, carved into the board's rim. Other chessboards hang in the dark around it, with pieces on them, and on some a game is being played.
+- [ ] 2.6 **(by ear)** When the game starts the music stops on both devices, and each army calls out once. The music-note button in the top bar is crossed out; press it and the music comes back; press it again to turn it off.
 
 **Play these moves.** No passkey prompt should appear for any move.
 
@@ -68,7 +70,7 @@ Laptop (B)
 - [ ] 2.7 Each move shows on the other screen within a second or two. **(by ear)** Footsteps as characters walk (laptop, 3D).
 - [ ] 2.8 On the phone, tapping a piece shows gold dots on the squares it can go to.
 - [ ] 2.9 **(by eye)** On move 4 the queen attacks, the pawn falls, and "+0.0256 tUSD" flies to the queen (laptop, 3D).
-- [ ] 2.10 **Nobody resigns.** The phone says "Checkmate - you won. The referee is settling the game..." and within about 30 seconds both screens say **Finished - White wins**. **(by eye and ear)** The Heroes cheer and you hear a checkmate line.
+- [ ] 2.10 **Nobody resigns.** The phone says "Checkmate - you won. The referee is settling the game..." and within about 30 seconds both screens say **Finished - White wins**. **(by eye and ear)** The Heroes keep jumping for joy until you leave the board, and you hear a checkmate line.
 - [ ] 2.11 Final amounts: **White 1.95**, **Black 0**. (Black captured nothing, so keeps nothing; the fee is 2.5% of the 2 tUSD pot.)
 - [ ] 2.12 Phone (A): tap **Withdraw 1.95 tUSD**, confirm with the passkey. The button becomes "Withdrawn". Back on the home page the header balance is **100.95 tUSD**.
 - [ ] 2.13 On the finished game the move list reads `1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7#`. Tap `Bc4`: the board goes back to that position. Use the arrows to step to the end.
@@ -93,7 +95,7 @@ Phone (A)
 
 - [ ] 3.3 After White's move 4 the top bar reads **1.2051** for White and **0.7949** for Black, and the bar between them has shifted towards White.
 - [ ] 3.4 **(by ear)** On the laptop, taking the queen brings a "big capture" line from one army and a reply from the other. The two voices do **not** talk over each other, and the music dips while they speak.
-- [ ] 3.5 Phone (A): the bottom panel is one line (arrows, a status and **...**), with no Resign showing. Tap **...**: the panel opens with **Offer draw**, **Resign**, the moves, and what each side took as small pieces on violet squares (four of them). **(by eye)** The black pieces are easy to see.
+- [ ] 3.5 The laptop's bottom panel is one line too. Phone (A): the bottom panel is one line (arrows, a status and **...**), with no Resign showing. Tap **...**: the panel opens with **Offer draw**, **Resign**, the moves, and what each side took as small pieces on violet squares (four of them). **(by eye)** The black pieces are easy to see.
 - [ ] 3.6 Phone (A): tap the small arrow at the top of the open panel: it shrinks back to one line. Tap **...** to open it again.
 - [ ] 3.7 Phone (A): tap **Resign**, confirm with the passkey.
 - [ ] 3.8 Result: **Finished - White wins**. **White 1.9**, **Black 0.05**. (Black keeps the 0.0513 it won by capturing, less the fee.)
@@ -109,7 +111,7 @@ Laptop (B)
 
 - [ ] 4.2 Under **Waiting** the caption is "t_alice is waiting, side by coin flip", and the board shows **both** sides set up **(by eye)**. Open it: the button says **Join, coin flip for sides (1 tUSD)**. Join.
 - [ ] 4.3 Each player now has a colour (the laptop's top bar says "White · name" and "Black · name", with "(you)" on yours). Whoever is White plays `e2 → e4`; Black plays `e7 → e5`.
-- [ ] 4.4 Laptop (B) presses **Offer draw** (no passkey prompt). The phone's panel opens by itself with **Accept draw offer**. Tap it.
+- [ ] 4.4 Laptop (B) presses **...**, then **Offer draw** (no passkey prompt). The phone's panel opens by itself with **Accept draw offer**. Tap it.
 - [ ] 4.5 Result: **Finished - Draw**. The panel says "Draws are free." and each player's button reads **Withdraw 1 tUSD**.
 - [ ] 4.6 Both withdraw 1 tUSD.
 
@@ -156,10 +158,10 @@ Phone (A): the "stateless" test
 
 Laptop (B): lock and reload
 
-- [ ] 6.6 Press the **lock** button. The panel offers **Unlock with passkey to keep playing**. Press it: Resign and Offer draw are back.
+- [ ] 6.6 Press the **lock** button. The panel offers **Unlock with passkey to keep playing**. Press it, then **...**: Resign and Offer draw are back.
 - [ ] 6.7 Reload the page. It comes back locked (by design). One press unlocks it.
 - [ ] 6.8 Press the share button in the panel: on a laptop it **copies the link** ("Link copied. Paste it anywhere."), it does not open a share sheet.
-- [ ] 6.9 Finish the game: Black (B) presses **Resign**. **Finished - White wins**. Both withdraw.
+- [ ] 6.9 Finish the game: Black (B) presses **Resign** (in the open panel). **Finished - White wins**. Both withdraw.
 
 ## Part 7: Game 5, running out of time (5 min, 3 of them waiting)
 
@@ -194,7 +196,7 @@ Invite earnings (Player C: a brand-new account in the private window)
 
 ## Part 10: Leaderboard and tournaments (12 min)
 
-- [ ] 10.1 Open **Leaderboard**: A, B and C are listed (among the test players) with W D L and a **Won (tUSD)** column. Your own row is marked "(you)". The order is by Won: payouts minus stakes, after fees.
+- [ ] 10.1 Open **Leaderboard**: A, B and C are listed (among the test players) with W D L and a **Won (tUSD)** column. Your own row is marked "(you)". The order is by winnings (payouts minus stakes, after fees). Only players who are ahead show an amount, with a plus; everyone else shows a dash, never a loss.
 
 A tournament with a prize pot (A hosts; B and C play)
 
@@ -208,7 +210,7 @@ A tournament with a prize pot (A hosts; B and C play)
 
 Tournament games use a **coin flip** for sides, so nobody can take White every time. In each game below, whoever gets White plays `e2 → e4`, then Black plays `e7 → e5`.
 
-- [ ] 10.9 **A v B.** A presses **Play** and gets a waiting game. B opens the tournament page, presses **Join** on that game, then **Join, coin flip for sides (1 tUSD)**. One move each, then **B resigns**. Back on the tournament page: "1 of 3 games played", the game shows "t_alice won", and A has 1 point.
+- [ ] 10.9 **A v B.** A presses **Play** and gets a waiting game. In the private window (signed out), open that game's link: it says "This is a tournament game in Test Cup, waiting for t_bob or t_cara. Nobody else can sit down here", with no Join button, and the game is not in the home page's Waiting list. B opens the tournament page, presses **Join** on that game, then **Join, coin flip for sides (1 tUSD)**. One move each, then **B resigns**. The finished game has no Rematch button, and its back button (top left; "Tournament" on the laptop) returns to the tournament page: "1 of 3 games played", the game shows "t_alice won", and A has 1 point.
 - [ ] 10.10 **A v C.** C presses **Play**, A joins the same way. One move each, then one offers a draw and the other accepts. A has **1½**, C has **½**.
 - [ ] 10.11 **B v C.** B presses **Play**, C joins. One move each, then **C resigns**. B has 1 point.
 - [ ] 10.12 "3 of 3 games played", and a **Pay out the prizes** button appears. Anyone presses it and confirms.
@@ -224,7 +226,7 @@ A free tournament
 - [ ] 11.1 `/sandbox` (laptop): it opens in 3D; press **2D**. Play both sides: `e2 → e4`, `d7 → d5`, `e4 → d5`. White's amount rises from 10 to **10.26** and Black's falls to **9.7436**. **Undo** takes a move back. **New game** resets. **(by eye)** In 3D the pawns change to a different set (rogues, rangers or engineers).
 - [ ] 11.2 `/sounds`: **(by ear)** every music track, voice line and effect plays.
 - [ ] 11.3 `/credits`: the music, art and voices are listed with their licences.
-- [ ] 11.4 **(by ear)** The speaker button in a game silences music, voices and effects at once, and pressing it again brings them back. Holding it on a phone (right-click on a laptop) skips to the next song.
+- [ ] 11.4 **(by ear)** In a game, the **speaker** button silences music, voices and effects at once, and pressing it again brings them back. The **music note** turns only the music on or off; holding it on a phone (right-click on a laptop) skips to the next song.
 - [ ] 11.5 Scroll to the footer and press **Feedback**. Choose **An idea**, type a sentence, press **Send**: "Sent. Every message is read." and a **Join the Discord** button. The message appears in your Discord channel with your username and the page.
 - [ ] 11.6 **(by eye)** Paste a game link into a chat app: the preview shows the Away Chess image and title.
 

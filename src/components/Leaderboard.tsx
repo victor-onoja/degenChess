@@ -41,10 +41,9 @@ export function Leaderboard({ limit }: { limit?: number }) {
               <td className="whitespace-nowrap text-right">
                 {s.wins} {s.draws} {s.losses}
               </td>
-              <td className="text-right font-bold" style={{ color: s.net > 0n ? "var(--gold)" : s.net < 0n ? "var(--bone-soft)" : undefined }}>
-                {/* No sign on an amount too small to show, so it never reads "-0". */}
-                {formatToken(s.net < 0n ? -s.net : s.net) === "0" ? "" : s.net > 0n ? "+" : "-"}
-                {formatToken(s.net < 0n ? -s.net : s.net)}
+              {/* Winnings only: a player who is behind shows a dash, never a loss. */}
+              <td className="text-right font-bold" style={{ color: s.net > 0n ? "var(--gold)" : "var(--bone-soft)" }}>
+                {s.net > 0n && formatToken(s.net) !== "0" ? `+${formatToken(s.net)}` : "\u2013"}
               </td>
             </tr>
           ))}
@@ -52,7 +51,7 @@ export function Leaderboard({ limit }: { limit?: number }) {
       </table>
       {!limit && (
         <p className="soft mt-3 text-sm">
-          {players} {players === 1 ? "player" : "players"}, every finished game counted. Winnings are payouts minus stakes, after fees.
+          {players} {players === 1 ? "player" : "players"}, every finished game counted. Won is payouts minus stakes, after fees, shown for players who are ahead.
         </p>
       )}
     </div>

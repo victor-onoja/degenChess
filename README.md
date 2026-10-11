@@ -6,6 +6,33 @@ Staked chess on-chain. Both players put up the same dollar stake, and **every ca
 
 Tech stack: Next.js, Mera passkey accounts, viem/wagmi, react-chessboard, chess.js, Solidity (Hardhat), on Monad testnet. Stakes are in tUSD, a 6-decimal test dollar standing in for AUSD.
 
+## Hackathon notes (Monad Metropolis, Track 02: Consumer Products & Payments)
+
+- **Live:** <https://test.awaychess.com> on Monad testnet (chain 10143). Contract addresses are in [src/deployments.ts](src/deployments.ts) and in [docs/SUBMISSION.md](docs/SUBMISSION.md), with the transactions that show the referee settling games.
+- **Built in the hackathon window.** Everything in this repository apart from the items in the next point was written between 27 September and 13 October 2026: the contracts, the referee workflow, the passkey accounts, the 2D and 3D boards, tournaments, tests and docs.
+- **What existed before.** The repository began in September 2024 as a weekend prototype with the same idea (captures move stake) on Arbitrum Sepolia: a single unaudited contract (`web3chess.sol`) and a RainbowKit starter page, 20 files in all. None of that code is in use. The contract was rewritten from scratch (the old one had no access control and its sums did not add up, see "Deploy" below), the wallet connection was replaced by passkey accounts, and the interface was rebuilt. Five untouched config files remain from the starter: `.eslintrc.json`, `.npmrc`, `next-env.d.ts`, `next.config.js`, `postcss.config.js`. The 2024 commits are kept in the history for transparency.
+- **AI tools.** Built by one person working with **Claude Code (Anthropic's Claude)** as a pair programmer: it wrote most of the code, tests and documentation under direction and review, and the commits it worked on carry a `Co-Authored-By: Claude` line. The characters' voice lines were generated with the Kokoro-82M text-to-speech model. No other generated art or music is used.
+- **Why Monad.** Every move is its own transaction, signed by a browser-held game key with no prompt. That only feels like chess if a move confirms in about a second and costs next to nothing, which is what Monad gives: a median of about 0.8 seconds from sending a move to its receipt, at about 0.007 MON of gas per move, measured on testnet. The capture payouts, clocks, draws and timeouts are all settled by the contract, so there is no game server to trust.
+- **Licence:** MIT, see [LICENSE](LICENSE). Third-party code and assets are listed under [Credits and licences](#credits-and-licences).
+
+## Architecture in one page
+
+```text
+ Browser (Next.js)                         Monad testnet                         Referee
+ ─────────────────                         ─────────────                         ───────
+ Passkey (Mera) ──derives──► money key ──► DegenChess.sol  ◄── arbitrate ── ChessReferee.sol ◄── report
+                          └► game key  ──► makeMove / draws / timeouts            ▲                │
+ 2D board (react-chessboard)                 stakes, captures, clocks,            │       Chainlink CRE workflow
+ 3D board (react-three-fiber)                payouts, stats, referrals     MoveMade events   (cre/referee: replays every
+ reads with wagmi/viem  ◄── polling ────     Tournaments.sol (leagues, pots)      └────────── game with chess.js)
+ /api/drip (faucet), /api/watch,             PlayerNames.sol (usernames)
+ /api/feedback (to Discord)                  tUSD (test dollar)
+```
+
+- **Money key and game key.** One passkey derives both. The money key signs staking, resigning and withdrawing and asks for the passkey each time. The game key lives in page memory, is registered per game in the contract, and can only move pieces, offer or accept draws and claim timeouts.
+- **The contract is the game server.** It records every move, moves a captured piece's share of the stake at once, runs the clocks and pays out. It does not check full chess legality: the referee does, off-chain, and settles checkmates and rule draws or forfeits an illegal move through `ChessReferee`.
+- **No backend state.** The app reads everything from the chain. The three small API routes are a testnet faucet, a live head-count of spectators and the feedback form.
+
 ## Game rules
 
 | Piece  | Weight | Value (of one stake) |
@@ -110,6 +137,7 @@ cre/                         the referee workflow (Chainlink CRE)
 contracts/test/MockUSD.sol   mintable test dollar (tUSD) for testnet, local dev and tests
 test/DegenChess.test.js      contract tests, including random legal games cross-checked against chess.js
 scripts/deploy.js            deploy (also deploys MockUSD unless PAYMENT_TOKEN is set)
+scripts/withdraw-fees.js     shows the owner's accrued fees and collects them
 scripts/export-abi.js        writes src/contracts/abi.ts from the compiled artifact
 contracts/PlayerNames.sol    usernames
 contracts/Tournaments.sol    round-robin leagues, with an optional prize pot paid out by points
@@ -180,6 +208,30 @@ Against the live site, with the always-on referee settling the checkmate: `APP_U
 The hands-on pass, with the moves to play and the amounts to expect at each step, is in [docs/TEST-PLAN.md](docs/TEST-PLAN.md). `tools/e2e/test-plan.mjs` walks the same steps (Player A on a phone-sized browser, Player B on a laptop-sized one) and checks the wording, buttons and amounts the plan quotes, so the plan cannot drift from the app.
 
 After changing the contract, run `npm run compile` to regenerate `src/contracts/abi.ts`.
+
+## Credits and licences
+
+The project's own code is MIT ([LICENSE](LICENSE)). It builds on:
+
+| What | From | Licence |
+| --- | --- | --- |
+| Web framework, UI | Next.js, React, Tailwind CSS, react-toastify | MIT |
+| Chain access | viem, wagmi, @tanstack/react-query | MIT |
+| Passkey accounts | Mera (`@category-labs/mera`) | MIT or Apache-2.0 |
+| Chess rules in the browser and the referee | chess.js | BSD-2-Clause |
+| 2D board and its piece images (Cburnett set) | react-chessboard | MIT (pieces BSD) |
+| 3D | three.js, @react-three/fiber, drei, postprocessing | MIT |
+| Contracts | OpenZeppelin Contracts (SafeERC20, ReentrancyGuard), Hardhat | MIT |
+| Referee workflow | Chainlink CRE SDK and CLI | see package |
+| Tests | Playwright, Mocha/Chai | Apache-2.0 / MIT |
+| Heroes and Undead characters and animations | KayKit by Kay Lousberg | CC0 |
+| Classic 3D chess set | Poly Haven (Riley Queen) | CC0 |
+| Music (11 recordings) | Wikimedia Commons, each credited on `/credits` | public domain, CC0, CC BY 3.0/4.0 or CC BY-SA 3.0, per track |
+| Voices | generated with Kokoro-82M | Apache-2.0 |
+| Typefaces | Bricolage Grotesque, Uncial Antiqua (Google Fonts) | SIL OFL |
+| Monad logo, Chainlink mark | their owners; used only to say what the game is built on and refereed by | trademarks |
+
+Every asset is also credited in the app at `/credits`.
 
 ## Deploy to Monad testnet
 

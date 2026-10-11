@@ -462,7 +462,7 @@ export default function Tournaments() {
   const id = param !== undefined && /^\d+$/.test(param) ? BigInt(param) : null;
   const { tournament, loading } = useTournament(id);
   const open = (t: bigint | null) => router.push(t === null ? "/tournaments" : { pathname: "/tournaments", query: { t: t.toString() } }, undefined, { shallow: true });
-  const openGame = (game: bigint) => router.push({ pathname: "/", query: { game: game.toString() } });
+  const openGame = (game: bigint) => router.push({ pathname: "/", query: { game: game.toString(), ...(id !== null ? { t: id.toString() } : {}) } });
 
   return (
     <div className="mx-auto max-w-[1240px] px-5 pb-24 sm:px-10">

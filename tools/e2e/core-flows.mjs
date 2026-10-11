@@ -150,6 +150,7 @@ await shot(watcher, "spectator");
 
 step("Draw by agreement");
 await move(desk, "e8", "f8", [phone, desk, watcher]); // Kxf8
+await click(desk, "Open panel"); // the bottom panel is one line during play
 await click(desk, "Offer draw");
 await idle(desk);
 await click(phone, "Accept draw offer");

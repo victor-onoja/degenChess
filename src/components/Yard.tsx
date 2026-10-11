@@ -9,6 +9,7 @@ import { formatToken, sameAddress } from "../lib/format";
 import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
 import { withApproval } from "../lib/stake";
+import { tournamentSeat, useTournamentList } from "../lib/tournaments";
 import { useWatcherCounts } from "../lib/watchers";
 import { Icon } from "./Icon";
 import { ShareButton } from "./ShareButton";
@@ -145,6 +146,7 @@ function useNarrow() {
 export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const { address } = useDegenAccount();
   const { games } = useRecentGames();
+  const { list: tournaments } = useTournamentList(12);
   const { label } = useNames(games.flatMap((g) => [g.white, g.black]));
   const narrow = useNarrow();
   const [picked, setPicked] = useState<Tab | null>(null);
@@ -154,7 +156,12 @@ export function Yard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const mine = (g: ListedGame) => sameAddress(g.white, me) || sameAddress(g.black, me);
   const live = games.filter((g) => g.status === Status.Active);
   const lists: Record<Tab, ListedGame[]> = {
-    open: games.filter((g) => g.status === Status.Open),
+    // A tournament game waits for particular opponents: only they (and its creator) are shown it here.
+    open: games.filter((g) => {
+      if (g.status !== Status.Open) return false;
+      const seat = tournamentSeat(g, tournaments);
+      return !seat || sameAddress(g.white, me) || seat.awaited.some((p) => sameAddress(p, me));
+    }),
     live: [...live.filter(mine), ...live.filter((g) => !mine(g))],
     done: games.filter((g) => g.status === Status.Finished),
     mine: games.filter((g) => g.status === Status.Finished && mine(g)),

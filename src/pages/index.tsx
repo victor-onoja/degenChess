@@ -52,14 +52,18 @@ const Home: NextPage = () => {
   // The game being viewed lives in the URL (?game=3) so it can be shared with an opponent.
   const gameParam = typeof router.query.game === "string" ? router.query.game : null;
   const gameId = gameParam !== null && /^\d+$/.test(gameParam) ? BigInt(gameParam) : null;
+  // A game opened from a tournament page remembers it (?t=2), so leaving the game returns there.
+  const tParam = typeof router.query.t === "string" && /^\d+$/.test(router.query.t) ? router.query.t : null;
   const openGame = (id: bigint | null) =>
-    router.push(id === null ? "/" : { pathname: "/", query: { game: id.toString() } }, undefined, { shallow: true });
+    id === null && tParam !== null
+      ? router.push({ pathname: "/tournaments", query: { t: tParam } })
+      : router.push(id === null ? "/" : { pathname: "/", query: { game: id.toString(), ...(tParam !== null ? { t: tParam } : {}) } }, undefined, { shallow: true });
 
   if (gameId !== null && CONTRACT_ADDRESS) {
     return (
       <>
         <Seo title={`Board ${gameId}`} />
-        <GameView key={gameId.toString()} gameId={gameId} onExit={() => openGame(null)} onOpenGame={openGame} />
+        <GameView key={gameId.toString()} gameId={gameId} onExit={() => openGame(null)} onOpenGame={openGame} tournament={tParam !== null ? BigInt(tParam) : null} />
         <ToastContainer position="top-center" theme="dark" />
       </>
     );
@@ -199,6 +203,21 @@ const Home: NextPage = () => {
               </div>
             ))}
           </dl>
+          <p className="builton">
+            <span>
+              Built on{" "}
+              <a href="https://www.monad.xyz" target="_blank" rel="noreferrer" aria-label="Monad">
+                <span className="mark" style={{ ["--mark" as string]: "url(/brand/monad.svg)", width: "6.05em" }} />
+              </a>
+            </span>
+            <span>
+              Refereed by{" "}
+              <a href="https://chain.link/chainlink-runtime-environment" target="_blank" rel="noreferrer" aria-label="Chainlink CRE">
+                <span className="mark" style={{ ["--mark" as string]: "url(/brand/chainlink-mark.svg)", width: "1.15em" }} />
+                Chainlink CRE
+              </a>
+            </span>
+          </p>
         </section>
 
         <footer className="mt-24 flex flex-wrap items-end justify-between gap-6">

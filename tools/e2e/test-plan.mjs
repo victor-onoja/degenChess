@@ -67,6 +67,8 @@ async function player(name, { phone = false, passkey = true, view } = {}) {
 const idle = (p) => p.page.waitForFunction(() => !document.querySelector(".Toastify__toast--loading"), null, { timeout: 60000 });
 const button = (p, name) => p.page.getByRole("button", { name, exact: typeof name === "string" });
 async function press(p, name) {
+  // Offer draw and Resign live in the bottom panel, which is one line during play.
+  if (name === "Resign" || name === "Offer draw") await expand(p);
   await button(p, name).first().click({ timeout: 60000 });
 }
 /** In-app navigation, as a player clicking around would do. A full reload locks the account by design. */
@@ -129,10 +131,11 @@ async function line(moves, watchers) {
   await watchers[0].page.waitForTimeout(1500); // sit down first, as a person would
   for (const [p, from, to, promotion] of moves) await move(p, from, to, watchers, promotion);
 }
-/** On a phone the bottom panel is one line during play; the "..." button opens it. */
+/** The bottom panel is one line during play; the "..." button opens it. */
 async function expand(p) {
-  const more = p.page.getByRole("button", { name: "Expand HUD" }).last();
-  if (p.phone && (await button(p, "Shrink panel").count()) === 0 && (await more.count())) await more.click();
+  const more = p.page.getByRole("button", { name: "Open panel" });
+  await more.or(button(p, "Resign")).first().waitFor({ timeout: 30000 }).catch(() => {});
+  if ((await button(p, "Shrink panel").count()) === 0 && (await more.count())) await more.click();
 }
 async function withdraw(p) {
   await press(p, /^Withdraw [\d.]+ tUSD$/);
@@ -197,6 +200,7 @@ part("Part 2: checkmate, settled by the referee");
 let g = await createGame(A, { clock: "5 + 3", side: "White" });
 check("2.2", (await button(A, "2D").getAttribute("aria-pressed")) === "true", "the phone opens the game in 2D");
 await see("2.2", A, "Waiting for an opponent");
+check("2.2", (await button(A, "Music off").count()) === 1, "music is on while waiting (the music button offers Music off)");
 check("2.2", (await button(A, "Share invite link").count()) === 1 && (await button(A, "Cancel & Refund").count()) === 1, "with Share invite link and Cancel & Refund");
 await go(B, "/");
 await press(B, /^Waiting \d+$/);
@@ -207,6 +211,8 @@ await press(B, "Join as Black (1 tUSD)");
 await B.page.getByText("White to move").first().waitFor({ timeout: 60000 });
 await idle(B);
 await A.page.getByText("White to move").first().waitFor({ timeout: 30000 });
+check("2.6", (await button(A, "Music on").count()) === 1 && (await button(B, "Music on").count()) === 1, "once the game starts the music is off for both players (the button offers Music on)");
+check("2.6", (await button(A, "Mute").count()) === 1, "with a separate button for all sound");
 const promptsBefore = await A.page.evaluate(() => window.__prompts ?? 0);
 await A.page.locator('[data-square="e2"]').tap();
 check("2.8", (await A.page.locator('[data-square="e4"] div[style*="radial-gradient"]').count()) > 0, "tapping a piece marks the squares it can go to");
@@ -244,6 +250,7 @@ await A.page.getByText("White to move").first().waitFor({ timeout: 60000 });
 await idle(A);
 await line([[B, "e2", "e4"], [A, "d7", "d5"], [B, "e4", "d5"], [A, "d8", "d5"], [B, "b1", "c3"], [A, "d5", "g2"], [B, "f1", "g2"]], both);
 hud = await text(B);
+check("3.5", (await button(B, "Resign").count()) === 0 && (await button(B, "Open panel").count()) === 1, "on the laptop too, the bottom panel is one line during play");
 check("3.3", hud.includes("1.2051") && hud.includes("0.7949"), `the top bar reads 1.2051 and 0.7949 (${hud.match(/[\d.]+ tUSD/g)?.slice(0, 4).join(", ")})`);
 check("3.5", (await button(A, "Resign").count()) === 0 && (await button(A, "Previous move").count()) >= 1 && (await button(A, "Next move").count()) >= 1, "during play the phone's bottom panel is one line: back, status, forward, and a ... button (no Resign showing)");
 await expand(A);
@@ -256,7 +263,7 @@ check("3.6", (await button(A, "Resign").count()) === 0, "the arrow shrinks it ba
 await expand(A);
 await press(A, "Resign");
 for (const p of both) await see("3.8", p, "Finished - White wins");
-hud = await text(A);
+hud = await text(B); // the laptop's top bar shows both amounts with their unit
 check("3.8", /1\.9 tUSD/.test(hud) && /0\.05 tUSD/.test(hud), `final amounts are 1.9 and 0.05 (${hud.match(/[\d.]+ tUSD/g)?.slice(0, 4).join(", ")})`);
 await idle(A);
 await withdraw(A);
@@ -343,7 +350,9 @@ for (const p of [A, B, W]) await see("6.3", p, "1 watching");
 await press(B, "Lock");
 check("6.6", await button(B, "Unlock with passkey to keep playing").waitFor({ timeout: 30000 }).then(() => true, () => false), "locked, the panel offers Unlock with passkey to keep playing");
 await press(B, "Unlock with passkey to keep playing");
-await button(B, "Resign").waitFor({ timeout: 60000 });
+await button(B, "Open panel").waitFor({ timeout: 60000 });
+await expand(B);
+await button(B, "Resign").waitFor({ timeout: 30000 });
 await B.page.getByRole("button", { name: /^Share/ }).first().click();
 await see("6.8", B, "Link copied", { label: "the laptop share button copies the link" });
 await press(B, "Resign");
@@ -501,6 +510,16 @@ async function fixture(host, guest, hostName, guestName, end) {
     throw e;
   });
   await idle(host);
+  if (host === A && guest === B) {
+    // Someone who is not in this pairing opens the waiting game: they are told whose it is, and cannot join.
+    await W.page.goto(host.page.url());
+    await see("10.9", W, /This is a tournament game in Test Cup/, { timeout: 60000, label: "an outsider is told it is a tournament game" });
+    check("10.9", (await W.page.getByRole("button", { name: /^Join/ }).count()) === 0 && (await button(W, "Play now").count()) === 1, "and is offered no way to join it");
+    await W.page.goto(APP);
+    await W.page.getByRole("button", { name: /^Waiting \d+$/ }).click();
+    await W.page.waitForTimeout(2500);
+    check("10.9", !(await text(W, "#yard")).includes(`${alice} is waiting, side by coin flip`), "the tournament game is not offered in the home page's Waiting list");
+  }
   await mine(guest).getByRole("button", { name: "Join", exact: true }).click({ timeout: 60000 });
   await guest.page.waitForURL(/game=\d+/, { timeout: 30000 });
   check("10.9", await button(guest, "Join, coin flip for sides (1 tUSD)").waitFor({ timeout: 30000 }).then(() => true, () => false), "a tournament game is joined with Join, coin flip for sides (1 tUSD)");
@@ -517,6 +536,12 @@ async function fixture(host, guest, hostName, guestName, end) {
   await end();
   await host.page.getByText(/^Finished - /).first().waitFor({ timeout: 60000 });
   for (const p of [host, guest]) await idle(p);
+  if (host === A && guest === B) {
+    await B.page.waitForTimeout(1500);
+    check("10.9", (await B.page.getByRole("button", { name: /^Rematch/ }).count()) === 0 && (await B.page.getByRole("button", { name: /^Withdraw|^Nothing to withdraw|^Withdrawn/ }).count()) === 1, "a finished tournament game offers no rematch");
+    await B.page.getByRole("button", { name: "Back to the tournament" }).click();
+    await see("10.9", B, "1 of 3 games played", { timeout: 60000, label: "the back button returns to the tournament page" });
+  }
 }
 await fixture(A, B, alice, bob, () => press(B, "Resign"));
 await go(A, tPath);

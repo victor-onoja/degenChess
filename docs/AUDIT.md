@@ -74,6 +74,11 @@ These are deliberate trade-offs or open problems. We'd value your view on how ba
 - `withdraw`, `cancelGame` and `withdrawFees`: double-withdraw or withdraw-after-cancel paths.
 - `ChessReferee.onReport`: the metadata slice used for `expectedWorkflowOwner` (`metadata[42:62]`), whether a report for one game can be replayed against another, and whether the `tx.origin` reporter check can be satisfied by anyone other than a reporter (for example a reporter's transaction calling into a contract that then calls the forwarder).
 
+## Added after the review (11 October 2026, app only, no contract change)
+
+- **Tournament games are seated by the app, not the contract.** A tournament game is an ordinary open game, and `joinGame` lets anyone join an open game. From 11 October the app recognises a tournament game (a coin-flip game from a player of a running tournament, at its stake and clock, while that player still has someone to play) and offers the seat only to that player's remaining opponents; everyone else is told whose game it is and can watch. Someone calling the contract directly can still join it. The damage is bounded: they play an ordinary staked game against the creator, it does not count for the tournament (`Tournaments._record` only accepts a game between two of its players, once per pairing), and the pairing can be played again. Enforcing it on-chain would need an "invited opponent" on `createGame`; that is on the mainnet list.
+- **Owner fees.** `scripts/withdraw-fees.js` reads `accruedFees` and, with `WITHDRAW=1`, calls `withdrawFees` as the owner.
+
 ## External review, 9 October 2026
 
 An independent reviewer read the contracts. What they raised, what we found while checking it, and what changed. The changes are in the source and covered by tests (40 contract tests); they were deployed to Monad testnet the same day, and the addresses in `src/deployments.ts` are the fixed contracts.

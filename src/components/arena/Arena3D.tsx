@@ -428,9 +428,10 @@ function Board({
   return (
     <group>
       <mesh position={[0, -0.2, 0]} receiveShadow>
-        <boxGeometry args={[8.6, 0.28, 8.6]} />
+        <boxGeometry args={[9.1, 0.28, 9.1]} />
         <meshStandardMaterial color="#15121f" roughness={0.5} metalness={0.4} />
       </mesh>
+      <Runes />
       {squares.map(({ square, x, z, dark }) => {
         const isLast = lastMove && (lastMove.from === square || lastMove.to === square);
         const isTarget = targets.includes(square);
@@ -479,6 +480,82 @@ function Board({
           </mesh>
         );
       })}
+    </group>
+  );
+}
+
+const RUNE_FONT = '"Uncial Antiqua", "Bricolage Grotesque", serif';
+const runes = new Map<string, THREE.CanvasTexture>();
+/** One coordinate, drawn as a glowing carved letter. Redrawn once the rune font has arrived. */
+function rune(char: string) {
+  let texture = runes.get(char);
+  if (texture) return texture;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 96;
+  const draw = () => {
+    const g = canvas.getContext("2d")!;
+    g.clearRect(0, 0, 96, 96);
+    g.font = `64px ${RUNE_FONT}`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    // A dark cut under a lit edge: the letter reads as carved into the rim, with light in the groove.
+    g.fillStyle = "rgba(0, 0, 0, 0.9)";
+    g.fillText(char, 48, 54);
+    g.shadowColor = "rgba(255, 194, 51, 0.9)";
+    g.shadowBlur = 10;
+    g.fillStyle = "#ffd77a";
+    g.fillText(char, 48, 51);
+    if (texture) texture.needsUpdate = true;
+  };
+  texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  draw();
+  void document.fonts?.load(`64px "Uncial Antiqua"`, char).then(draw, () => {});
+  runes.set(char, texture);
+  return texture;
+}
+
+/**
+ * The files and ranks, etched into the rim and faintly alight. Each side reads its own: a to h along
+ * its near edge, 1 to 8 up its left.
+ */
+function Runes() {
+  const marks = useMemo(() => {
+    const all: { char: string; x: number; z: number; turn: number }[] = [];
+    for (let i = 0; i < 8; i++) {
+      const file = String.fromCharCode(97 + i);
+      const rank = String(i + 1);
+      const [fx] = xz(`${file}1`);
+      const [, rz] = xz(`a${rank}`);
+      all.push({ char: file, x: fx, z: 4.28, turn: 0 }, { char: file, x: fx, z: -4.28, turn: Math.PI });
+      all.push({ char: rank, x: -4.28, z: rz, turn: 0 }, { char: rank, x: 4.28, z: rz, turn: Math.PI });
+    }
+    return all;
+  }, []);
+  const glow = useRef<THREE.MeshBasicMaterial[]>([]);
+  useFrame(({ clock }) => {
+    // The light in the grooves breathes, a little out of step from mark to mark.
+    glow.current.forEach((m, i) => {
+      if (m) m.opacity = 0.62 + Math.sin(clock.elapsedTime * 0.9 + i * 0.7) * 0.18;
+    });
+  });
+  return (
+    <group>
+      {marks.map((m, i) => (
+        <mesh key={i} position={[m.x, -0.055, m.z]} rotation={[-Math.PI / 2, 0, m.turn]}>
+          <planeGeometry args={[0.34, 0.34]} />
+          <meshBasicMaterial
+            ref={(mat) => {
+              if (mat) glow.current[i] = mat;
+            }}
+            map={rune(m.char)}
+            transparent
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -558,7 +635,8 @@ function CameraRig({
       const aspect = size.width / size.height;
       const portrait = aspect < 0.85;
       // As a backdrop the camera sits low and close, so the pieces' faces are the subject.
-      const elevation = attract ? (portrait ? 0.62 : 0.4) : portrait ? 0.98 : aspect > 1.5 ? 0.6 : 0.5;
+      // In play the camera looks well down onto the board, so the back ranks are easy to read and reach.
+      const elevation = attract ? (portrait ? 0.62 : 0.4) : portrait ? 0.98 : 0.84;
       const vHalf = THREE.MathUtils.degToRad(FOV / 2);
       const hHalf = Math.atan(Math.tan(vHalf) * aspect);
       const near = 4.25 * Math.cos(elevation);
@@ -664,50 +742,97 @@ export interface ArenaProps {
 
 // ------------------------------------------------------------------ the multiverse
 
-/** A checkerboard texture for the far boards: other games, in other dimensions. */
-function ghostTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 64;
+/** Games being played on the far boards: other dimensions, other players. */
+const FAR_GAMES = [
+  "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7 c4 c6 cxb5 axb5 Nc3 Bb7 Bg5 b4 Nb1 h6 Bh4 c5 dxe5 Nxe4 Bxe7 Qxe7 exd6 Qf6 Nbd2 Nxd6 Nc4 Nxc4 Bxc4 Nb6",
+  "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7 Ne1 Nd7 Nd3 f5 Bd2 Nf6 f3 f4 c5 g5 Rc1 Ng6 cxd6 cxd6 Nb5 Rf7 Qc2 Ne8 a4 h5 Nf2 Bf8 h3 Rg7",
+  "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6 f3 Be7 Qd2 O-O O-O-O Nbd7 g4 b5 g5 b4 Ne2 Ne8 f4 a5 f5 a4 Nbd4 exd4 Nxd4 b3 Kb1 bxc2+ Nxc2 Bb3",
+  "e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3 Ba5 d4 exd4 O-O d3 Qb3 Qf6 e5 Qg6 Re1 Nge7 Ba3 b5 Qxb5 Rb8 Qa4 Bb6 Nbd2 Bb7 Ne4 Qf5 Bxd3 Qh5 Nf6+ gxf6 exf6 Rg8",
+  "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6 cxd5 Nxd5 Bxe7 Qxe7 Nxd5 exd5 Rc1 Be6 Qa4 c5 Qa3 Rc8 Bb5 a6 dxc5 bxc5 O-O Ra7 Be2 Nd7 Nd4 Qf8 Nxe6 fxe6 e4 d4",
+  "e4 e6 d4 d5 Nc3 Bb4 e5 c5 a3 Bxc3+ bxc3 Ne7 Qg4 Qc7 Qxg7 Rg8 Qxh7 cxd4 Ne2 Nbc6 f4 Bd7 Qd3 dxc3 Nxc3 a6 Rb1 Nf5 Ne2 Na5 h4 Rc8 h5 Nc4",
+];
+const FAR_GLYPH: Record<string, string> = { p: "\u265F", n: "\u265E", b: "\u265D", r: "\u265C", q: "\u265B", k: "\u265A" };
+
+/** Draws a position onto a far board's canvas: the squares and every piece on them, readable from a distance. */
+function drawFarBoard(canvas: HTMLCanvasElement, game: Chess) {
   const g = canvas.getContext("2d")!;
-  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
-    g.fillStyle = (r + f) % 2 ? "#3b2e8c" : "#8573ee";
-    g.fillRect(f * 8, r * 8, 8, 8);
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+  const cell = canvas.width / 8;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.font = `${cell * 0.86}px "Apple Symbols", "Segoe UI Symbol", "Noto Sans Symbols 2", "DejaVu Sans", serif`;
+  game.board().forEach((row, r) =>
+    row.forEach((piece, f) => {
+      g.fillStyle = (r + f) % 2 ? "#3b2e8c" : "#8573ee";
+      g.fillRect(f * cell, r * cell, cell, cell);
+      if (!piece) return;
+      g.lineWidth = cell * 0.09;
+      g.strokeStyle = piece.color === "w" ? "#17131f" : "#efe5cf";
+      g.fillStyle = piece.color === "w" ? "#f6efdc" : "#0f0d16";
+      g.strokeText(FAR_GLYPH[piece.type], (f + 0.5) * cell, (r + 0.54) * cell);
+      g.fillText(FAR_GLYPH[piece.type], (f + 0.5) * cell, (r + 0.54) * cell);
+    })
+  );
 }
 
 /**
- * Other boards hang in the void around this one, tilted at their own angles and drifting: the same
- * game being played in other dimensions. Cheap: a dozen textured slabs, no lights, no shadows.
+ * Other boards hang in the void around this one, tilted at their own angles and drifting: other
+ * games, in other dimensions. Each is a real chessboard with its pieces, and on some the game is
+ * still going, a move every few seconds. Cheap: a dozen textured slabs, no lights, no shadows.
  */
 function Multiverse() {
   const boards = useMemo(() => {
-    const texture = ghostTexture();
     const rand = (() => {
       let seed = 7;
       return () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     })();
     return Array.from({ length: 14 }, (_, i) => {
       const angle = (i / 14) * Math.PI * 2 + rand() * 0.4;
-      const distance = 16 + rand() * 18;
-      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.16 + rand() * 0.22, fog: false, depthWrite: false });
+      // Around and below the board, where a camera looking down onto the game still sees them.
+      const distance = 12.5 + rand() * 14;
+      const moves = FAR_GAMES[i % FAR_GAMES.length].split(" ");
+      // Each board joins its game part-way through; every other one is still being played.
+      const game = new Chess();
+      const startAt = 8 + Math.floor(rand() * (moves.length - 12));
+      for (const san of moves.slice(0, startAt)) game.move(san);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      drawFarBoard(canvas, game);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.42 + rand() * 0.3, fog: false, depthWrite: false });
+      const edge = new THREE.MeshBasicMaterial({ color: "#15121f", transparent: true, opacity: 0.55, fog: false, depthWrite: false });
       return {
-        position: [Math.cos(angle) * distance, -4 + rand() * 12, Math.sin(angle) * distance] as [number, number, number],
-        rotation: [rand() * 1.4 - 0.7, rand() * Math.PI, rand() * 1.2 - 0.6] as [number, number, number],
-        size: 3 + rand() * 4,
+        position: [Math.cos(angle) * distance, -10 + rand() * 11, Math.sin(angle) * distance] as [number, number, number],
+        rotation: [rand() * 0.9 - 0.45, rand() * Math.PI, rand() * 0.8 - 0.4] as [number, number, number],
+        size: 4 + rand() * 4.5,
         spin: (rand() - 0.5) * 0.08,
-        material,
+        // The board's faces show the position; its sides are plain dark stone.
+        materials: [edge, edge, material, material, edge, edge],
+        live: i % 2 === 0 ? { game, moves, canvas, texture, next: startAt, due: 2 + rand() * 4, every: 2.6 + rand() * 2.4 } : null,
       };
     });
   }, []);
   const refs = useRef<(THREE.Mesh | null)[]>([]);
-  useFrame((_, delta) => {
+  useFrame(({ clock }, delta) => {
     boards.forEach((b, i) => {
       const mesh = refs.current[i];
       if (mesh) mesh.rotation.y += b.spin * delta;
+      const live = b.live;
+      if (!live || clock.elapsedTime < live.due) return;
+      live.due = clock.elapsedTime + live.every;
+      // The next move of that game; when it runs out, the players set the pieces up and start again.
+      if (live.next >= live.moves.length) {
+        live.game.reset();
+        live.next = 0;
+      } else {
+        try {
+          live.game.move(live.moves[live.next++]);
+        } catch {
+          live.next = live.moves.length;
+        }
+      }
+      drawFarBoard(live.canvas, live.game);
+      live.texture.needsUpdate = true;
     });
   });
   return (
@@ -715,8 +840,8 @@ function Multiverse() {
       {boards.map((b, i) => (
         <mesh key={i} ref={(m) => {
             refs.current[i] = m;
-          }} position={b.position} rotation={b.rotation} material={b.material}>
-          <boxGeometry args={[b.size, 0.06, b.size]} />
+          }} position={b.position} rotation={b.rotation} material={b.materials}>
+          <boxGeometry args={[b.size, 0.1, b.size]} />
         </mesh>
       ))}
     </group>
@@ -951,11 +1076,13 @@ function Scene({
 export default function Arena3D(props: ArenaProps) {
   const set = props.set ?? "armies";
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
-  // Phones skip shadows and glow, and render at a lower resolution; any device drops further if it struggles.
+  // Phones skip shadows and glow; any device that struggles drops them too.
   const [lite, setLite] = useState(() => typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 640);
-  // Render close to the screen's real density so the characters stay crisp on phones (which are 3x);
-  // the glow and shadows are what phones skip, not sharpness.
-  const [dpr, setDpr] = useState(() => (typeof window === "undefined" ? 1.5 : Math.min(window.devicePixelRatio || 1, lite ? 2.5 : 2)));
+  // Render at the screen's real density so the characters stay crisp on phones (which are 3x): the
+  // glow and shadows are what phones skip, not sharpness. A struggling device gives up a little
+  // sharpness at a time, never below what still looks crisp, and gets it back when it recovers.
+  const sharpest = typeof window === "undefined" ? 1.5 : Math.min(window.devicePixelRatio || 1, lite ? 3 : 2);
+  const [dpr, setDpr] = useState(sharpest);
 
   return (
     <div
@@ -970,16 +1097,19 @@ export default function Arena3D(props: ArenaProps) {
       <Canvas key={props.orientation} shadows={!lite} camera={{ position: [0, 7, 13], fov: FOV }} dpr={dpr}>
         <PerformanceMonitor
           onDecline={() => {
-            // Struggling: drop the effects first, then sharpness a step at a time, never below 1.25x.
             setLite(true);
-            setDpr((d) => Math.max(1.25, d - 0.5));
+            setDpr((d) => Math.max(Math.min(sharpest, 2), d - 0.25));
           }}
+          onIncline={() => setDpr((d) => Math.min(sharpest, d + 0.25))}
         />
         <Suspense
           fallback={
-            <Html center>
-              <div className="arena-loading">Setting the board...</div>
-            </Html>
+            // Behind the landing headline the board simply arrives; in a game, say what is happening.
+            props.attract ? null : (
+              <Html center>
+                <div className="arena-loading">Setting the board</div>
+              </Html>
+            )
           }
         >
           <Scene {...props} set={set} askPromotion={(from, to) => setPromotion({ from, to })} />

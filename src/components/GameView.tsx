@@ -8,7 +8,7 @@ import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { chessContract, POLL_MS, Result, Status, toGameInfo, useGame } from "../lib/contract";
 import { encodeMove, replay } from "../lib/moves";
-import { formatClock } from "../lib/clock";
+import { describeClock, formatClock } from "../lib/clock";
 import { formatDuration, formatToken, sameAddress, ZERO_ADDRESS } from "../lib/format";
 import { useNames } from "../lib/names";
 import { isMuted, setMuted, sfx } from "../lib/sound";
@@ -22,6 +22,7 @@ import { PieceIcon } from "./PieceIcon";
 import { usePieceSet } from "../lib/pieceSet";
 import { say, useVoices } from "../lib/voices";
 import { nextTrack, useMusic } from "../lib/music";
+import { tournamentSeat, useTournamentList } from "../lib/tournaments";
 import { useWatchers } from "../lib/watchers";
 import { FeedbackLink } from "./Feedback";
 import { ShareButton } from "./ShareButton";
@@ -49,10 +50,13 @@ export function GameView({
   gameId,
   onExit,
   onOpenGame,
+  tournament = null,
 }: {
   gameId: bigint;
   onExit: () => void;
   onOpenGame: (id: bigint) => void;
+  /** The tournament this game was opened from: back returns there, and it offers no rematch. */
+  tournament?: bigint | null;
 }) {
   const account = useDegenAccount();
   const { unlocked, gameKey, busy: pending, sendGame, sendMoney, gameKeyTopUp } = account;
@@ -90,7 +94,14 @@ export function GameView({
     args: [gameId],
     query: { refetchInterval: POLL_MS },
   });
-  const { label } = useNames([info?.white, info?.black]);
+  // An open tournament game seats only that player's tournament opponents.
+  const { list: tournaments } = useTournamentList(12, info?.status === Status.Open);
+  const seat =
+    info?.status === Status.Open
+      ? tournamentSeat({ id: gameId, white: info.white, stake: info.stake, creatorSide: Number(creatorSide ?? 0), clock: describeClock(clock?.[0] ?? 0, clock?.[1] ?? 0) }, tournaments)
+      : null;
+  const { label } = useNames([info?.white, info?.black, ...(seat?.awaited ?? [])]);
+  const seatNames = (seat?.awaited ?? []).map(label).join(" or ");
 
   // Rematch: look at the games created after this one for an open game from the opponent at the same stake.
   const { data: gameCount } = useReadContract({ ...chessContract, functionName: "gameCount", query: { refetchInterval: POLL_MS } });
@@ -148,7 +159,18 @@ export function GameView({
 
   // The armies talk as moves land, and warn you once when your clock is nearly out.
   useVoices(liveHistory, pieceSet === "armies" && !viewing, info?.status === Status.Active);
-  useMusic(true);
+  // Music keeps you company while you wait for an opponent; once the game is on it is quiet unless
+  // you ask for it. Your choice, either way, is remembered on this device.
+  const [musicChoice, setMusicChoice] = useState<boolean | null>(null);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("degenchess.music");
+      if (saved === "on" || saved === "off") setMusicChoice(saved === "on");
+    } catch {}
+  }, []);
+  const musicOn = musicChoice ?? info?.status !== Status.Active;
+  useMusic(musicOn);
+
   // The audience: spectators are counted, the two players only see the number.
   const isPlayer = !!info && !!address && (sameAddress(address, info.white) || sameAddress(address, info.black));
   const watchers = useWatchers(gameId, !isPlayer, !!info && info.status === Status.Active);
@@ -210,6 +232,8 @@ export function GameView({
   // Minimized HUD: a slim score strip and a one-line dock, for more board. Default on phones.
   const [compact, setCompact] = useState(false);
   useEffect(() => setCompact(window.innerWidth < 640), []);
+  // The bottom panel is one line during play, on every screen, until the player opens it.
+  const [dockOpen, setDockOpen] = useState(false);
 
   // Focus: nothing but the board. Uses the browser's fullscreen too where the device allows it.
   const [focus, setFocusState] = useState(false);
@@ -270,6 +294,8 @@ export function GameView({
   // Clock: each stored time is as of that player's turn start, so the side on move is charged the time since then.
   const [clockBase, clockIncrement, whiteTime, blackTime] = clock ?? [0, 0, 0, 0];
   const clockOn = clockBase > 0;
+  // Someone who is not one of the players this tournament game is waiting for: they may watch, not join.
+  const notMySeat = seat !== null && !seat.awaited.some((p) => sameAddress(p, address));
   const sinceLastMove = active ? Math.max(now - Number(info.lastMoveAt), 0) : 0;
   const clockLeft = { w: whiteTime - (turn === "w" ? sinceLastMove : 0), b: blackTime - (turn === "b" ? sinceLastMove : 0) };
   // Seconds until the side to move loses on time.
@@ -468,7 +494,7 @@ export function GameView({
   // The one-line dock is only used mid-game when nothing needs the player's attention.
   const needsAttention =
     !(active && myColor && keyReady) || boardNotice !== null || lowMoveGas || drawOfferedByOpponent || flagFell;
-  const slimDock = compact && !needsAttention;
+  const slimDock = !dockOpen && !needsAttention;
   needsYou.current = boardNotice !== null || drawOfferedByOpponent || flagFell || !active;
 
   return (
@@ -508,10 +534,10 @@ export function GameView({
       {!focus && (
       <div ref={setTopEl} className="pointer-events-none relative z-10 flex flex-col gap-2 p-3">
         <div className="flex items-center justify-between gap-2">
-          <button className="ghost pointer-events-auto" onClick={onExit} aria-label="Back to the yard">
-            <Icon name="back" /> <span className="hidden sm:inline">Yard</span>
+          <button className="ghost pointer-events-auto" onClick={onExit} aria-label={tournament !== null ? "Back to the tournament" : "Back to the yard"}>
+            <Icon name="back" /> <span className="hidden sm:inline">{tournament !== null ? "Tournament" : "Yard"}</span>
           </button>
-          <div className="pointer-events-auto flex gap-2">
+          <div className="topbar pointer-events-auto flex gap-2">
             <button
               className="ghost"
               aria-label={compact ? "Expand HUD" : "Minimize HUD"}
@@ -533,15 +559,29 @@ export function GameView({
             ))}
             <button
               className="ghost"
-              aria-label={muted ? "Unmute" : "Mute"}
-              title="Tap to mute. Hold for the next song."
+              aria-label={musicOn ? "Music off" : "Music on"}
+              aria-pressed={musicOn}
+              title={musicOn ? "Music is on. Tap to turn it off; hold for the next song." : "Music is off. Tap to turn it on."}
               onClick={() => {
-                setMuted(!muted);
-                setMutedState(!muted);
+                setMusicChoice(!musicOn);
+                try {
+                  localStorage.setItem("degenchess.music", musicOn ? "off" : "on");
+                } catch {}
               }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 nextTrack();
+              }}
+            >
+              <Icon name={musicOn ? "musicOn" : "musicOff"} />
+            </button>
+            <button
+              className="ghost"
+              aria-label={muted ? "Unmute" : "Mute"}
+              title="All sound: music, voices and effects"
+              onClick={() => {
+                setMuted(!muted);
+                setMutedState(!muted);
               }}
             >
               <Icon name={muted ? "soundOff" : "soundOn"} />
@@ -665,7 +705,7 @@ export function GameView({
             <button className="ghost !min-w-[40px] !px-0" aria-label="Next move" disabled={!viewing} onClick={() => step((viewPly ?? history.length) + 1)}>
               <Icon name="next" size={18} />
             </button>
-            <button className="ghost" aria-label="Expand HUD" onClick={() => setCompact(false)}>
+            <button className="ghost" aria-label="Open panel" title="Offer a draw, resign, the moves" onClick={() => setDockOpen(true)}>
               <Icon name="more" />
             </button>
           </div>
@@ -673,7 +713,7 @@ export function GameView({
         <div className="slab pointer-events-auto mx-auto flex w-full max-w-2xl flex-col gap-2 p-3">
           {/* Back down to one line, for more board (only when nothing here needs the player). */}
           {!needsAttention && (
-            <button className="-mt-1 mx-auto flex h-6 w-16 items-center justify-center rounded-[3px] soft" aria-label="Shrink panel" title="Shrink" onClick={() => setCompact(true)}>
+            <button className="-mt-1 mx-auto flex h-6 w-16 items-center justify-center rounded-[3px] soft" aria-label="Shrink panel" title="Shrink" onClick={() => setDockOpen(false)}>
               <Icon name="down" size={18} />
             </button>
           )}
@@ -749,13 +789,19 @@ export function GameView({
             </>
           )}
 
-          {info.status === Status.Open && myColor === null && !hasAccount && (
+          {info.status === Status.Open && myColor === null && notMySeat && (
+            <p className="text-sm">
+              This is a tournament game in <span className="font-bold">{seat!.name}</span>, waiting for {seatNames}. Nobody else can sit down here; you can
+              watch once it starts.
+            </p>
+          )}
+          {info.status === Status.Open && myColor === null && !notMySeat && !hasAccount && (
             <p className="text-sm">
               This board is waiting for an opponent. Press Play now to sit down{" "}
               {["as Black", "as White", "(a coin flip picks the sides)"][Number(creatorSide ?? 0)] ?? "as Black"}.
             </p>
           )}
-          {info.status === Status.Open && myColor === null && hasAccount && (
+          {info.status === Status.Open && myColor === null && !notMySeat && hasAccount && (
             <button
               className="act"
               disabled={!hasAccount || pending !== null}
@@ -868,6 +914,7 @@ export function GameView({
                 </button>
               )}
               {myColor &&
+                tournament === null &&
                 (rematch ? (
                   <button className="act" onClick={() => onOpenGame(rematch.id)}>
                     {label(opponent)} wants a rematch &rarr; game #{rematch.id.toString()}

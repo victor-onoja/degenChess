@@ -110,6 +110,7 @@ check(true, "players and the spectator see \"1 watching\"");
 if (SHOTS) await a.screenshot({ path: `${SHOTS}/community-watching.png` });
 
 step("Bob resigns; the standings and the leaderboard pick it up");
+await b.getByRole("button", { name: "Open panel" }).click(); // the bottom panel is one line during play
 await b.getByRole("button", { name: "Resign", exact: true }).click();
 await a.getByText(/^Finished - /).waitFor({ timeout: 60000 });
 await idle(b);

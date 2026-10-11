@@ -117,21 +117,24 @@ export const Figure = forwardRef<FigureParts, { color: Color; kind: PieceSymbol;
   }, [scene, kind]);
 
   const { actions } = useAnimations(animations, root);
-  const play = (clip: string) => {
-    if (current.current === clip) return;
+  const play = (clip: string, again = false) => {
+    // `again` repeats a one-off clip for as long as it is asked for (a winner keeps jumping for joy).
+    const key = again ? `${clip}+` : clip;
+    if (current.current === key) return;
     const next = actions[clip];
     if (!next) return;
-    const previous = current.current ? actions[current.current] : null;
+    const previous = current.current ? actions[current.current.replace("+", "")] : null;
     next.reset();
-    next.setLoop(LOOPED.includes(clip) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    next.setLoop(again || LOOPED.includes(clip) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    if (again) next.time = Math.random() * next.getClip().duration; // a crowd, not a drill
     next.clampWhenFinished = true;
     next.fadeIn(0.18).play();
-    previous?.fadeOut(0.18);
-    current.current = clip;
+    if (previous !== next) previous?.fadeOut(0.18);
+    current.current = key;
   };
   const act = (action: Action) => {
     if (performance.now() < lockedUntil.current && action !== "Death_A") return;
-    play(clipFor(action, color, kind, variant));
+    play(clipFor(action, color, kind, variant), action === "Cheer");
   };
   useEffect(() => {
     // A new game: the Undead claw their way up out of the board; everyone else is already standing.

@@ -4,6 +4,8 @@ const PATHS = {
   back: "M19 12H5M11 6l-6 6 6 6",
   soundOn: "M4 10v4h3l5 4V6L7 10H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11",
   soundOff: "M4 10v4h3l5 4V6L7 10H4zM16 9.5l5 5M21 9.5l-5 5",
+  musicOn: "M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0z",
+  musicOff: "M9 18V9.5M12.5 5.3L19 4v9M9 18a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0zM4 3l17 17",
   fullscreen: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3",
   up: "M6 15l6-6 6 6",

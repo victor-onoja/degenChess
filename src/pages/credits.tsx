@@ -10,6 +10,10 @@ const ART = [
   ["Classic 3D chess set", "Riley Queen, Chess Set, Poly Haven", "CC0", "https://polyhaven.com/a/chess_set"],
   ["Flat chess pieces", "Colin M.L. Burnett (Cburnett), via react-chessboard", "BSD", "https://github.com/Clariity/react-chessboard"],
   ["Voices", "Generated with Kokoro-82M (hexgrad)", "Apache-2.0", "https://huggingface.co/hexgrad/Kokoro-82M"],
+  ["Board coordinates typeface", "Uncial Antiqua, Astigmatic, via Google Fonts", "SIL Open Font License", "https://fonts.google.com/specimen/Uncial+Antiqua"],
+  ["Interface typeface", "Bricolage Grotesque, Mathieu Triay, via Google Fonts", "SIL Open Font License", "https://fonts.google.com/specimen/Bricolage+Grotesque"],
+  ["Monad logo", "Monad Foundation. Shown to say what the game is built on; not an endorsement", "Trademark of its owner", "https://www.monad.xyz"],
+  ["Chainlink mark", "Chainlink, via Simple Icons. Shown to say what referees the games; not an endorsement", "Trademark of its owner", "https://chain.link"],
 ] as const;
 
 export default function Credits() {

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useReadContract, useReadContracts } from "wagmi";
 import { CHAIN, TOURNAMENTS_ADDRESS } from "../config";
 import { tournamentsAbi } from "../contracts/abi";
+import { describeClock } from "./clock";
 import { chessContract, POLL_MS, Result, Status, toGameInfo, type GameInfo } from "./contract";
 
 // Tournaments are round-robin leagues of ordinary staked games. The Tournaments contract only lists
@@ -194,6 +195,8 @@ export interface ListedTournament {
   /** Who came first once it is over (more than one when they tied), and what first place paid each. */
   winners: `0x${string}`[];
   firstPrize: bigint;
+  /** The pairings, while it is running (empty otherwise). */
+  fixtures: Fixture[];
 }
 
 const LIST_SCAN = 400; // the most recent games looked at to score the tournaments in a list
@@ -202,8 +205,8 @@ const LIST_SCAN = 400; // the most recent games looked at to score the tournamen
  * The newest tournaments with where each one stands. A pot tournament is over when its pot is paid;
  * a free one, which the contract never closes, is over when every pairing has a finished game.
  */
-export function useTournamentList(limit = 30): { list: ListedTournament[]; loading: boolean } {
-  const { tournaments, loading } = useTournaments(limit);
+export function useTournamentList(limit = 30, enabled = true): { list: ListedTournament[]; loading: boolean } {
+  const { tournaments, loading } = useTournaments(enabled ? limit : 0);
   const { data: prizes, isLoading: loadingPrizes } = useReadContracts({
     contracts: tournaments.map((t) => ({ ...tournamentsContract, functionName: "getPrize" as const, args: [t.id] as const })),
     query: { enabled: tournaments.length > 0, refetchInterval: POLL_MS * 3 },
@@ -233,7 +236,7 @@ export function useTournamentList(limit = 30): { list: ListedTournament[]; loadi
       const p = prizes?.[i]?.result;
       const [entryFee, , deadline, , paid, cancelled] = p ?? [0n, 0, 0n, 0n, false, false];
       const total = (t.players.length * (t.players.length - 1)) / 2;
-      const base = { t, cancelled, entryFee, pot: entryFee * BigInt(t.players.length), deadline, total, done: 0, payable: false, winners: [], firstPrize: 0n };
+      const base = { t, cancelled, entryFee, pot: entryFee * BigInt(t.players.length), deadline, total, done: 0, payable: false, winners: [], firstPrize: 0n, fixtures: [] as Fixture[] };
       if (cancelled) return { ...base, state: "finished" };
       if (!t.started) return { ...base, state: "open" };
       if (paid && p) {
@@ -243,11 +246,11 @@ export function useTournamentList(limit = 30): { list: ListedTournament[]; loadi
       const { fixtures, standings } = tableOf(t, all);
       const done = fixtures.filter((f) => f.game?.status === Status.Finished).length;
       const allPlayed = total > 0 && done === total;
-      if (entryFee > 0n) return { ...base, state: "running", done, payable: allPlayed || (deadline > 0n && now >= deadline) };
+      if (entryFee > 0n) return { ...base, state: "running", done, fixtures, payable: allPlayed || (deadline > 0n && now >= deadline) };
       const top = standings[0]?.points ?? 0;
       return allPlayed
         ? { ...base, state: "finished", done, winners: standings.filter((s) => s.points === top).map((s) => s.address) }
-        : { ...base, state: "running", done };
+        : { ...base, state: "running", done, fixtures };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tournaments, prizes, games, ids.length]);
@@ -255,4 +258,34 @@ export function useTournamentList(limit = 30): { list: ListedTournament[]; loadi
   // Nothing is listed until its prize side and games have arrived: a row is never shown half-known.
   const waiting = loading || (tournaments.length > 0 && (loadingPrizes || !prizes)) || (live.length > 0 && gameCount === undefined) || (ids.length > 0 && (loadingGames || !games));
   return { list: waiting ? [] : list, loading: waiting };
+}
+
+export interface TournamentSeat {
+  id: bigint;
+  name: string;
+  /** The players this game is waiting for: the creator's opponents they have not played yet. */
+  awaited: `0x${string}`[];
+}
+
+/**
+ * The tournament an open game was opened for, if any. A tournament game is an ordinary open game, so
+ * it is recognised by what the tournament page creates: a coin-flip game from one of a running
+ * tournament's players, at its stake and clock, while that player still has someone to play. The app
+ * then seats only those opponents (the contract itself would let anyone join an open game).
+ */
+export function tournamentSeat(
+  game: { id: bigint; white: string; stake: bigint; creatorSide: number; clock: string },
+  list: ListedTournament[]
+): TournamentSeat | null {
+  if (game.creatorSide !== 2) return null;
+  for (const x of list) {
+    if (x.state !== "running" || game.id < x.t.firstGameId || game.stake !== x.t.stake) continue;
+    if (game.clock !== describeClock(x.t.clockBase, x.t.clockIncrement)) continue;
+    if (!x.t.players.some((p) => key(p) === key(game.white))) continue;
+    const awaited = x.fixtures
+      .filter((f) => !f.game && (key(f.a) === key(game.white) || key(f.b) === key(game.white)))
+      .map((f) => (key(f.a) === key(game.white) ? f.b : f.a));
+    if (awaited.length > 0) return { id: x.t.id, name: x.t.name, awaited };
+  }
+  return null;
 }
