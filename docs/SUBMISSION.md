@@ -27,13 +27,29 @@ Deadline: **13 October 2026, 11:59 PM ET** (14 October, 04:59 GMT+1). A submissi
 | Working prototype a third party can run (9.1) | live at `test.awaychess.com`; runs locally from the README |
 | No token (9.3) | none; stakes are in a test dollar (tUSD) |
 
-**How it answers the judging criteria (20% each).**
+**How it answers the track's judging criteria (Consumer Products & Payments).**
 
-- **Product quality and completeness:** a finished loop a stranger can use: sign up in one tap, stake, play, get paid, rematch, share, tournaments, a leaderboard, a practice board, feedback. Seven browser suites and a hands-on script check it end to end.
-- **Technical excellence:** moves, captures, clocks and payouts live in the contract (40 tests, including random games cross-checked against chess.js); a Chainlink CRE workflow referees; an independent review was acted on and written up in `docs/AUDIT.md`.
-- **Monad integration:** every move is a transaction (median 0.8 s to receipt, about 0.007 MON), signed by a prompt-free session key; the code handles Monad specifics (gas billed on the limit, the reserve-balance rule, lagged balance checks).
-- **Track fit:** a consumer product whose user need not know crypto: no wallet, no seed phrase, usernames instead of addresses, dollars instead of tokens. The core value is a money experience: your stake is in play on every capture.
-- **Innovation and impact:** captures that pay, with a loser who keeps what they took; one passkey split into a money key and a contract-scoped game key; a referee nobody runs by hand.
+| Criterion | Our answer | Honest gap |
+| --- | --- | --- |
+| Technical execution (20%): real on-chain logic and settlement | Every move is a Monad transaction; a capture moves that piece's share of the stake in the same transaction; clocks, draws, timeouts, fees, referrals and prize pots are all contract logic. Verdict transactions are listed under "Evidence for judges". | The referee workflow runs in Chainlink's simulation mode, not on its network. |
+| Design and craft (20%): would a non-crypto user finish the flow unaided? | One tap with Face ID, no wallet, no seed phrase, usernames, dollars, moves that never prompt, share links that open straight onto the board. A test script of 100+ steps was walked on a phone by the author and by an automated run. | Money actions still say "passkey"; a faucet stands in for buying dollars on testnet. |
+| Originality and track insight (15%) | Money that moves during the game: each capture pays, and a loser keeps what they took. That only works with sub-second, near-free settlement. | |
+| Founder and market readiness (25%): a named segment and its pain | Online chess players who already bet informally: club nights, Discord servers, streamer challenges. Today that means trusting a stranger to pay up after the game, or an escrow middleman. Here the stake is held by the contract and paid as you play. See "Who it's for". | **Fill in before submitting:** two or three sentences on who you are and why chess. |
+| Traction and path forward (20%): user testing and distribution | Share links with a built-in invite reward, tournaments anyone can start, a feedback form into Discord. | **Fill in before submitting:** how many friends tested, what they said, what changed because of it (see "Traction" below). |
+
+**Deliverables for the track.** Logo: `public/brand/logo-mark.png` (25 KB, PNG). Repo: public. Technical demo video (at most 3 minutes) and pitch video (at most 2 minutes): **both required, to record**. Live product link with access instructions: see "Access for judges" below. Advert (30 seconds): optional.
+
+**Access for judges.** Open <https://test.awaychess.com> on a phone or laptop with a passkey provider (iCloud Keychain, Google Password Manager or 1Password). Type a username and press **Play now**: one Face ID or fingerprint prompt creates the account and a faucet gives it 100 test dollars and gas. No login, wallet or test credentials are needed. To play both sides alone, use a second browser or a private window for the opponent, or try `/sandbox` (a practice board, nothing staked). A waiting game can be joined from the Waiting tab or from its share link.
+
+**Where each bounty stands.**
+
+| Bounty | Fit | Notes |
+| --- | --- | --- |
+| Best Mera-Powered UX on Monad | Strong | Mera is the whole account layer; one ceremony; the measured time to first transaction is shown to the user; money actions re-prompt, moves never do, scoped by the contract; lock, reload and 30 idle minutes end the session; the stateless test is automated. |
+| Best workflow with CRE | Good, one point to check | The workflow is the referee and is demonstrated by CLI simulation with broadcast. The bounty also asks to "integrate at least one blockchain with an external API, system, data source, LLM or AI agent": today the workflow reads Monad, runs a chess engine and writes to Monad, with no external service. |
+| Mera: One Passkey, Many Keys | Weak as it stands | The bounty is for PRF-derived keys doing work that is **not** signing transactions. Both of our keys (money and game) sign transactions; the game key is a capability key, which is the closest we come. |
+
+---
 
 ---
 
@@ -102,6 +118,8 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 
 **Why they stay:** stakes that move during the game make a losing position worth playing out; rematches are one tap; the armies make every game a small show.
 
+**Traction (fill in before submitting):** N friends tested on `test.awaychess.com` between 11 and 13 October; N games and N tournaments were played; the feedback form collected N messages; the changes they led to were: ... .
+
 **Beyond chess:** the account layer (one passkey, a scoped game key, stakes that shift during play) is game-agnostic. Away Chess is the first of a planned family of staked skill games.
 
 ---
@@ -118,7 +136,12 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 | Stateless test | Clear site data mid-game, reload, tap "I have a passkey": account and game key are rebuilt, the game continues. Automated in `tools/e2e/passkey-game.mjs`. |
 | Code | `src/lib/mera.ts`, `src/lib/account.tsx`, `contracts/DegenChess.sol` (`_setKey`, `_playerFor`). |
 
+**Asked at submission: how Mera is the entire account layer.** There is no other account system. `createPasskey` and `getPasskeyPrfOutput` give a PRF output that never leaves the page; from it the app derives two keys. The money key holds funds, is derived only for the length of one money action (stake, resign, withdraw, send) and is wiped after it, so each money action is one passkey prompt. The game key is held in page memory, registered per game in the contract, and can only move pieces, offer or accept a draw and claim a timeout, so play is prompt-free. Nothing secret is stored: clearing the browser or opening a new device and tapping "I have a passkey" rebuilds both keys and the game continues.
+
 ### Chainlink CRE (the referee)
+
+**Asked at submission: how CRE is the orchestration layer.** The workflow (`cre/referee/main.ts`) is what ends games. It is triggered by the game contract's `MoveMade` event, reads the game and its full move list from Monad, replays it with a chess engine (`judge.ts`), and, when the game is over or a move was illegal, writes a signed report through Chainlink's forwarder to `ChessReferee`, which settles the stakes. Without it a checkmate would need the loser to resign. Demonstrated with `cre workflow simulate referee --broadcast` against Monad testnet (commands in `cre/README.md`; verdict transactions in the table below).
+
 
 | Item | Where |
 | --- | --- |
