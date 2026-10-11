@@ -152,6 +152,7 @@ Monad is what makes this playable. Each move is a transaction; at about 0.8 seco
 | Illegal move forfeited | game 1: White "teleported" the queen to take Black's queen (tx `0x59fe9580c7b9a0d3bb481efbb89eace6b479d7dfb2c32bd76beec89216751383`); verdict tx `0x524e5e611ad8bb5a14810b47396bfcb2afcfc7cec4c76f7c5357b65112913a1c` forfeited White: 0 / 1.95 tUSD |
 | Stalemate settled as a draw | game 2 (Sam Loyd's ten-move stalemate), verdict tx `0xa48944409db882101ff134bc90536efd832f4d2cfb493ea69403056433249eca`: no fee, each side keeps its balance (1.2564 / 0.7436 tUSD) |
 | Rating workflow (external API) | request tx `0x8cee2566249b5d660177a9b69c8879f183065d7b8db33f7392f73c9e0d2df58b` (link chess.com/hikaru to the deployer); the workflow fetched the profile (location "Florida", rapid 2838) and, finding no code, delivered a refusal in `0x39fe7e8a2b558dcff3e6d9332a6cdf8aed725bfc1b9c734ed4d3ed0c911eb2df`. A successful link needs the code on the profile: shown in the bounty video with the author's own chess.com account |
+| Referee workflow by CLI, with the Discord report | 11 October: game 29, mate move `0x124f6004c33c1808173f64625bdd2d18a4442d9d4aab2c62a66bd1aa02b3ed03`; `cre workflow simulate referee --broadcast` delivered the verdict in `0x7bcaf3dc49081fd84f3f7fc0db0dc3c59fa4285a2db7157109db40a4ccef8887` and logged "result reported to the team channel (HTTP 200)" |
 | Earlier runs | rule draws settled through `cre workflow simulate --broadcast` on previous deployments |
 | Running | a Docker service on a server (`deploy/referee`) watches every move. It runs the workflow with the CRE CLI and, until our CRE API key and DON deployment access arrive, delivers the same `judge.ts` verdict through the same forwarder itself |
 | Security | our review found Chainlink's simulation forwarder let anyone deliver a verdict; fixed the same day with a reporter allowlist (`docs/AUDIT.md`) |
@@ -188,6 +189,8 @@ Record at 1080p on the production site. Use `/sandbox` (the practice board: you 
 ### Chainlink CRE bounty video (at most 2 minutes)
 
 Record the terminal and the app side by side. It must show a successful simulation through the CRE CLI.
+
+**Before recording the referee part,** pause the always-on referee, or it settles the game within two seconds and the simulation only logs "already settled": `ssh quantic-vps 'cd ~/degenchess-referee && docker compose stop'`. Start it again straight after with `docker compose start`; it catches up on anything it missed. The rating part needs no pause.
 
 | Time | Show | Say |
 | --- | --- | --- |

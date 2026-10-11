@@ -61,6 +61,10 @@ npm run referee
 `--broadcast` sends the verdict as a real transaction on Monad testnet. Without it the workflow runs
 as a dry run.
 
+If the always-on referee is running (see below) it settles a finished game within a couple of seconds,
+and a simulation run after that only logs "already settled". To watch the workflow itself settle a
+game, stop that service for the minute it takes (`docker compose stop`, then `docker compose start`).
+
 ## The second workflow: chess.com ratings (`cre/rating`)
 
 A player can link their chess.com account so opponents see a real rating next to their name. The chain
