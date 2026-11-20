@@ -28,6 +28,27 @@ async function main() {
   const chess = await hre.viem.deployContract("DegenChess", [token, moveTimeout]);
   console.log(`DegenChess deployed to ${chess.address} (token ${token}, move timeout ${moveTimeout}s)`);
 
+  // Fair-play limits per trust tier, as "maxStake:holdSeconds" for tiers 0..3 ("unlimited" for no cap).
+  // Monad testnet defaults keep the holds short so testers are not kept waiting; see docs/MAINNET.md
+  // for the mainnet values. Locally nothing is limited unless TIER_POLICY is set.
+  const policy = process.env.TIER_POLICY ?? (local ? "" : "25:600,100:0,500:0,unlimited:0");
+  if (policy) {
+    const pc = await hre.viem.getPublicClient();
+    const tiers = policy.split(",");
+    for (let tier = 0; tier < tiers.length; tier++) {
+      const [cap, hold] = tiers[tier].split(":");
+      const maxStake = cap === "unlimited" ? 2n ** 256n - 1n : parseUnits(cap, 6);
+      await pc.waitForTransactionReceipt({ hash: await chess.write.setTierPolicy([tier, maxStake, Number(hold)]) });
+    }
+    console.log(`Tier policy set: ${policy}`);
+  }
+  // The risk service's key (tools/risk/risk-watch.mjs): sets tiers and freezes accounts, nothing else.
+  if (process.env.RISK_OPERATOR) {
+    const pc = await hre.viem.getPublicClient();
+    await pc.waitForTransactionReceipt({ hash: await chess.write.setRiskOperator([process.env.RISK_OPERATOR]) });
+    console.log(`Risk operator: ${process.env.RISK_OPERATOR}`);
+  }
+
   const forwarder = process.env.FORWARDER_ADDRESS || (hre.network.name === "monadTestnet" ? MONAD_TESTNET_MOCK_FORWARDER : null);
   let referee = null;
   if (forwarder) {

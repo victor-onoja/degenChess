@@ -16,7 +16,7 @@ Thanks for looking at this. This page tells you what to review, what the contrac
 
 Out of scope: `contracts/test/MockUSD.sol` (a test token anyone can mint), the 3D rendering code.
 
-Deployed on Monad testnet (chain 10143): Away Chess `0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00`, ChessReferee `0xba90386c49ebdbe1f4ae572e5081421a909f8617`, stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
+Deployed on Monad testnet (chain 10143): Away Chess v9 `0x956481c2f626b3a212ad42a77eddc2823c80c53b`, ChessReferee `0xafbd77a9fa6787dd343cdee4b2bf34fee6bfb946` (the reviewed v8 was `0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00`; v9 adds the trust layer below), stake token (MockUSD, 6 decimals) `0xfbf011ba1f7d08651181b5eebabb7048596de9de`.
 
 Browser tests: `tools/e2e/passkey-game.mjs` (sign-up, staking, prompt-free moves, the stateless restore, resign, withdraw, rematch) `tools/e2e/core-flows.mjs` (cancel, tap-to-move, promotion, spectating, draw, win on time), `account-flows.mjs` (usernames, sending money), `community.mjs` (a prize-pot tournament from creation to payout), `sandbox.mjs` and `test-plan.mjs` (every step of the manual script, including creator-plays-Black and coin-flip seating with game keys). A manual script with expected payouts for each settlement path is in `docs/TEST-PLAN.md`.
 
@@ -107,6 +107,16 @@ An independent reviewer read the contracts. What they raised, what we found whil
 - A transaction that sends MON from an account holding under 10 MON reverts if that account sent anything else in the previous 3 blocks. The client and the faucet space such transactions out.
 - Gas affordability is checked against the balance from 3 blocks earlier, so freshly funded keys wait before their first transaction.
 - Gas is billed on the gas limit, not gas used.
+
+## Trust layer (v9, added 20 November 2026, NOT yet reviewed)
+
+`DegenChess` gained trust tiers (`setTierPolicy`, `setTrustTier`), a per-tier payout hold checked in `withdraw` via `withdrawableAt`, bounded freezes (`freeze`, `unfreeze`: at most `MAX_FREEZE` = 14 days, then `FREEZE_COOLDOWN` = 7 days before another), a `riskOperator` role, and `penalize(gameId, cheater)` with `credits`/`withdrawCredit`. Questions for a reviewer:
+
+- Can `penalize` ever move more than the cheater's own unwithdrawn balance from that one game, or leave the contract short (the "contract holds exactly what it owes" property)?
+- The stats correction in `penalize` decrements counters: is there any order of calls that underflows them?
+- Can the owner or risk operator chain `freeze`/`unfreeze` to hold an account longer than 14 days in any 21?
+- `withdrawableAt` reads the player's *current* tier: promotion releases a hold early, demotion extends it. Intended, but worth a look.
+- Tournament prize pots (`Tournaments.sol`) are paid out directly and do not yet go through the hold.
 
 ## How to report
 

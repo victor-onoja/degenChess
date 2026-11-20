@@ -1,7 +1,7 @@
 {
   "chainSelectorName": "monad-testnet",
-  "chessAddress": "0x2e44f61ea3616a1b1ff5393ddccdb2fac58b2f00",
-  "refereeAddress": "0xba90386c49ebdbe1f4ae572e5081421a909f8617",
+  "chessAddress": "0x956481c2f626b3a212ad42a77eddc2823c80c53b",
+  "refereeAddress": "0xafbd77a9fa6787dd343cdee4b2bf34fee6bfb946",
   "gasLimit": "600000",
   "announceUrl": "https://test.awaychess.com/api/announce"
 }

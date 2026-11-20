@@ -138,6 +138,16 @@ It does **not** check full chess legality in Solidity, because that is too expen
 
 Until the workflow runs on a Chainlink DON, its reports arrive through Chainlink's mock forwarder, which checks nothing. `ChessReferee` therefore only accepts a report whose transaction comes from an allowed reporter key (`setReporter`), until a workflow owner is set. The referee runs on a server ([deploy/referee](deploy/referee/README.md)); if the CRE CLI can't run there, it delivers the workflow's own verdict (`judge.ts`) itself, through the same forwarder.
 
+### Fair play: trust tiers, payout holds and the risk service
+
+Staked chess attracts engine users and people moving money between their own accounts. The contract carries a trust layer for this (v9):
+
+- **Trust tiers.** Every account has a tier, 0 for a new one. Each tier caps the stake the account may put up (`StakeAboveLimit`) and sets a **payout hold**: how long winnings from a finished game wait before `withdraw` releases them (`PayoutHeld`, at most 3 days). Captures still move value inside the game in real time; only the exit is held. With no policy set, nothing is limited.
+- **The risk service** ([tools/risk](tools/risk/risk-watch.mjs), [deploy/risk](deploy/risk/README.md)) is the contract's `riskOperator`. Each pass it checks finished games against Stockfish (engine agreement and centipawn loss after the opening), looks for collusion (one account always losing to the same other, quick losses), posts flags to Discord, freezes the accounts on a strong flag, and promotes players with a clean record: 10 counted games against 5 opponents for tier 1, 40 against 15 for tier 2. A verified chess.com account shortens the road. Tier 3 is set by hand.
+- **Bounded review powers.** `freeze` stops an account from staking or withdrawing for at most 14 days, and cannot be renewed until 7 days after it ends, so no account can be held indefinitely. `penalize(gameId, cheater)` is a human ruling: the cheater's unwithdrawn winnings from that game go to their opponent (or to the opponent's `credits` if they already withdrew), and both records are corrected. Neither power can send money anywhere outside the game.
+
+The app shows the limit when a stake is above it, and a countdown on held winnings. Open numbers from the contract are at `/stats` (`/api/metrics`, or `node tools/metrics.mjs` from a terminal).
+
 ## Project layout
 
 ```text
@@ -176,6 +186,10 @@ tools/armies/build.mjs       builds the character armies from the KayKit packs
 tools/voices/                the armies' voice lines (Kokoro) and their generator
 tools/music/fetch.mjs        downloads the soundtrack from Wikimedia Commons
 deploy/referee/              the referee as a Docker service
+tools/risk/                  the risk service: fair-play signals, Stockfish client, watcher and admin commands
+deploy/risk/                 the risk service as a Docker service
+tools/metrics.mjs            players, retention, volume and fees from the contract (also /stats)
+src/lib/metrics.ts           the metric definitions, shared by the CLI and /api/metrics
 tools/brand/render.mjs       renders og.png and public/brand/* from the running app
 ```
 
@@ -206,6 +220,7 @@ Press **Play now** and create a passkey (passkeys work on `localhost`). For a se
 npm test          # contract tests
 (cd cre/referee && node --test judge.test.ts)   # the referee's judging logic
 (cd cre/rating && node --test assess.test.ts)   # the rating workflow's decision
+node --test tools/risk/signals.test.mjs          # fair-play signals and promotion rules
 node tools/e2e/passkey-game.mjs   # browser test, needs the app running (APP_URL, default localhost:3000)
 node tools/e2e/core-flows.mjs     # the other core flows; local chain only (it moves the chain clock)
 node tools/e2e/account-flows.mjs  # usernames (taken, claim) and sending money by username
