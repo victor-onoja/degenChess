@@ -1,0 +1,12 @@
+name: awaychess-risk
+services:
+  risk:
+    build: .
+    restart: unless-stopped
+    env_file: .env # RISK_PRIVATE_KEY, DISCORD_RISK_WEBHOOK, optional CHESS_ADDRESS / RISK_* settings
+    volumes:
+      - state:/state
+    logging:
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  state:

@@ -61,3 +61,4 @@ yarn-error.log*
 
 # Raw KayKit packs (CC0, large): the build reads them, the app ships only what tools/armies/build.mjs makes
 /KayKit_*/
+/tools/risk/.state.json
