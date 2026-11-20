@@ -571,6 +571,143 @@ describe("DegenChess", () => {
       expect(bk).to.equal(zeroAddress);
     });
   });
+  describe("trust layer (fair play)", () => {
+    const HOUR = 3600;
+    const DAY = 24 * HOUR;
+    const addr = (w) => w.account.address;
+
+    it("tiers cap the stake an account can put up, on both create and join", async () => {
+      const f = await loadFixture(deployFixture);
+      await f.chess.write.setTierPolicy([0, usd(5), 0], f.as(f.owner));
+      await f.chess.write.setTierPolicy([1, usd(50), 0], f.as(f.owner));
+      await expect(f.chess.write.createGame([usd(10), zeroAddress, 0, 0], f.as(f.white))).to.be.rejectedWith("StakeAboveLimit");
+      await f.chess.write.createGame([usd(5), zeroAddress, 0, 0], f.as(f.white));
+
+      // White is promoted and opens a bigger board; black, still tier 0, cannot join it.
+      await f.chess.write.setTrustTier([[addr(f.white)], 1], f.as(f.owner));
+      await f.chess.write.createGame([usd(20), zeroAddress, 0, 0], f.as(f.white));
+      await expect(f.chess.write.joinGame([1n, zeroAddress], f.as(f.black))).to.be.rejectedWith("StakeAboveLimit");
+      await f.chess.write.joinGame([0n, zeroAddress], f.as(f.black));
+      expect(await f.chess.read.limitsOf([addr(f.white)])).to.deep.equal([1, usd(50), 0, 0n]);
+    });
+
+    it("only the owner sets policies; the owner or risk operator sets tiers", async () => {
+      const f = await loadFixture(deployFixture);
+      await expect(f.chess.write.setTierPolicy([0, usd(5), 0], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.setTierPolicy([4, usd(5), 0], f.as(f.owner))).to.be.rejectedWith("InvalidTier");
+      await expect(f.chess.write.setTierPolicy([0, usd(5), 3 * DAY + 1], f.as(f.owner))).to.be.rejectedWith("InvalidHold");
+      await expect(f.chess.write.setTrustTier([[addr(f.white)], 1], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await expect(f.chess.write.setRiskOperator([addr(f.stranger)], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.setRiskOperator([addr(f.stranger)], f.as(f.owner));
+      await f.chess.write.setTrustTier([[addr(f.white), addr(f.black)], 2], f.as(f.stranger));
+      expect(await f.chess.read.trustTier([addr(f.black)])).to.equal(2);
+      await expect(f.chess.write.setTrustTier([[addr(f.white)], 4], f.as(f.stranger))).to.be.rejectedWith("InvalidTier");
+      // With no policy set, nothing is limited: the contract behaves as before.
+      const [, maxStake, hold] = await f.chess.read.limitsOf([addr(f.white)]);
+      expect(maxStake).to.equal(2n ** 256n - 1n);
+      expect(hold).to.equal(0);
+    });
+
+    it("holds a new account's winnings for its tier's hold; a promotion releases them", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await f.chess.write.setTierPolicy([0, usd(100), 6 * HOUR], f.as(f.owner));
+      await f.chess.write.setTierPolicy([1, usd(100), 0], f.as(f.owner));
+      await f.chess.write.resign([0n], f.as(f.black)); // white wins
+      await expect(f.chess.write.withdraw([0n], f.as(f.white))).to.be.rejectedWith("PayoutHeld");
+      await time.increase(3 * HOUR);
+      await expect(f.chess.write.withdraw([0n], f.as(f.white))).to.be.rejectedWith("PayoutHeld");
+      await f.chess.write.setTrustTier([[addr(f.white)], 1], f.as(f.owner));
+      await f.chess.write.withdraw([0n], f.as(f.white));
+
+      // Black's hold simply runs out.
+      const at = await f.chess.read.withdrawableAt([0n, addr(f.black)]);
+      expect(at > BigInt(await time.latest())).to.equal(true);
+      await time.increaseTo(at);
+      await expect(f.chess.write.withdraw([0n], f.as(f.black))).to.be.rejectedWith("NothingToWithdraw"); // lost, captured nothing
+    });
+
+    it("a freeze blocks staking and withdrawing, is bounded, and cannot be renewed straight away", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await f.chess.write.resign([0n], f.as(f.black));
+      const now = BigInt(await time.latest());
+      await expect(f.chess.write.freeze([addr(f.white), now + BigInt(15 * DAY)], f.as(f.owner))).to.be.rejectedWith("FreezeTooLong");
+      await expect(f.chess.write.freeze([addr(f.white), now], f.as(f.owner))).to.be.rejectedWith("FreezeTooLong");
+      await expect(f.chess.write.freeze([addr(f.white), now + BigInt(DAY)], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.freeze([addr(f.white), now + BigInt(10 * DAY)], f.as(f.owner));
+
+      await expect(f.chess.write.withdraw([0n], f.as(f.white))).to.be.rejectedWith("PayoutHeld");
+      await expect(f.chess.write.createGame([STAKE, zeroAddress, 0, 0], f.as(f.white))).to.be.rejectedWith("AccountFrozen");
+      await expect(f.chess.write.withdrawReferralEarnings(f.as(f.white))).to.be.rejectedWith("AccountFrozen");
+      // No stacking: a second freeze is refused until the cooldown after this one has passed.
+      await expect(f.chess.write.freeze([addr(f.white), now + BigInt(12 * DAY)], f.as(f.owner))).to.be.rejectedWith("FreezeCooldown");
+
+      await time.increase(10 * DAY);
+      await f.chess.write.withdraw([0n], f.as(f.white));
+      await expect(f.chess.write.freeze([addr(f.white), BigInt(await time.latest()) + BigInt(DAY)], f.as(f.owner))).to.be.rejectedWith(
+        "FreezeCooldown"
+      );
+      await time.increase(7 * DAY);
+      await f.chess.write.freeze([addr(f.white), BigInt(await time.latest()) + BigInt(DAY)], f.as(f.owner));
+      await f.chess.write.unfreeze([addr(f.white)], f.as(f.owner));
+      await f.chess.write.createGame([STAKE, zeroAddress, 0, 0], f.as(f.white));
+    });
+
+    it("penalize gives a cheater's winnings to the opponent and corrects both records", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await f.chess.write.setTierPolicy([0, usd(100), DAY], f.as(f.owner));
+      await playSan(f, "e4 d5 exd5 Qxd5".split(" ")); // a pawn each way
+      await f.chess.write.resign([0n], f.as(f.black)); // white "wins" (say, with an engine)
+      const before = await gameInfo(f.chess);
+      expect(before.result).to.equal(1);
+
+      await expect(f.chess.write.penalize([0n, addr(f.stranger)], f.as(f.owner))).to.be.rejectedWith("NotPlayer");
+      await expect(f.chess.write.penalize([0n, addr(f.white)], f.as(f.stranger))).to.be.rejectedWith("NotOwner");
+      await f.chess.write.penalize([0n, addr(f.white)], f.as(f.owner));
+      await expect(f.chess.write.penalize([0n, addr(f.black)], f.as(f.owner))).to.be.rejectedWith("AlreadyPenalized");
+
+      const after = await gameInfo(f.chess);
+      expect(after.result).to.equal(2); // BlackWins
+      expect(after.whiteBalance).to.equal(0n);
+      expect(after.blackBalance).to.equal(before.whiteBalance + before.blackBalance);
+      const [ww, wd, wl, wnet] = await f.chess.read.stats([addr(f.white)]);
+      const [bw, bd, bl, bnet] = await f.chess.read.stats([addr(f.black)]);
+      expect([ww, wd, wl]).to.deep.equal([0, 0, 1]);
+      expect([bw, bd, bl]).to.deep.equal([1, 0, 0]);
+      expect(wnet).to.equal(-STAKE);
+      expect(bnet).to.equal(after.blackBalance - STAKE);
+
+      await time.increase(DAY);
+      await expect(f.chess.write.withdraw([0n], f.as(f.white))).to.be.rejectedWith("NothingToWithdraw");
+      await f.chess.write.withdraw([0n], f.as(f.black));
+      await f.chess.write.withdrawFees(f.as(f.owner));
+      expect(await f.link.read.balanceOf([f.chess.address])).to.equal(0n);
+    });
+
+    it("if the victim already withdrew, the penalty is a credit they can withdraw", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await playSan(f, "e4 d5 exd5 Qxd5".split(" "));
+      await f.chess.write.offerDraw([0n], f.as(f.white));
+      await f.chess.write.acceptDraw([0n], f.as(f.black)); // a draw: no hold policy set, black withdraws at once
+      await f.chess.write.withdraw([0n], f.as(f.black));
+      const g = await gameInfo(f.chess);
+      await f.chess.write.penalize([0n, addr(f.white)], f.as(f.owner));
+      expect(await f.chess.read.credits([addr(f.black)])).to.equal(g.whiteBalance);
+      const [, bd, , ] = await f.chess.read.stats([addr(f.black)]);
+      expect(bd).to.equal(0);
+      await f.chess.write.withdrawCredit(f.as(f.black));
+      await expect(f.chess.write.withdrawCredit(f.as(f.black))).to.be.rejectedWith("NothingToWithdraw");
+      expect(await f.link.read.balanceOf([f.chess.address])).to.equal(0n);
+    });
+
+    it("cannot penalize a cheater whose money has already left, or a game still being played", async () => {
+      const f = await loadFixture(activeGameFixture);
+      await expect(f.chess.write.penalize([0n, addr(f.white)], f.as(f.owner))).to.be.rejectedWith("WrongStatus");
+      await f.chess.write.resign([0n], f.as(f.black));
+      await f.chess.write.withdraw([0n], f.as(f.white));
+      await expect(f.chess.write.penalize([0n, addr(f.white)], f.as(f.owner))).to.be.rejectedWith("WrongStatus");
+    });
+  });
+
   describe("ownership", () => {
     it("is handed over in two steps, and the old owner loses every power", async () => {
       const f = await loadFixture(activeGameFixture);

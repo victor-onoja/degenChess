@@ -19,6 +19,14 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// Game keys: each player may register a second address (a prompt-free session key held in the
 /// browser) that can play for them - move, offer/accept draws, claim timeouts - but can never
 /// resign, cancel or withdraw. Money actions always need the player's own key.
+///
+/// Trust layer (fair play): every account has a trust tier, 0 by default. A tier caps the stake an
+/// account may put up and sets how long its winnings wait after a game before they can be withdrawn,
+/// so an engine user can be caught before the money leaves. An off-chain risk service (the risk
+/// operator) promotes accounts as they build a record; the contract only enforces. Two review powers
+/// exist and both are bounded: `freeze` pauses an account for at most MAX_FREEZE and cannot be renewed
+/// until FREEZE_COOLDOWN has passed, and `penalize` gives a cheater's unwithdrawn winnings from one game
+/// to the opponent. Neither can send money to the owner or to anyone outside the game.
 contract DegenChess is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -62,6 +70,7 @@ contract DegenChess is ReentrancyGuard {
         // The side the creator asked for: 0 white, 1 black, 2 random. While the game is open the creator
         // sits in the white slot; the seats are settled when someone joins.
         uint8 creatorSide;
+        uint64 endedAt; // when the game finished: payout holds count from here
         uint16[] moves; // from | to << 6 | promotion << 12
     }
 
@@ -83,6 +92,13 @@ contract DegenChess is ReentrancyGuard {
     uint256 public constant REFERRAL_SHARE_BPS = 2000; // 20%
     uint32 public constant MAX_CLOCK = 3 hours;
     uint32 public constant MAX_INCREMENT = 5 minutes;
+    /// @notice Trust tiers 0..TIER_COUNT-1. New accounts are tier 0.
+    uint8 public constant TIER_COUNT = 4;
+    /// @notice The longest any tier's winnings can be held after a game.
+    uint32 public constant MAX_HOLD = 3 days;
+    /// @notice The longest a single freeze can last, and how long after it ends before another may start.
+    uint32 public constant MAX_FREEZE = 14 days;
+    uint32 public constant FREEZE_COOLDOWN = 7 days;
 
     IERC20 public immutable paymentToken;
     /// @notice Withdraws fees, sets the arbiter and can arbitrate as a fallback. Handed over in two steps
@@ -115,6 +131,22 @@ contract DegenChess is ReentrancyGuard {
     mapping(uint256 => Game) internal games;
     uint256 public gameCount;
 
+    struct TierPolicy {
+        uint256 maxStake; // largest stake an account in this tier may put up (create or join)
+        uint32 payoutHold; // seconds after a game ends before this tier's winnings can be withdrawn
+    }
+
+    /// @notice Each tier's limits. Unlimited with no hold until the owner sets them.
+    TierPolicy[TIER_COUNT] public tierPolicy;
+    mapping(address => uint8) public trustTier;
+    /// @notice While in the future, the account cannot stake or withdraw (under review).
+    mapping(address => uint64) public frozenUntil;
+    /// @notice Sets trust tiers and freezes accounts: the off-chain risk service. The owner can too.
+    address public riskOperator;
+    /// @notice Winnings moved to a player by `penalize` after they had already withdrawn from that game.
+    mapping(address => uint256) public credits;
+    mapping(uint256 => bool) public penalized;
+
     event GameCreated(uint256 indexed gameId, address indexed white, uint256 stake);
     event GameCancelled(uint256 indexed gameId);
     event PlayerJoined(uint256 indexed gameId, address indexed black);
@@ -130,6 +162,13 @@ contract DegenChess is ReentrancyGuard {
     event OwnershipTransferred(address indexed from, address indexed to);
     event Seated(uint256 indexed gameId, address indexed white, address indexed black);
     event ReferralCredited(uint256 indexed gameId, address indexed referrer, uint256 amount);
+    event TierPolicySet(uint8 indexed tier, uint256 maxStake, uint32 payoutHold);
+    event TrustTierSet(address indexed player, uint8 tier);
+    event Frozen(address indexed player, uint64 until);
+    event Unfrozen(address indexed player);
+    event RiskOperatorSet(address indexed operator);
+    event Penalized(uint256 indexed gameId, address indexed cheater, address indexed beneficiary, uint256 amount);
+    event CreditWithdrawn(address indexed player, uint256 amount);
 
     error NotOwner();
     error NotPlayer();
@@ -147,12 +186,21 @@ contract DegenChess is ReentrancyGuard {
     error InvalidReferrer();
     error InvalidSide();
     error KeyTaken();
+    error StakeAboveLimit();
+    error AccountFrozen();
+    error PayoutHeld();
+    error InvalidTier();
+    error InvalidHold();
+    error FreezeTooLong();
+    error FreezeCooldown();
+    error AlreadyPenalized();
 
     constructor(address _paymentToken, uint256 _moveTimeout) {
         paymentToken = IERC20(_paymentToken);
         owner = msg.sender;
         moveTimeout = _moveTimeout;
         initialBoard = _buildInitialBoard();
+        for (uint8 t = 0; t < TIER_COUNT; t++) tierPolicy[t].maxStake = type(uint256).max;
     }
 
     // ------------------------------------------------------------------ lifecycle
@@ -190,6 +238,7 @@ contract DegenChess is ReentrancyGuard {
         // Bounded so the uint32 clock arithmetic in makeMove can never overflow and lock a game.
         if (_clockSeconds > MAX_CLOCK || _incrementSeconds > MAX_INCREMENT) revert InvalidClock();
         if (_clockSeconds == 0 && _incrementSeconds != 0) revert InvalidClock();
+        _checkCanStake(msg.sender, _stake);
         paymentToken.safeTransferFrom(msg.sender, address(this), _stake);
 
         gameId = gameCount++;
@@ -222,6 +271,7 @@ contract DegenChess is ReentrancyGuard {
         Game storage g = games[_gameId];
         if (g.status != Status.Open) revert WrongStatus();
         if (msg.sender == g.white) revert NotPlayer();
+        _checkCanStake(msg.sender, g.stake);
         paymentToken.safeTransferFrom(msg.sender, address(this), g.stake);
 
         g.black = msg.sender;
@@ -427,6 +477,7 @@ contract DegenChess is ReentrancyGuard {
     }
 
     function withdrawReferralEarnings() external nonReentrant {
+        _checkNotFrozen(msg.sender);
         uint256 amount = referralEarnings[msg.sender];
         if (amount == 0) revert NothingToWithdraw();
         referralEarnings[msg.sender] = 0;
@@ -436,6 +487,7 @@ contract DegenChess is ReentrancyGuard {
     function withdraw(uint256 _gameId) external nonReentrant {
         Game storage g = games[_gameId];
         if (g.status != Status.Finished) revert WrongStatus();
+        if (block.timestamp < withdrawableAt(_gameId, msg.sender)) revert PayoutHeld();
         uint256 amount;
         if (msg.sender == g.white && !g.whiteWithdrawn) {
             g.whiteWithdrawn = true;
@@ -447,6 +499,128 @@ contract DegenChess is ReentrancyGuard {
         if (amount == 0) revert NothingToWithdraw();
         emit Withdrawn(_gameId, msg.sender, amount);
         paymentToken.safeTransfer(msg.sender, amount);
+    }
+
+    /// @notice Withdraw winnings that `penalize` moved to you after you had already withdrawn.
+    function withdrawCredit() external nonReentrant {
+        _checkNotFrozen(msg.sender);
+        uint256 amount = credits[msg.sender];
+        if (amount == 0) revert NothingToWithdraw();
+        credits[msg.sender] = 0;
+        emit CreditWithdrawn(msg.sender, amount);
+        paymentToken.safeTransfer(msg.sender, amount);
+    }
+
+    // ------------------------------------------------------------------ trust layer
+
+    function setRiskOperator(address _operator) external {
+        if (msg.sender != owner) revert NotOwner();
+        riskOperator = _operator;
+        emit RiskOperatorSet(_operator);
+    }
+
+    function setTierPolicy(uint8 _tier, uint256 _maxStake, uint32 _payoutHold) external {
+        if (msg.sender != owner) revert NotOwner();
+        if (_tier >= TIER_COUNT) revert InvalidTier();
+        if (_payoutHold > MAX_HOLD) revert InvalidHold();
+        tierPolicy[_tier] = TierPolicy(_maxStake, _payoutHold);
+        emit TierPolicySet(_tier, _maxStake, _payoutHold);
+    }
+
+    function setTrustTier(address[] calldata _players, uint8 _tier) external {
+        _onlyRisk();
+        if (_tier >= TIER_COUNT) revert InvalidTier();
+        for (uint256 i = 0; i < _players.length; i++) {
+            trustTier[_players[i]] = _tier;
+            emit TrustTierSet(_players[i], _tier);
+        }
+    }
+
+    /// @notice Pause an account while its games are reviewed: it cannot stake or withdraw until `_until`.
+    ///         At most MAX_FREEZE from now, and not again until FREEZE_COOLDOWN after the last one ended,
+    ///         so no account can be held indefinitely.
+    function freeze(address _player, uint64 _until) external {
+        _onlyRisk();
+        if (_until <= block.timestamp || _until > block.timestamp + MAX_FREEZE) revert FreezeTooLong();
+        uint64 last = frozenUntil[_player];
+        if (last != 0 && block.timestamp < uint256(last) + FREEZE_COOLDOWN) revert FreezeCooldown();
+        frozenUntil[_player] = _until;
+        emit Frozen(_player, _until);
+    }
+
+    /// @notice End a freeze early (the cooldown still counts from now).
+    function unfreeze(address _player) external {
+        _onlyRisk();
+        if (frozenUntil[_player] > block.timestamp) frozenUntil[_player] = uint64(block.timestamp);
+        emit Unfrozen(_player);
+    }
+
+    /// @notice Fair-play ruling on a finished game: `_cheater` loses it. Their unwithdrawn payout from this
+    ///         game goes to their opponent, and both records are corrected. Once per game. The fee and any
+    ///         referral credit already taken stay as they were.
+    function penalize(uint256 _gameId, address _cheater) external nonReentrant {
+        _onlyRisk();
+        Game storage g = games[_gameId];
+        if (g.status != Status.Finished) revert WrongStatus();
+        if (penalized[_gameId]) revert AlreadyPenalized();
+        bool cheaterIsWhite = _cheater == g.white;
+        if (!cheaterIsWhite && _cheater != g.black) revert NotPlayer();
+        if (cheaterIsWhite ? g.whiteWithdrawn : g.blackWithdrawn) revert WrongStatus(); // the money has left
+        penalized[_gameId] = true;
+
+        address victim = cheaterIsWhite ? g.black : g.white;
+        uint256 amount;
+        if (cheaterIsWhite) {
+            amount = g.whiteBalance;
+            g.whiteBalance = 0;
+            g.whiteWithdrawn = true;
+        } else {
+            amount = g.blackBalance;
+            g.blackBalance = 0;
+            g.blackWithdrawn = true;
+        }
+        if (cheaterIsWhite ? g.blackWithdrawn : g.whiteWithdrawn) credits[victim] += amount;
+        else if (cheaterIsWhite) g.blackBalance += amount;
+        else g.whiteBalance += amount;
+
+        // Correct the records: the cheater lost this game, the opponent won it.
+        Result old = g.result;
+        Result corrected = cheaterIsWhite ? Result.BlackWins : Result.WhiteWins;
+        if (old != corrected) {
+            PlayerStats storage c = stats[_cheater];
+            PlayerStats storage v = stats[victim];
+            if (old == Result.Draw) {
+                c.draws--;
+                v.draws--;
+            } else {
+                c.wins--;
+                v.losses--;
+            }
+            c.losses++;
+            v.wins++;
+            g.result = corrected;
+        }
+        stats[_cheater].net -= int256(amount);
+        stats[victim].net += int256(amount);
+        emit Penalized(_gameId, _cheater, victim, amount);
+    }
+
+    /// @notice When `_player` can withdraw from this game: after their tier's hold, and after any freeze.
+    function withdrawableAt(uint256 _gameId, address _player) public view returns (uint256) {
+        uint256 at = uint256(games[_gameId].endedAt) + tierPolicy[trustTier[_player]].payoutHold;
+        uint256 frozen = frozenUntil[_player];
+        return frozen > at ? frozen : at;
+    }
+
+    /// @notice An account's limits, for the app: tier, largest stake, payout hold, frozen until (0 = never).
+    function limitsOf(address _player)
+        external
+        view
+        returns (uint8 tier, uint256 maxStake, uint32 payoutHold, uint64 frozen)
+    {
+        tier = trustTier[_player];
+        TierPolicy memory p = tierPolicy[tier];
+        return (tier, p.maxStake, p.payoutHold, frozenUntil[_player]);
     }
 
     // ------------------------------------------------------------------ views
@@ -513,6 +687,19 @@ contract DegenChess is ReentrancyGuard {
 
     // ------------------------------------------------------------------ internals
 
+    function _onlyRisk() internal view {
+        if (msg.sender != owner && msg.sender != riskOperator) revert NotOwner();
+    }
+
+    function _checkNotFrozen(address _player) internal view {
+        if (frozenUntil[_player] > block.timestamp) revert AccountFrozen();
+    }
+
+    function _checkCanStake(address _player, uint256 _stake) internal view {
+        _checkNotFrozen(_player);
+        if (_stake > tierPolicy[trustTier[_player]].maxStake) revert StakeAboveLimit();
+    }
+
     /// @dev The player `_sender` acts for: themselves, or the player whose game key it is.
     function _playerFor(Game storage g, address _sender) internal view returns (address) {
         if (_sender == g.white || _sender == g.black) return _sender;
@@ -559,6 +746,7 @@ contract DegenChess is ReentrancyGuard {
         g.status = Status.Finished;
         g.result = _result;
         g.drawOfferedBy = address(0);
+        g.endedAt = uint64(block.timestamp);
 
         uint256 whiteBal = g.whiteBalance;
         uint256 blackBal = g.blackBalance;

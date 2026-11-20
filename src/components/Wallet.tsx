@@ -26,6 +26,13 @@ export function Wallet({ onClose }: { onClose: () => void }) {
     args: [address ?? zeroAddress],
     query: { enabled: !!address },
   });
+  // Winnings returned to you after an opponent was found cheating (see the contract's `penalize`).
+  const { data: credit } = useReadContract({
+    ...chessContract,
+    functionName: "credits",
+    args: [address ?? zeroAddress],
+    query: { enabled: !!address },
+  });
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState(false);
   const [to, setTo] = useState("");
@@ -167,6 +174,23 @@ export function Wallet({ onClose }: { onClose: () => void }) {
               Withdraw
             </button>
           </div>
+          {!!credit && credit > 0n && (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <span>
+                Returned after a fair-play review{" "}
+                <span className="amount">
+                  {formatToken(credit)} {TOKEN_SYMBOL}
+                </span>
+              </span>
+              <button
+                className="act act--sm"
+                disabled={busy !== null}
+                onClick={() => sendMoney("Withdraw returned winnings", () => [{ ...chessContract, functionName: "withdrawCredit" }])}
+              >
+                Withdraw
+              </button>
+            </div>
+          )}
         </section>
 
         <RatingLink />

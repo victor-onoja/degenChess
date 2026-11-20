@@ -6,7 +6,7 @@ import { Chessboard } from "react-chessboard";
 import { Chess, type Move, type PieceSymbol, type Square } from "chess.js";
 import { TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
-import { chessContract, POLL_MS, Result, Status, toGameInfo, useGame } from "../lib/contract";
+import { chessContract, formatWait, isCapped, POLL_MS, Result, Status, toGameInfo, useGame, useLimits } from "../lib/contract";
 import { encodeMove, replay } from "../lib/moves";
 import { describeClock, formatClock } from "../lib/clock";
 import { formatDuration, formatToken, sameAddress, ZERO_ADDRESS } from "../lib/format";
@@ -73,6 +73,14 @@ export function GameView({
     query: { refetchInterval: POLL_MS },
   });
   const { data: withdrawn } = useReadContract({ ...chessContract, functionName: "getWithdrawn", args: [gameId] });
+  // Fair-play limits: a new account's winnings wait out a hold, and its stakes are capped.
+  const limits = useLimits(address);
+  const { data: payoutAt } = useReadContract({
+    ...chessContract,
+    functionName: "withdrawableAt",
+    args: [gameId, address ?? ZERO_ADDRESS],
+    query: { enabled: !!address && info?.status === Status.Finished, refetchInterval: 30_000 },
+  });
   const { data: moveTimeout } = useReadContract({ ...chessContract, functionName: "moveTimeout" });
   // The side the creator chose (0 white, 1 black, 2 random); it only matters until someone joins.
   const { data: creatorSide } = useReadContract({ ...chessContract, functionName: "getCreatorSide", args: [gameId] });
@@ -407,6 +415,9 @@ export function GameView({
   const iOfferedDraw = active && sameAddress(info.drawOfferedBy, address);
   const myBalance = myColor === "w" ? info.whiteBalance : myColor === "b" ? info.blackBalance : 0n;
   const alreadyWithdrawn = myColor === "w" ? withdrawn?.[0] : myColor === "b" ? withdrawn?.[1] : true;
+  const holdLeft = payoutAt !== undefined ? Number(payoutAt) - now : 0;
+  const frozen = !!limits && limits.frozenUntil > now;
+  const joinOverLimit = isCapped(limits) && info.stake > limits!.maxStake;
 
   let boardNotice: string | null = null;
   if (illegalAt !== null) {
@@ -817,7 +828,14 @@ export function GameView({
               {["as Black", "as White", "(a coin flip picks the sides)"][Number(creatorSide ?? 0)] ?? "as Black"}.
             </p>
           )}
-          {info.status === Status.Open && myColor === null && !notMySeat && hasAccount && (
+          {info.status === Status.Open && myColor === null && !notMySeat && hasAccount && (joinOverLimit || frozen) && (
+            <p className="text-sm" style={{ color: "var(--alert)" }}>
+              {frozen
+                ? `Your account is paused for a fair-play review. It reopens in ${formatWait(limits!.frozenUntil - now)}.`
+                : `This board's stake is above your limit of ${formatToken(limits!.maxStake)} ${TOKEN_SYMBOL}. Limits rise as you play.`}
+            </p>
+          )}
+          {info.status === Status.Open && myColor === null && !notMySeat && hasAccount && !joinOverLimit && !frozen && (
             <button
               className="act"
               disabled={!hasAccount || pending !== null}
@@ -919,15 +937,24 @@ export function GameView({
               {myColor && (
                 <button
                   className="act"
-                  disabled={pending !== null || alreadyWithdrawn || myBalance === 0n}
+                  disabled={pending !== null || alreadyWithdrawn || myBalance === 0n || holdLeft > 0}
                   onClick={() => moneyCall("Withdraw", "withdraw")}
                 >
                   {alreadyWithdrawn
                     ? "Withdrawn"
                     : myBalance === 0n
                       ? "Nothing to withdraw"
-                      : `Withdraw ${formatToken(myBalance)} ${TOKEN_SYMBOL}`}
+                      : holdLeft > 0
+                        ? `${formatToken(myBalance)} ${TOKEN_SYMBOL} unlocks in ${formatWait(holdLeft)}`
+                        : `Withdraw ${formatToken(myBalance)} ${TOKEN_SYMBOL}`}
                 </button>
+              )}
+              {myColor && !alreadyWithdrawn && myBalance > 0n && holdLeft > 0 && (
+                <p className="soft text-center text-xs">
+                  {frozen
+                    ? "Your account is paused while a game is reviewed. It reopens automatically."
+                    : "Winnings from newer accounts wait a short fair-play check before they can leave. The wait shrinks as you play."}
+                </p>
               )}
               {myColor &&
                 tournament === null &&

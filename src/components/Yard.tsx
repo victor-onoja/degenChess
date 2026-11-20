@@ -4,7 +4,7 @@ import { degenChessAbi } from "../contracts/abi";
 import { TOKEN_DECIMALS, TOKEN_SYMBOL } from "../config";
 import { useDegenAccount } from "../lib/account";
 import { TIME_CONTROLS } from "../lib/clock";
-import { chessContract, Result, Status, useTokenState } from "../lib/contract";
+import { chessContract, formatWait, isCapped, Result, Status, useLimits, useTokenState } from "../lib/contract";
 import { formatToken, sameAddress } from "../lib/format";
 import { type ListedGame, usePositions, useRecentGames } from "../lib/games";
 import { useNames } from "../lib/names";
@@ -41,6 +41,10 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
   const hasAccount = address !== null || returning;
   const stake = parseStake(stakeInput);
   const short = stake !== null && balance !== undefined && balance < stake;
+  const limits = useLimits(address);
+  const capped = isCapped(limits);
+  const overLimit = stake !== null && capped && stake > limits!.maxStake;
+  const frozenFor = limits ? limits.frozenUntil - Math.floor(Date.now() / 1000) : 0;
   const custom = !STAKE_PRESETS.includes(stakeInput);
 
   async function createGame() {
@@ -104,11 +108,17 @@ function StartBoard({ onOpenGame }: { onOpenGame: (id: bigint) => void }) {
       </div>
 
       <p className="soft mb-2 text-sm">You get a link to send your opponent. Whoever opens it can sit down in one tap.</p>
-      <button onClick={createGame} disabled={!hasAccount || stake === null || short || busy !== null} className="act w-full">
+      <button onClick={createGame} disabled={!hasAccount || stake === null || short || overLimit || frozenFor > 0 || busy !== null} className="act w-full">
         {busy ?? (hasAccount ? "Create Game" : "Press Play now to get started")}
       </button>
       <p className="soft mt-2 text-sm">
-        {short ? (
+        {frozenFor > 0 ? (
+          <span style={{ color: "var(--alert)" }}>Your account is paused for a fair-play review. It reopens in {formatWait(frozenFor)}.</span>
+        ) : overLimit ? (
+          <span style={{ color: "var(--alert)" }}>
+            New accounts can stake up to {formatToken(limits!.maxStake)} {TOKEN_SYMBOL}. Your limit rises as you play.
+          </span>
+        ) : short ? (
           <span style={{ color: "var(--alert)" }}>You have {formatToken(balance)} {TOKEN_SYMBOL}. Lower the stake.</span>
         ) : hasAccount ? (
           "Staking asks for your passkey. Moves never do."

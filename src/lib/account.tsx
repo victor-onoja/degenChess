@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useQueryClient } from "@tanstack/react-query";
 import {
   BaseError,
+  ContractFunctionRevertedError,
   createPublicClient,
   createWalletClient,
   http,
@@ -75,8 +76,23 @@ const SETTLE_BLOCKS = 3n; // Monad checks gas affordability against the balance 
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** What each contract refusal means to a player. */
+const CONTRACT_ERRORS: Record<string, string> = {
+  StakeAboveLimit: "that stake is above your account's limit. Limits rise as you play fair games",
+  AccountFrozen: "your account is paused while a game is reviewed. It reopens automatically",
+  PayoutHeld: "these winnings are still in the fair-play check. Try again when the timer ends",
+  InsufficientBalance: "not enough funds",
+  NothingToWithdraw: "nothing to withdraw",
+  NotYourTurn: "it is not your turn",
+  TimeExpired: "your clock has run out",
+  WrongStatus: "this game has moved on. Refresh and try again",
+};
+
 export function shortError(e: unknown): string {
   if (e instanceof BaseError) {
+    const reverted = e.walk((x) => x instanceof ContractFunctionRevertedError) as ContractFunctionRevertedError | null;
+    const name = reverted?.data?.errorName;
+    if (name && CONTRACT_ERRORS[name]) return CONTRACT_ERRORS[name];
     // Monad reports balance problems as a generic "invalid parameters" RPC error; the detail says why.
     if (/insufficient balance|reserve balance/i.test(e.details ?? "")) return "not enough MON for gas yet - try again in a moment";
     return e.shortMessage.split("\n")[0];
